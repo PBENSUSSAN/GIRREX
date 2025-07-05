@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Connexion - GIRREX{% endblock %}
+
+{% comment %}
+Ce bloc de style est spécifique à cette page. Il change la couleur de fond
+pour que le formulaire de connexion se détache mieux.
+Pour que cela fonctionne, vous devez avoir {% block page_specific_styles %}{% endblock %} dans le <head> de votre base.html
+{% endcomment %}
+{% block page_specific_styles %}
+    <style>
+        body {
+            background-color: #f0f2f5; /* Un gris clair pour le fond */
+        }
+    </style>
+{% endblock %}
+
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center align-items-center" style="min-height: 100vh;">
+        <div class="col-md-6 col-lg-5">
+            
+            <div class="card shadow-lg border-0">
+                <div class="card-body p-4 p-md-5">
+                    <div class="text-center mb-4">
+                        <img src="{% static 'images/logo dgaev.jpeg' %}" alt="Logo GIRREX" style="height: 100px;">
+                        <img src="{% static 'images/logo GIRREX.png' %}" alt="Logo GIRREX" style="height: 100px;">
+                        
+                        <h2 class="mt-3 h3 fw-bold text-secondary">AUTHENTIFICATION</h2>
+                    </div>
+                    
+                    {% if form.errors %}
+                        <div class="alert alert-danger" role="alert">
+                            Nom d'utilisateur ou mot de passe incorrect. Veuillez réessayer.
+                        </div>
+                    {% endif %}
+                    
+                    {% if user.is_authenticated %}
+                        <div class="alert alert-info">
+                            Vous êtes déjà connecté en tant que {{ user.username }}.
+                            <a href="{% url 'logout' %}" class="alert-link">Se déconnecter ?</a>
+                        </div>
+                    {% else %}
+                        <form method="post" action="{% url 'login' %}">
+                            {% csrf_token %}
+                            
+                            <!-- Affiche les champs du formulaire de connexion fourni par Django -->
+                            {{ form.as_p }}
+                            
+                            <div class="d-grid mt-4">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="bi bi-box-arrow-in-right me-2"></i>Se connecter
+                                </button>
+                            </div>
+                        </form>
+                    {% endif %}
+                </div>
+                <div class="card-footer text-center py-3 bg-light">
+                    <small class="text-muted">
+                        <a href="{% url 'password_reset' %}">Mot de passe oublié ?</a>
+                    </small>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+
+{% comment %}
+C'est le bloc le plus important. En le définissant ici (même s'il est vide),
+il remplace le contenu du bloc 'sidebar_override' de base.html.
+Résultat : la sidebar disparaît de cette page.
+{% endcomment %}
+{% block sidebar_override %}
+{% endblock sidebar_override %}

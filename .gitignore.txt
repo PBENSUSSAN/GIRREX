@@ -1,0 +1,22 @@
+# Fichiers de cache Python
+__pycache__/
+*.pyc
+
+# Fichier de base de données locale
+*.sqlite3
+db.sqlite3
+
+# Fichiers d'environnement (pour les secrets)
+.env
+*.env
+
+# Dossiers pour les fichiers uploadés par les utilisateurs et les fichiers statiques collectés
+/media/
+/static/
+
+# Fichiers de logs
+*.log
+
+# Fichiers IDE (PyCharm, VSCode, etc.)
+.idea/
+.vscode/

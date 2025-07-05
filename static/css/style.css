@@ -1,0 +1,120 @@
+/* Fichier : static/css/style.css (Adapté pour GIRREX) */
+
+/* Définition des polices et couleurs de base */
+body { font-family: sans-serif; background-color: #f0f2f5; }
+.wrapper { display: flex; align-items: stretch; }
+#sidebar { min-width: 250px; max-width: 250px; background: #002346; color: #fff; min-height: 100vh; }
+#sidebar a { color: rgba(255, 255, 255, 0.8); text-decoration: none; }
+#content { width: 100%; padding: 20px; }
+
+.wrapper {
+    display: flex;
+    width: 100%;
+    align-items: stretch;
+}
+
+/* ================== */
+/* STYLE DE LA SIDEBAR*/
+/* ================== */
+#sidebar {
+    min-width: 250px;
+    max-width: 250px;
+    background: #002346; /* Un bleu foncé, proche du logo DGA */
+    color: #fff;
+    transition: all 0.3s;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.sidebar-header {
+    padding: 20px;
+    background: #001a33; /* Un peu plus foncé pour le header */
+    text-align: center;
+}
+
+.sidebar-header a {
+    color: #fff;
+    text-decoration: none;
+    font-size: 1.5em;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#sidebar ul.components {
+    padding: 20px 0;
+    border-bottom: 1px solid #47748b;
+}
+
+#sidebar ul p {
+    color: #fff;
+    padding: 10px;
+}
+
+#sidebar ul li a {
+    padding: 10px 20px;
+    font-size: 1.1em;
+    display: block;
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    transition: all 0.3s;
+    border-left: 3px solid transparent;
+}
+
+#sidebar ul li a:hover {
+    color: #fff;
+    background: #003366;
+    border-left: 3px solid #E1000F; /* Rouge DGA pour l'indicateur */
+}
+
+#sidebar ul li.active > a, a[aria-expanded="true"] {
+    color: #fff;
+    background: #003366;
+}
+
+/* Style des icônes dans la sidebar */
+#sidebar ul li a i {
+    margin-right: 10px;
+}
+
+/* Style des sous-menus */
+ul ul a {
+    font-size: 0.9em !important;
+    padding-left: 30px !important;
+    background: #001a33;
+}
+
+/* Section utilisateur en bas */
+.user-info {
+    padding: 20px;
+    border-top: 1px solid #47748b;
+}
+
+.user-info a {
+    display: block;
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    padding: 5px 0;
+}
+.user-info a:hover {
+    color: #fff;
+}
+
+
+/* ==================== */
+/* STYLE DU CONTENU     */
+/* ==================== */
+#content {
+    width: 100%;
+    padding: 20px 40px;
+    min-height: 100vh;
+    transition: all 0.3s;
+}
+
+/* Style pour les tables (repris de Bootstrap mais on peut le personnaliser) */
+table {
+    margin-top: 20px;
+}

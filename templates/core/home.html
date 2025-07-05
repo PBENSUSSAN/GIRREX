@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}Tableau de Bord - GIRREX{% endblock %}
+
+{% block content %}
+    <div class="container-fluid pt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-info shadow-sm">
+                    <h4 class="alert-heading">Bienvenue, {{ user.agent_profile.trigram|default:user.username }} !</h4>
+                    <p>
+                        Vous êtes sur le tableau de bord de l'application GIRREX.
+                        Cette page affichera prochainement les informations clés et les alertes importantes.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card text-center shadow-sm h-100">
+                    <div class="card-body">
+                        <i class="bi bi-people-fill" style="font-size: 3rem; color: #0d6efd;"></i>
+                        <h5 class="card-title mt-3">Gestion des Agents</h5>
+                        <p class="card-text">Consulter et gérer les dossiers des agents, leurs formations et leurs licences.</p>
+                        <a href="{% url 'liste-agents' %}" class="btn btn-primary">Accéder aux Agents</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center shadow-sm h-100">
+                    <div class="card-body">
+                        <i class="bi bi-mortarboard-fill" style="font-size: 3rem; color: #198754;"></i>
+                        <h5 class="card-title mt-3">Catalogue de Formation</h5>
+                        <p class="card-text">Parcourir les modules de formation disponibles et planifier les sessions.</p>
+                        <a href="#" class="btn btn-success disabled">Prochainement</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center shadow-sm h-100">
+                    <div class="card-body">
+                        <i class="bi bi-shield-check" style="font-size: 3rem; color: #dc3545;"></i>
+                        <h5 class="card-title mt-3">Sécurité (SMS)</h5>
+                        <p class="card-text">Suivre les événements de sécurité, les actions et la documentation associée.</p>
+                        <a href="#" class="btn btn-danger disabled">Prochainement</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

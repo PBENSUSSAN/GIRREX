@@ -1,0 +1,95 @@
+MODULE,ITEM,N°,SUJET,DATE,Validité,Support,Sujet / Précisions,module_type,id_module
+FSAU,Pannes des systèmes techniques locaux,1-1,Systèmes radar primaires / secondaires / poursuite multi-radar ,,,,,CAM_CAG,1
+,,1-2,Systèmes locaux de communication (radio/téléphone) ,,,,,CAM_CAG,2
+,,1-3,Interfaces opérationnelles locales,,,,,CAM_CAG,3
+,Incidents liés aux aéronefs,2-1,Panne radio bord + Transpondeur + Givrage + Emploi phraséo d'urgence,,,,,CAM_CAG,4
+,,2-2,Accident et incident aérien + Emploi phraséo d'urgence,,,,,CAM_CAG,5
+,,2-3 CAG,Hypoxie,2024-05-23,,PPS,,CAM_CAG,6
+,,2-4 CAG,Phases d’alerte CAG,2024-04-26,,PPS,,CAM_CAG,7
+,,2-4 CAM,Phases d’alerte CAM,2024-05-17,,PPS,,CAM_CAG,8
+,Procédures locales inhabituelles ,3-1 CAM,Délestage carburant,2024-05-17,,PPS,,CAM_CAG,9
+,,3-1 CAG,Délestage carburant,2024-05-17,,PPS,,CAM_CAG,10
+,,3-2 CAM,Situations spécifiques locales ,,,,,CAM_CAG,11
+,,3-3 CAM,OUI,2023-11-15,,PPS,,CAM_CAG,12
+,,3-4 CAM,Aéronefs armés (si concerné),,,,,CAM_CAG,13
+,,3-5 CAM,Zones d’abandon de bord / Déroutement (si concerné),,,,,CAM_CAG,14
+,,3-6 CAM,Interventions illicites,2024-09-25,,PPS,,CAM_CAG,15
+,,3-6 CAG,Interventions illicites,2024-09-24,,PPS,,CAM_CAG,16
+,,3-7 CAG,Evacuation d'urgence du CCER,,,,,CAM_CAG,17
+,,3-8 CAG,Appels anonymes,,,,,CAM_CAG,18
+REG,CAG,1-1,Points issus des SERA CAG,2025-05-21,,PPS,,CAM_CAG,19
+,,1-2,RCA 4 «Modes de compatibilité CAM/CAG »,2025-04-08,,PPS,,CAM_CAG,20
+,,1-3,Points de phraséologie CAG,2025-04-11,,PPS,,CAM_CAG,21
+,CER et CAM,2-1 CAM,Procédure d'agrément du directeur de DGA Essais en vol,2025-04-11,,PPS,,CAM_CAG,22
+,,2-2 CAM,Notion de procédures particulières et de dispositions règlementaires spécifiques,2024-09-25,,PPS,,CAM_CAG,23
+,,2-3 CAM,"RCAM  > Règles de la CAM I, V et T",2024-10-03,,PPS,,CAM_CAG,24
+,,2-4 CAM,SCAM et PCAM,2024-10-16,,PPS,,CAM_CAG,25
+,Phraséologie CAM ,3-1 CAM,Les basics,2024-10-16,,PPS,,CAM_CAG,26
+,,3-2 CAM,Situations d’urgence,2024-10-21,,PPS,,CAM_CAG,27
+,SAR,4 CAM,La SAR,2023-09-25,,PPS,,CAM_CAG,28
+SYS,Systèmes radar ,1-1,"La chaîne primaire (capteur, performances générales, visualisation) ",,,,,CAM_CAG,29
+,,1-2,Délestage carburant,,,,,CAM_CAG,30
+,,1-3,"La chaîne multi-radar (capteurs, performances générales, visualisation)",,,,,CAM_CAG,31
+,Systèmes de communication ,2-1,"La chaîne de radiocommunication (performances générales, modes d’alimentation)",,,,,CAM_CAG,32
+,,2-2,"La chaîne téléphonique (architecture générale, alimentation, correspondants)",,,,,CAM_CAG,33
+,,2-3,Les autres systèmes de communication locaux,,,,,CAM_CAG,34
+,Interfaces opérationnelles ,3,Tout outil opérationnel local utilisé au profit de l’activité CER,,,,,CAM_CAG,35
+OPS,Documentation opérationnelle,1-1,MANEX CCER partie A: partie principale,,,,,CAM_CAG,36
+,,1-2,MANEX CCER partie B: lettres et protocoles d'accord,,,,,CAM_CAG,37
+,,1-3,MANEX du CCER partie C: fiches reflexes,,,,,CAM_CAG,38
+,Aérodrome local ,2-1,Caractéristiques principales,,,,,CAM_CAG,39
+,et ,2-2,Procédures DEP/ARR,,,,,CAM_CAG,40
+,principaux aérodromes,2-3,Espaces aériens (INF/SUP),,,,,CAM_CAG,41
+,Environnement aéronautique,3-1,Flux CAG significatif,,,,,CAM_CAG,42
+,,3-2,"Activités de l'aviation légère et sportive (ex : zones para, ...)",,,,,CAM_CAG,43
+,,3-3,"Activités Défenses (zones Défenses, P,D,R, TSA, champs de tir,...)",,,,,CAM_CAG,44
+,Météorologie locale,4-1,"Les phénomènes dangereux (Givrage, ...)",2024-10-24,,PPS,Le givrage + vents + fronts,CAM_CAG,45
+,,4-2,Configuration locale particulière,,,,,CAM_CAG,46
+,Performances ,5-1,Performances des aéronefs liées aux essais locaux ,2024-10-30,,PPS,,CAM_CAG,47
+,des aéronefs en essais et réception ,5-2,Types de profils dits « standards » (si existants),2024-09-23,,PPS,"Profils de vol : Airbus, ATR, Dassault",CAM_CAG,48
+,et Profils de vol,5-3,Types d’activités dites « complexes » (si existantes),2024-10-02,,PPS,Vols paraboliques,CAM_CAG,49
+SA/SMS,Organisation du management ,1-1 CAM,Politique de sécurité aérienne de DGA Essais en vol ,2025-05-19,,PPS,attente mise à jour instruction SA,CAM_CAG,50
+,de la SA au sein de DGA EV,1-2 CAM,"Chaîne SA au sein de DGA Essais en vol (acteurs, fonctions et rôles).",2025-05-19,,PPS,attente mise à jour instruction SA,CAM_CAG,51
+,Traitement d’un évènement ,2-1 CAM,Présentation du formulaire (FNE) par un cas concret ,,,,,CAM_CAG,52
+,,2-2 CAM,Procédure de traitement d'un évènement,2024-12-11,,PPS,,CAM_CAG,53
+,,2-3 CAM,Moyens de diffusion,2024-05-22,,PPS,,CAM_CAG,54
+,Etude de cas concrets significatifs ,3 CAM,Tout évènement dont l’analyse présente des bénéfices en matière de sécurité,,,,,CAM_CAG,55
+,Organisation du SMS au sein de DGA EV,4-1 CAM,Manuel prestataire de DGA EV : la chaine SMS (partie B),2024-10-23,,PPS,,CAM_CAG,56
+,,4-2 CAM,Manuel prestataire de DGA EV (toutes les parties hors partie B),2024-12-06,,PPS,,CAM_CAG,57
+OPS,Documentation opérationnelle,1-1,MANEX CCER partie A: partie générale,,,,,CAM_CAG,58
+,,1-2,MANEX CCER partie B: lettres et protocoles d'accord,,,,,CAM_CAG,59
+,,1-3,MANEX du CCER partie C: fiches reflexes,,,,,CAM_CAG,60
+,Suivi de l'activité,2-1 CAM,Planification des activités / Relations avec la CCA,,,,,CAM_CAG,61
+,,2-2 CAM,Gestion de la capacité / Actions de régulation,,,,,CAM_CAG,62
+OPS,,2-3 CAM,Tenue du registre journal / Outils ou inerfaces de suivi en temps réel,,,,,CAM_CAG,63
+CDQ,Gestion des espaces aériens,3-1 CAM,Activation / désactivation des zones,,,,,CAM_CAG,64
+,,3-2 CAM,Procédures de coordination,,,,,CAM_CAG,65
+,,3-3 CAM,Activités de l’aviation légère et sportive,,,,,CAM_CAG,66
+OPS CDQ,Gestion ops du perso en salle de contrôle,4-1 CAM,Organisation du travail du dispositif opérationnel de la DCER,2024-05-17,,PPS,,CAM_CAG,67
+"HORS PFU / PCU
+ou
+SPECIFIQUE
+ou
+RECOMMANDATIONS
+GPSA / CDSA
+",,,Instruction 1550/DIRCAM,2024-11-08,,PPS,,SPECIFIQUE,68
+,,,Comparatif PU CAM / CAG,2024-10-24,,PPS,,SPECIFIQUE,69
+,,,IRMA,2019-03-26,,PPS,,SPECIFIQUE,70
+,,,ODS,2022-04-14,,PPS,,SPECIFIQUE,71
+,,,Organisation SMS (DCER et local),2017-06-10,,PPS,,SPECIFIQUE,72
+,,,BIVC,2022-02-14,,PPS,,SPECIFIQUE,73
+,,,Classification des vols d'essais,2024-04-11,,PPS,,SPECIFIQUE,74
+,,,GPSA = situations orageuses,2024-11-29,,PPS,,SPECIFIQUE,75
+,,,GPSA = Blindspot,2024-10-24,,PPS,,SPECIFIQUE,76
+,,,Procédures RVT,2023-05-04,,PPS,,SPECIFIQUE,77
+,,,Vents et Fronts,2019-03-26,,PPS,,SPECIFIQUE,78
+,,,"EXA ""e-learning""",2023-10-16,,PPS,,SPECIFIQUE,79
+,,,Pannes avions de chasse,2024-09-24,,PPS,,SPECIFIQUE,80
+,,,DIANE,2023-10-16,,PPS,,SPECIFIQUE,81
+,,,TCAS,2024-10-29,,PPS,,SPECIFIQUE,82
+,,,Utilisation A/0400,2023-10-10,,PPS,,SPECIFIQUE,83
+,,, Rappel Fréquences Pas de 8.33 Khz et phraséologie associée,2023-10-13,,PPS,,SPECIFIQUE,84
+,,,Sommeil et vigilance,2023-10-13,,PPS,,SPECIFIQUE,85
+,,,Instructions DIRCAM et Réglementations CAM,2023-10-13,,PPS,,SPECIFIQUE,86
+,,,FSAU - Panne EMTI - Rafale,2024-09-06,,PPS,,SPECIFIQUE,87
+,,,Règles-interception-combat-EV,2023-10-13,,PPS,,SPECIFIQUE,88
