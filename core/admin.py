@@ -8,7 +8,7 @@ from .models import (
     # Section II: Vols
     Client, Vol, ControleVol, AuditHeuresControle,
     # Section III: Paramétrage (sans Delegation)
-    Parametre, ValeurParametre, Role, AgentRole,
+    Parametre, ValeurParametre, Role, AgentRole, Delegation,
     # Section IV: Documentaire
     DocumentType, Document, DocumentVersion, SignatureCircuit,
     # Section V: Changement & MRR
@@ -122,7 +122,12 @@ class AgentRoleAdmin(admin.ModelAdmin):
     search_fields = ('agent__trigram', 'agent__nom', 'role__nom')
     autocomplete_fields = ('agent', 'role', 'centre')
 
-# NOTE : La classe DelegationAdmin est supprimée de cette version stable
+@admin.register(Delegation)
+class DelegationAdmin(admin.ModelAdmin):
+    list_display = ('delegant', 'delegataire', 'date_debut', 'date_fin', 'motivee_par')
+    list_filter = ('date_debut', 'date_fin')
+    search_fields = ('delegant__trigram', 'delegataire__trigram', 'motivee_par')
+    autocomplete_fields = ('delegant', 'delegataire', 'creee_par')
 
 # ==============================================================================
 # SECTION IV : GESTION DOCUMENTAIRE

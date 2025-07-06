@@ -326,6 +326,42 @@ class AgentRole(models.Model):
             for group in role_to_remove.groups.all():
                 if not active_roles.filter(role__groups=group).exists():
                     user.groups.remove(group)
+    
+    # Dans core/models.py, à la fin de la SECTION III
+
+class Delegation(models.Model):
+    """Trace la délégation temporaire des droits d'un agent à un autre."""
+    delegant = models.ForeignKey(
+        'Agent', 
+        on_delete=models.CASCADE, 
+        related_name='delegations_donnees',
+        help_text="L'agent qui donne ses droits."
+    )
+    delegataire = models.ForeignKey(
+        'Agent', 
+        on_delete=models.CASCADE, 
+        related_name='delegations_recues',
+        help_text="L'agent qui reçoit les droits (l'intérimaire)."
+    )
+    date_debut = models.DateField(help_text="Début de la période de délégation.")
+    date_fin = models.DateField(help_text="Fin de la période de délégation.")
+    motivee_par = models.CharField(max_length=255, blank=True, help_text="Raison de la délégation (ex: Congés, Déplacement).")
+    creee_par = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        related_name='delegations_creees',
+        help_text="Utilisateur qui a enregistré cette délégation."
+    )
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Délégation de droits"
+        verbose_name_plural = "Délégations de droits"
+        ordering = ['-date_debut']
+
+    def __str__(self):
+        return f"{self.delegant} délègue à {self.delegataire} du {self.date_debut} au {self.date_fin}"
 
 # ==============================================================================
 # SECTION IV : GESTION DOCUMENTAIRE
@@ -421,6 +457,7 @@ class MRR(models.Model):
     statut = models.CharField(max_length=50, choices=STATUT_CHOICES, default='ouvert')
     commentaires = models.TextField(blank=True)
     archive = models.BooleanField(default=False)
+
     class Meta:
         verbose_name = "Fiche MRR"
         verbose_name_plural = "Fiches MRR"
@@ -432,6 +469,7 @@ class MRRSignataire(models.Model):
     agent = models.ForeignKey(Agent, on_delete=models.PROTECT)
     date_signature = models.DateField(null=True, blank=True)
     commentaire = models.TextField(blank=True)
+
     class Meta:
         unique_together = ('mrr', 'agent')
         verbose_name = "Signataire MRR"
