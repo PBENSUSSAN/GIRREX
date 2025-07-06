@@ -1,26 +1,21 @@
-# Fichier : core/admin.py
+# Fichier : core/admin.py (VERSION STABLE COMPLÈTE - FIN ÉTAPE 4)
 
 from django.contrib import admin
 from .models import (
     # Section I: RH
-    Centre, Agent, Licence, Qualification, Mention, CertificatMed,
-    Module, Organisme, Formation, Evaluation, Habilitation, Affectation,
-
+    Centre, Agent, Licence, Qualification, Mention, CertificatMed, Module, Organisme, 
+    Formation, Evaluation, Habilitation, Affectation,
     # Section II: Vols
     Client, Vol, ControleVol, AuditHeuresControle,
-
-    # Section III: Paramétrage
+    # Section III: Paramétrage (sans Delegation)
     Parametre, ValeurParametre, Role, AgentRole,
-
     # Section IV: Documentaire
     DocumentType, Document, DocumentVersion, SignatureCircuit,
-
     # Section V: Changement & MRR
-    CentreRole, ResponsableSMS, MRR, MRRSignataire, MRRProgression,
-    Changement, Action, Notification,
-
+    CentreRole, ResponsableSMS, MRR, MRRSignataire, MRRProgression, Changement, Action, 
+    Notification,
     # Section VI: QS/SMS
-    ResponsableQSCentral, EvenementQS, RecommendationQS, ActionQS,
+    ResponsableQSCentral, EvenementQS, RecommendationQS, ActionQS, 
     AuditQS, EvaluationRisqueQS, NotificationQS,
 )
 
@@ -35,38 +30,17 @@ class CentreAdmin(admin.ModelAdmin):
 
 @admin.register(Agent)
 class AgentAdmin(admin.ModelAdmin):
-    # --- Configuration de la vue LISTE ---
     list_display = ('id_agent', 'reference', 'trigram', 'nom', 'prenom', 'centre', 'actif')
     list_filter = ('centre', 'actif', 'type_agent')
     search_fields = ('reference', 'trigram', 'nom', 'prenom', 'user__username')
     ordering = ('reference',)
-    
-    # --- Configuration du formulaire de MODIFICATION/AJOUT ---
-    # On liste TOUS les champs du modèle, organisés en sections.
     fieldsets = (
-        # Section 1: Identifiants principaux
-        ('Identification Principale', {
-            'fields': ('id_agent', 'reference', 'trigram')
-        }),
-        # Section 2: Compte et Affectation
-        ('Compte & Affectation', {
-            'fields': ('user', 'centre', 'actif', 'type_agent')
-        }),
-        # Section 3: Informations personnelles (repliée par défaut)
-        ('Détails Personnels (optionnel)', {
-            'classes': ('collapse',), # Rend la section repliable
-            'fields': ('nom', 'prenom', 'date_naissance', 'nationalite'),
-        }),
+        ('Identification Principale', {'fields': ('id_agent', 'reference', 'trigram')}),
+        ('Compte & Affectation', {'fields': ('user', 'centre', 'actif', 'type_agent')}),
+        ('Détails Personnels (optionnel)', {'classes': ('collapse',), 'fields': ('nom', 'prenom', 'date_naissance', 'nationalite')}),
     )
-
-    # Pour que les champs ForeignKey soient faciles à utiliser
     autocomplete_fields = ['user', 'centre']
-    
-    # Pour rendre le champ id_agent non modifiable après création
-    # C'est une bonne pratique pour les ID legacy
     readonly_fields = ('id_agent',)
-
-    # Pour un affichage plus compact
     radio_fields = {'type_agent': admin.HORIZONTAL}
 
 @admin.register(Licence)
@@ -74,7 +48,7 @@ class LicenceAdmin(admin.ModelAdmin):
     list_display = ('num_licence', 'agent', 'type_licence', 'date_validite', 'statut')
     list_filter = ('statut', 'type_licence', 'date_validite')
     search_fields = ('num_licence', 'agent__trigram', 'agent__reference')
-    autocomplete_fields = ['agent'] # Pour une recherche facile de l'agent
+    autocomplete_fields = ['agent']
 
 @admin.register(Formation)
 class FormationAdmin(admin.ModelAdmin):
@@ -89,15 +63,20 @@ class ModuleAdmin(admin.ModelAdmin):
     list_filter = ('module_type', 'module')
     search_fields = ('sujet', 'item', 'precisions')
 
-# Enregistrement des autres modèles RH avec une configuration par défaut
-admin.site.register(Qualification)
-admin.site.register(Mention)
-admin.site.register(CertificatMed)
-admin.site.register(Organisme)
-admin.site.register(Evaluation)
-admin.site.register(Habilitation)
-admin.site.register(Affectation)
-
+@admin.register(Qualification)
+class QualificationAdmin(admin.ModelAdmin): pass
+@admin.register(Mention)
+class MentionAdmin(admin.ModelAdmin): pass
+@admin.register(CertificatMed)
+class CertificatMedAdmin(admin.ModelAdmin): pass
+@admin.register(Organisme)
+class OrganismeAdmin(admin.ModelAdmin): pass
+@admin.register(Evaluation)
+class EvaluationAdmin(admin.ModelAdmin): pass
+@admin.register(Habilitation)
+class HabilitationAdmin(admin.ModelAdmin): pass
+@admin.register(Affectation)
+class AffectationAdmin(admin.ModelAdmin): pass
 
 # ==============================================================================
 # SECTION II : GESTION DES VOLS
@@ -115,20 +94,35 @@ class ClientAdmin(admin.ModelAdmin):
     list_display = ('nom', 'contact', 'email')
     search_fields = ('nom', 'contact', 'email')
 
-# Enregistrement des autres modèles de cette section
-admin.site.register(ControleVol)
-admin.site.register(AuditHeuresControle)
-
+@admin.register(ControleVol)
+class ControleVolAdmin(admin.ModelAdmin): pass
+@admin.register(AuditHeuresControle)
+class AuditHeuresControleAdmin(admin.ModelAdmin): pass
 
 # ==============================================================================
 # SECTION III : PARAMETRAGE DYNAMIQUE ET GESTION DES ROLES
 # ==============================================================================
 
-admin.site.register(Parametre)
-admin.site.register(ValeurParametre)
-admin.site.register(Role)
-admin.site.register(AgentRole)
+@admin.register(Parametre)
+class ParametreAdmin(admin.ModelAdmin): pass
+@admin.register(ValeurParametre)
+class ValeurParametreAdmin(admin.ModelAdmin): pass
 
+@admin.register(Role)
+class RoleAdmin(admin.ModelAdmin):
+    list_display = ('nom', 'scope', 'level')
+    list_filter = ('scope', 'level')
+    search_fields = ('nom',)
+    filter_horizontal = ('groups',)
+
+@admin.register(AgentRole)
+class AgentRoleAdmin(admin.ModelAdmin):
+    list_display = ('agent', 'role', 'centre', 'date_debut', 'date_fin')
+    list_filter = ('role', 'centre', 'date_fin')
+    search_fields = ('agent__trigram', 'agent__nom', 'role__nom')
+    autocomplete_fields = ('agent', 'role', 'centre')
+
+# NOTE : La classe DelegationAdmin est supprimée de cette version stable
 
 # ==============================================================================
 # SECTION IV : GESTION DOCUMENTAIRE
@@ -140,10 +134,12 @@ class DocumentAdmin(admin.ModelAdmin):
     list_filter = ('type_document', 'est_archive', 'centres_visibles')
     search_fields = ('titre', 'reference', 'description')
 
-admin.site.register(DocumentType)
-admin.site.register(DocumentVersion)
-admin.site.register(SignatureCircuit)
-
+@admin.register(DocumentType)
+class DocumentTypeAdmin(admin.ModelAdmin): pass
+@admin.register(DocumentVersion)
+class DocumentVersionAdmin(admin.ModelAdmin): pass
+@admin.register(SignatureCircuit)
+class SignatureCircuitAdmin(admin.ModelAdmin): pass
 
 # ==============================================================================
 # SECTION V : GESTION DU CHANGEMENT ET MRR
@@ -155,14 +151,20 @@ class MRRAdmin(admin.ModelAdmin):
     list_filter = ('statut',)
     search_fields = ('intitule',)
 
-admin.site.register(CentreRole)
-admin.site.register(ResponsableSMS)
-admin.site.register(MRRSignataire)
-admin.site.register(MRRProgression)
-admin.site.register(Changement)
-admin.site.register(Action)
-admin.site.register(Notification)
-
+@admin.register(CentreRole)
+class CentreRoleAdmin(admin.ModelAdmin): pass
+@admin.register(ResponsableSMS)
+class ResponsableSMSAdmin(admin.ModelAdmin): pass
+@admin.register(MRRSignataire)
+class MRRSignataireAdmin(admin.ModelAdmin): pass
+@admin.register(MRRProgression)
+class MRRProgressionAdmin(admin.ModelAdmin): pass
+@admin.register(Changement)
+class ChangementAdmin(admin.ModelAdmin): pass
+@admin.register(Action)
+class ActionAdmin(admin.ModelAdmin): pass
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin): pass
 
 # ==============================================================================
 # SECTION VI : QUALITE/SECURITE DES VOLS (QS/SMS)
@@ -174,9 +176,15 @@ class EvenementQSAdmin(admin.ModelAdmin):
     list_filter = ('statut', 'niveau_gravite', 'centre')
     search_fields = ('description', 'analyse', 'rapporteur__trigram')
 
-admin.site.register(ResponsableQSCentral)
-admin.site.register(RecommendationQS)
-admin.site.register(ActionQS)
-admin.site.register(AuditQS)
-admin.site.register(EvaluationRisqueQS)
-admin.site.register(NotificationQS)
+@admin.register(ResponsableQSCentral)
+class ResponsableQSCentralAdmin(admin.ModelAdmin): pass
+@admin.register(RecommendationQS)
+class RecommendationQSAdmin(admin.ModelAdmin): pass
+@admin.register(ActionQS)
+class ActionQSAdmin(admin.ModelAdmin): pass
+@admin.register(AuditQS)
+class AuditQSAdmin(admin.ModelAdmin): pass
+@admin.register(EvaluationRisqueQS)
+class EvaluationRisqueQSAdmin(admin.ModelAdmin): pass
+@admin.register(NotificationQS)
+class NotificationQSAdmin(admin.ModelAdmin): pass
