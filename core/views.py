@@ -1,24 +1,19 @@
-# Fichier : core/views.py (VERSION STABLE COMPLÈTE - FIN ÉTAPE 4)
+# Fichier : core/views.py (VERSION FINALE)
 
 from django.shortcuts import render
-from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.decorators import login_required
 from .models import Agent
+# On importe notre nouveau décorateur
+from .decorators import effective_permission_required
 
 @login_required
 def home(request):
-    """
-    Vue pour la page d'accueil (tableau de bord).
-    """
-    # Dans cette version stable, la vue home n'a pas besoin de logique de permission.
     context = {} 
     return render(request, 'core/home.html', context)
 
-@permission_required('core.view_agent', raise_exception=True)
+# On utilise notre décorateur personnalisé
+@effective_permission_required('core.view_agent')
 def liste_agents(request):
-    """
-    Vue pour afficher la liste de tous les agents.
-    Protégée par la permission standard de Django.
-    """
     agents = Agent.objects.all().order_by('reference')
     context = {
         'agents': agents,

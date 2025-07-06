@@ -37,22 +37,22 @@
                     </div>
     
                     <ul class="list-unstyled components">
-                        {% if perms.core.view_agent %}
+                        {% if effective_perms.core.view_agent %}
                             <li><a href="{% url 'liste-agents' %}"><i class="bi bi-people-fill"></i>Agents</a></li>
                         {% endif %}
                         <li><a href="#"><i class="bi bi-mortarboard-fill"></i>Modules de Formation</a></li>
                         <li><a href="#"><i class="bi bi-card-checklist"></i>Licences</a></li>
                         <hr>
-                        {% if perms.core.view_role %}
+                        {% if effective_perms.core.view_role %}
                         <li>
                             <a href="#adminSubmenu" data-bs-toggle="collapse" aria-expanded="false" class="dropdown-toggle">
                                 <i class="bi bi-gear-fill"></i>Administration
                             </a>
                             <ul class="collapse list-unstyled" id="adminSubmenu">
-                                {% if perms.auth.view_user %}
+                                {% if effective_perms.auth.view_user %}
                                     <li><a href="#" class="ps-4">Gestion Utilisateurs</a></li>
                                 {% endif %}
-                                {% if perms.core.view_parametre %}
+                                {% if effective_perms.core.view_parametre %}
                                     <li><a href="#" class="ps-4">Paramètres</a></li>
                                 {% endif %}
                             </ul>
