@@ -17,6 +17,8 @@ from .models import (
     # Section VI: QS/SMS
     ResponsableQSCentral, EvenementQS, RecommendationQS, ActionQS, 
     AuditQS, EvaluationRisqueQS, NotificationQS,
+    # Section VII : TDS
+    PositionJour, TourDeService, TourDeServiceHistorique,
 )
 
 # ==============================================================================
@@ -193,3 +195,36 @@ class AuditQSAdmin(admin.ModelAdmin): pass
 class EvaluationRisqueQSAdmin(admin.ModelAdmin): pass
 @admin.register(NotificationQS)
 class NotificationQSAdmin(admin.ModelAdmin): pass
+
+# ==============================================================================
+# SECTION VII : TDS
+# ==============================================================================
+@admin.register(PositionJour)
+class PositionJourAdmin(admin.ModelAdmin):
+    list_display = ('nom', 'description', 'centre', 'categorie')
+    list_filter = ('centre', 'categorie')
+    search_fields = ('nom', 'description')
+    ordering = ('centre', 'nom')
+
+@admin.register(TourDeService)
+class TourDeServiceAdmin(admin.ModelAdmin):
+    list_display = ('date', 'agent', 'position_matin', 'position_apres_midi', 'modifie_par')
+    list_filter = ('date', 'agent__centre')
+    search_fields = ('agent__trigram', 'agent__nom')
+    autocomplete_fields = ['agent', 'position_matin', 'position_apres_midi']
+    ordering = ('-date', 'agent')
+
+@admin.register(TourDeServiceHistorique)
+class TourDeServiceHistoriqueAdmin(admin.ModelAdmin):
+    list_display = ('date', 'agent', 'type_modification', 'modifie_par', 'modifie_le')
+    list_filter = ('type_modification', 'date')
+    
+    # Sécurité : On empêche la modification manuelle de l'historique
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

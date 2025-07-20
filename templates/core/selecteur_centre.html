@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Sélection du Centre{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h3>Sélectionner un Centre</h3>
+        </div>
+        <div class="card-body">
+            <p>Veuillez choisir un centre pour afficher le planning du Tour de Service.</p>
+            <div class="list-group">
+                {% for centre in centres %}
+                    {# CORRECTION : Utilise le nom avec tiret défini dans urls.py #}
+                    <a href="{% url 'tour-de-service-centre' centre.id %}" class="list-group-item list-group-item-action">
+                        {{ centre.nom_centre }} ({{ centre.code_centre }})
+                    </a>
+                {% empty %}
+                    <p class="text-muted">Aucun centre n'a été trouvé.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
