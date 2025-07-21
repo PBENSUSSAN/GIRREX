@@ -24,4 +24,7 @@ urlpatterns = [
     path('api/centre/<int:centre_id>/positions/add/', views.api_add_position, name='api-add-position'),
     path('api/position/<int:position_id>/update/', views.api_update_position, name='api-update-position'),
     path('api/position/<int:position_id>/delete/', views.api_delete_position, name='api-delete-position'),
+    path('planning/centre/<int:centre_id>/<int:year>/<int:month>/valider/', views.valider_tour_de_service, name='valider-tour-de-service'), 
+    path('planning/centre/<int:centre_id>/versions/', views.liste_versions_validees, name='liste-versions-validees'),
+    path('planning/version/<int:version_id>/', views.voir_version_validee, name='voir-version-validee'),
 ]

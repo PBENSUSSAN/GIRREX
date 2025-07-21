@@ -1,11 +1,11 @@
 # ==============================================================================
-# Fichier : core/views.py (VERSION FINALE INTÉGRALE)
+# Fichier : core/views.py (VERSION FINALE ET COMPLÈTE)
 # ==============================================================================
 
 import calendar
 import json
 from datetime import date, timedelta
-
+from django.db import transaction
 from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Q
@@ -13,7 +13,7 @@ from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.views.decorators.http import require_POST
-from .models import Agent, PositionJour, TourDeService, Centre
+from .models import Agent, PositionJour, TourDeService, Centre, VersionTourDeService
 from .decorators import effective_permission_required
 
 # --- VUES EXISTANTES ---
@@ -62,12 +62,10 @@ def tour_de_service_view(request, centre_id, year=None, month=None):
 
     tours = TourDeService.objects.filter(agent__in=agents_du_centre, date__range=(days_in_month[0], days_in_month[-1])).select_related('position_matin', 'position_apres_midi')
     
-    # Données pour le rendu initial par Django
     planning_data = {agent.id_agent: {} for agent in agents_du_centre}
     for tour in tours:
         planning_data[tour.agent_id][tour.date] = tour
         
-    # Données JSON pour la reconstruction par JavaScript
     planning_json_data = {}
     for tour in tours:
         agent_id_key = tour.agent_id
@@ -88,6 +86,8 @@ def tour_de_service_view(request, centre_id, year=None, month=None):
         'centre': centre,
         'user_can_edit': request.user.has_perm('core.change_tourdeservice'),
         'current_month_display': current_month_date.strftime('%B %Y').capitalize(),
+        'current_year': year,
+        'current_month': month,
         
         'agents': agents_du_centre,
         'days_in_month_formatted': days_formatted_for_template,
@@ -103,7 +103,7 @@ def tour_de_service_view(request, centre_id, year=None, month=None):
     }
     return render(request, 'core/tour_de_service.html', context)
 
-# --- VUES AJAX ET API (INCHANGÉES) ---
+# --- VUES AJAX ET API ---
 @require_POST
 @login_required
 @permission_required('core.change_tourdeservice', raise_exception=True)
@@ -192,3 +192,91 @@ def api_delete_position(request, position_id):
         return JsonResponse({'status': 'error', 'message': 'Position non trouvée'}, status=404)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+@require_POST
+@login_required
+@permission_required('core.add_versiontourdeservice', raise_exception=True)
+def valider_tour_de_service(request, centre_id, year, month):
+    centre = get_object_or_404(Centre, pk=centre_id)
+    
+    with transaction.atomic():
+        # 1. On récupère les données du planning "live"
+        agents_du_centre = Agent.objects.filter(centre=centre, actif=True)
+        premier_jour = date(int(year), int(month), 1)
+        dernier_jour = premier_jour.replace(day=calendar.monthrange(int(year), int(month))[1])
+
+        tours = TourDeService.objects.filter(
+            agent__in=agents_du_centre,
+            date__range=(premier_jour, dernier_jour)
+        ).select_related('agent', 'position_matin', 'position_apres_midi')
+
+        planning_snapshot = {}
+        for tour in tours:
+            agent_key = str(tour.agent.id_agent)
+            if agent_key not in planning_snapshot:
+                planning_snapshot[agent_key] = {
+                    'trigram': tour.agent.trigram or tour.agent.reference,
+                    'planning': {}
+                }
+            
+            planning_snapshot[agent_key]['planning'][tour.date.isoformat()] = {
+                'position_matin': tour.position_matin.nom if tour.position_matin else None,
+                'position_apres_midi': tour.position_apres_midi.nom if tour.position_apres_midi else None,
+                'commentaire': tour.commentaire
+            }
+            
+        # 2. On calcule le nouveau numéro de version
+        versions_existantes = VersionTourDeService.objects.filter(
+            centre=centre, annee=year, mois=month
+        ).count()
+        nouveau_numero_index = versions_existantes + 1
+        
+        # Formatage du numéro (ex: "072025-1")
+        numero_version_str = f"{str(month).zfill(2)}{year}-{nouveau_numero_index}"
+
+        # 3. On CRÉE la nouvelle version avec son numéro
+        VersionTourDeService.objects.create(
+            centre=centre,
+            annee=year,
+            mois=month,
+            numero_version=numero_version_str, # On enregistre le nouveau numéro
+            valide_par=request.user,
+            donnees_planning=planning_snapshot
+        )
+    
+    return JsonResponse({'status': 'ok', 'message': "Une nouvelle version du planning a été sauvegardée."})
+
+# --- VUES POUR LA CONSULTATION DES VERSIONS VALIDÉES ---
+@login_required
+def liste_versions_validees(request, centre_id):
+    centre = get_object_or_404(Centre, pk=centre_id)
+    versions = VersionTourDeService.objects.filter(centre=centre).order_by('-date_validation')
+    
+    context = {
+        'centre': centre,
+        'versions': versions
+    }
+    return render(request, 'core/liste_versions.html', context)
+
+@login_required
+def voir_version_validee(request, version_id):
+    version = get_object_or_404(VersionTourDeService, pk=version_id)
+    planning_data = version.donnees_planning
+    
+    agents_dans_version = sorted(planning_data.keys(), key=lambda k: planning_data[k]['trigram'])
+    
+    premier_jour = date(version.annee, version.mois, 1)
+    cal = calendar.Calendar()
+    days_in_month = [d for d in cal.itermonthdates(version.annee, version.mois) if d.month == version.mois]
+
+    jours_fr = ["Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"]
+    days_formatted = [{"date": d, "jour_court": jours_fr[d.weekday()], "num": d.day} for d in days_in_month]
+    
+    context = {
+        'version': version,
+        'centre': version.centre,
+        'agents': agents_dans_version,
+        'days_in_month_formatted': days_formatted,
+        'planning_data': planning_data
+    }
+    return render(request, 'core/voir_version.html', context)

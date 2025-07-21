@@ -18,7 +18,7 @@ from .models import (
     ResponsableQSCentral, EvenementQS, RecommendationQS, ActionQS, 
     AuditQS, EvaluationRisqueQS, NotificationQS,
     # Section VII : TDS
-    PositionJour, TourDeService, TourDeServiceHistorique,
+    PositionJour, TourDeService, TourDeServiceHistorique,VersionTourDeService,
 )
 
 # ==============================================================================
@@ -227,4 +227,15 @@ class TourDeServiceHistoriqueAdmin(admin.ModelAdmin):
         return False
 
     def has_delete_permission(self, request, obj=None):
+        return False
+
+@admin.register(VersionTourDeService)
+class VersionTourDeServiceAdmin(admin.ModelAdmin):
+    list_display = ('__str__', 'valide_par', 'date_validation')
+    list_filter = ('centre', 'annee', 'mois', 'valide_par')
+    readonly_fields = ('centre', 'annee', 'mois', 'valide_par', 'date_validation', 'donnees_planning')
+    
+    def has_add_permission(self, request):
+        return False
+    def has_change_permission(self, request, obj=None):
         return False

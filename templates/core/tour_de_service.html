@@ -93,7 +93,12 @@
         </div>
     {% else %}
         <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
-            <h3 class="mb-2 mb-md-0">Tour de Service [{{ centre.code_centre }}] - {{ current_month_display }}</h3>
+            <div class="d-flex align-items-center">
+                <h3 class="mb-0 me-3">Tour de Service [{{ centre.code_centre }}] - {{ current_month_display }}</h3>
+                <a href="{% url 'liste-versions-validees' centre.id %}" class="btn btn-sm btn-outline-info">
+                     <i class="bi bi-clock-history"></i> Voir les versions
+                </a>
+            </div>
         </div>
 
         <div class="mb-3 d-flex flex-wrap align-items-center">
@@ -119,6 +124,12 @@
                 <button id="invert-view-btn" class="btn btn-sm btn-outline-primary">
                     <i class="bi bi-arrow-down-up"></i> Inverser
                 </button>
+                
+                {% if perms.core.add_versiontourdeservice %}
+                <button id="validate-planning-btn" class="btn btn-sm btn-success">
+                    <i class="bi bi-check-circle"></i> Valider le mois
+                </button>
+                {% endif %}
             </div>
         </div>
 
@@ -290,7 +301,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 gridBody.appendChild(bodyRow);
             });
         }
-        attachGridEvents(); // Ré-attache les événements après chaque reconstruction
+        attachGridEvents();
     }
 
     // --- PARTIE 3: FONCTIONS D'INTERACTION ---
@@ -369,26 +380,22 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) { console.error('Erreur sauvegarde commentaire:', error); }
     }
     
-    // --- PARTIE 4: INITIALISATION ET ÉVÉNEMENTS ---
     function attachGridEvents() {
+        if (!grid) return;
         document.addEventListener('click', e => {
             if (activeCell && !activeCell.contains(e.target)) switchToViewMode(activeCell);
-        }, true); // Use capturing to ensure this runs first
-        
+        }, true);
         grid.addEventListener('click', e => {
             const cell = e.target.closest('.planning-cell.editable');
             if (cell) { e.stopPropagation(); switchToEditMode(cell); }
         });
-        
         grid.addEventListener('contextmenu', e => {
             const cell = e.target.closest('.planning-cell.editable');
             if (!cell || !commentModal) return;
             e.preventDefault();
-            
             const agent = agents.find(a => a.id_agent == cell.dataset.agentId);
             const day = days.find(d => d.date_iso == cell.dataset.date);
             const identifier = isViewInverted ? `${day.jour_court} ${day.num}` : (agent.trigram || agent.reference);
-            
             commentModalEl.querySelector('#comment-agent-id').value = cell.dataset.agentId;
             commentModalEl.querySelector('#comment-date').value = cell.dataset.date;
             commentModalEl.querySelector('#comment-textarea').value = cell.dataset.comment;
@@ -397,7 +404,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    renderTable(); // Rendu initial ET premier attachement des événements
+    renderTable();
 
     if(commentModalEl){
         commentModalEl.querySelector('#save-comment-btn').addEventListener('click', () => {
@@ -416,6 +423,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('toggle-detailed-view').addEventListener('click', () => grid.classList.toggle('detailed-view'));
     document.getElementById('toggle-weekends').addEventListener('click', () => document.body.classList.toggle('hide-weekends'));
     document.getElementById('print-btn').addEventListener('click', () => window.print());
+    document.getElementById('invert-view-btn').addEventListener('click', () => { isViewInverted = !isViewInverted; renderTable(); });
 
     const configModalEl = document.getElementById('config-positions-modal');
     if (configModalEl) {
@@ -467,17 +475,40 @@ document.addEventListener('DOMContentLoaded', function() {
             loadPositions();
         });
     }
+// --- LOGIQUE POUR LE BOUTON DE VALIDATION (VERSION FINALE) ---
+    const validateBtn = document.getElementById('validate-planning-btn');
+    if (validateBtn) {
+        validateBtn.addEventListener('click', function() {
+            if (confirm("Êtes-vous sûr de vouloir valider (ou mettre à jour) la version actuelle de ce planning ?")) {
+                
+                // On récupère les données directement depuis le contexte Django, c'est 100% fiable.
+                const centreId = '{{ centre.id }}';
+                const year = '{{ current_year }}';
+                const month = '{{ current_month }}';
 
-    const invertViewBtn = document.getElementById('invert-view-btn');
-    if (invertViewBtn) {
-        invertViewBtn.addEventListener('click', () => {
-            isViewInverted = !isViewInverted;
-            renderTable();
+                const validationUrl = `/planning/centre/${centreId}/${year}/${month}/valider/`;
+
+                fetch(validationUrl, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrfToken }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'ok') {
+                        alert(data.message);
+                    } else {
+                        alert("Une erreur est survenue : " + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error("Erreur critique lors de la validation:", error);
+                    alert("Une erreur critique de communication avec le serveur est survenue.");
+                });
+            }
         });
     }
-});
+});;
 
-// --- Fonctions globales pour la configuration ---
 function editPosition(button) {
     const row = button.closest('tr');
     const nomCell = row.querySelector('[data-field="nom"]');

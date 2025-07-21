@@ -720,3 +720,47 @@ class TourDeServiceHistorique(models.Model):
 
     def __str__(self):
         return f"Historique pour {self.agent} le {self.date} ({self.modifie_le.strftime('%d/%m/%Y %H:%M')})"
+
+class VersionTourDeService(models.Model):
+    """
+    Représente un "instantané" validé du planning d'un centre pour un mois donné.
+    """
+    centre = models.ForeignKey(
+        Centre, 
+        on_delete=models.CASCADE, 
+        related_name='versions_planning'
+    )
+    annee = models.IntegerField(help_text="L'année du planning (ex: 2025)")
+    mois = models.IntegerField(help_text="Le mois du planning (ex: 7 pour Juillet)")
+
+    numero_version = models.CharField(
+        max_length=20,
+        editable=False, # Ce champ ne doit pas être modifiable manuellement
+        help_text="Identifiant unique de la version (ex: 072025-1)"
+    )
+    
+    valide_par = models.ForeignKey(
+        User, 
+        on_delete=models.PROTECT, 
+        help_text="L'utilisateur qui a validé cette version."
+    )
+    date_validation = models.DateTimeField(
+        auto_now_add=True, 
+        help_text="La date et l'heure exactes de la validation."
+    )
+    
+    # Ce champ stockera une copie complète du planning au format JSON
+    donnees_planning = models.JSONField(
+        help_text="Snapshot complet du planning au moment de la validation."
+    )
+
+    class Meta:
+        verbose_name = "Version Validée de Tour de Service"
+        verbose_name_plural = "Versions Validées de Tour de Service"
+        ordering = ['-annee', '-mois', '-date_validation']
+        # On s'assure qu'on ne peut pas avoir plusieurs versions validées en même temps
+        # Bien qu'on puisse enlever cette contrainte si on veut plusieurs "brouillons"
+        #unique_together = ('centre', 'annee', 'mois')
+
+    def __str__(self):
+        return f"Version du {self.mois}/{self.annee} pour {self.centre.code_centre} (validée le {self.date_validation.strftime('%d/%m/%Y')})"

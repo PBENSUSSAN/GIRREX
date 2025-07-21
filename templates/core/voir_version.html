@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Version du {{ version.mois }}/{{ version.annee }} - {{ centre.code_centre }}{% endblock %}
+
+{% block page_specific_styles %}
+<style>
+    /* Styles pour la cohérence visuelle avec la page du planning */
+    #planning-grid th, #planning-grid td { 
+        white-space: nowrap; 
+        text-align: center;
+        vertical-align: middle !important;
+        padding: 0.4rem; 
+    }
+    .day-col { 
+        min-width: 55px; 
+        font-size: 0.9rem; 
+    }
+    .agent-col { 
+        text-align: left !important;
+        font-weight: bold; 
+        padding-left: 0.75rem !important;
+    }
+    .weekend { 
+        background-color: #f0f0f0 !important; 
+        color: #6c757d;
+    }
+    .planning-cell { 
+        min-height: 50px; 
+    }
+    .view-mode .morning, .view-mode .afternoon {
+        display: block;
+        line-height: 1.2;
+    }
+    .planning-cell .view-mode.has-comment { 
+        font-weight: bold; 
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'selecteur-centre' %}">Planning</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'tour-de-service-centre' centre.id %}">Tour de Service [{{ centre.code_centre }}]</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'liste-versions-validees' centre.id %}">Versions Validées</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Version du {{ version.mois }}/{{ version.annee }}</li>
+        </ol>
+    </nav>
+
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle-fill"></i>
+        Vous consultez une version archivée du planning, validée le <strong>{{ version.date_validation|date:"d/m/Y à H:i" }}</strong> par <strong>{{ version.valide_par.username }}</strong>. Cette page est en lecture seule.
+    </div>
+
+    <h3 class="mb-4">Tour de Service [{{ centre.code_centre }}] - Version {{ version.numero_version }}</h3>
+
+    <div class="table-responsive">
+        <table id="planning-grid" class="table table-bordered table-sm">
+            <thead class="thead-light">
+                <tr>
+                    <th class="agent-col">Agent</th>
+                    {% for day_data in days_in_month_formatted %}
+                    <th class="day-col {% if day_data.date.weekday >= 5 %}weekend{% endif %}">
+                        {{ day_data.jour_court }}<br>{{ day_data.num }}
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for agent_id, agent_data in planning_data.items %}
+                <tr>
+                    <td class="agent-col">{{ agent_data.trigram }}</td>
+                    {% for day_data in days_in_month_formatted %}
+                        {% with date_key=day_data.date|date:"Y-m-d" %}
+                        {% with tour=agent_data.planning|get_item:date_key %}
+                        <td class="planning-cell {% if day_data.date.weekday >= 5 %}weekend{% endif %}" title="{{ tour.commentaire|default:'' }}">
+                            <span class="view-mode {% if tour.commentaire %}has-comment{% endif %}">
+                                <span class="morning">{{ tour.position_matin|default:"" }}</span>
+                                <span class="afternoon">{{ tour.position_apres_midi|default:"" }}</span>
+                            </span>
+                        </td>
+                        {% endwith %}
+                        {% endwith %}
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
