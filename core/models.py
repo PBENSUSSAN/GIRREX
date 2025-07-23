@@ -660,6 +660,12 @@ class PositionJour(models.Model):
         help_text="Classification de la position pour les statistiques et règles."
     )
 
+    couleur = models.CharField(
+        max_length=7, 
+        default='#FFFFFF', 
+        help_text="Code couleur hexadécimal (ex: #4169E1). Le blanc est la couleur par défaut."
+    )
+
     class Meta:
         verbose_name = "Position Jour (Planning)"
         verbose_name_plural = "Positions Jour (Planning)"
