@@ -1,50 +1,72 @@
 # ==============================================================================
-# Fichier : core/views.py (VERSION FINALE ET COMPLÈTE)
+# Fichier : core/views.py (VERSION COMPLÈTE, REFACTORISÉE ET FINALE)
 # ==============================================================================
 
 import calendar
 import json
 from datetime import date, timedelta
-from django.db import transaction
-from django.core.serializers.json import DjangoJSONEncoder
+
 from django.contrib.auth.decorators import login_required, permission_required
-from django.db.models import Q
+from django.db import transaction
 from django.http import JsonResponse
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
-from .models import Agent, PositionJour, TourDeService, Centre, VersionTourDeService
-from .decorators import effective_permission_required
 
-# --- VUES EXISTANTES ---
+from .decorators import effective_permission_required
+from .models import (Agent, Centre, PositionJour, TourDeService,
+                     VersionTourDeService)
+
+# ==============================================================================
+# SECTION I : VUES GÉNÉRALES
+# ==============================================================================
+
 @login_required
 def home(request):
+    """
+    Affiche la page d'accueil / le tableau de bord.
+    """
     context = {} 
     return render(request, 'core/home.html', context)
 
 @effective_permission_required('core.view_agent')
 def liste_agents(request):
+    """
+    Affiche la liste de tous les agents.
+    """
     agents = Agent.objects.all().order_by('reference')
     context = {'agents': agents}
     return render(request, 'core/liste_agents.html', context)
 
-# --- NOUVELLE LOGIQUE POUR LE TOUR DE SERVICE ---
+# ==============================================================================
+# SECTION II : LOGIQUE DU TOUR DE SERVICE (PLANNING)
+# ==============================================================================
+
 @login_required
 def selecteur_centre_view(request):
+    """
+    Permet à l'utilisateur de choisir un centre pour voir le planning.
+    Redirige automatiquement si l'utilisateur n'est associé qu'à un seul centre.
+    """
     try:
         user_centre = request.user.agent_profile.centre
         if user_centre:
             return redirect('tour-de-service-centre', centre_id=user_centre.id)
     except AttributeError:
+        # L'utilisateur n'a pas de profil agent ou n'est pas lié à un centre
         pass
 
     centres = Centre.objects.all()
     context = {'centres': centres}
     return render(request, 'core/selecteur_centre.html', context)
 
-
 @login_required
 def tour_de_service_view(request, centre_id, year=None, month=None):
+    """
+    Vue principale du planning (SQUELETTE).
+    Sert la page HTML de base qui va ensuite charger les données via l'API.
+    Son rôle est de préparer le contexte de la page (titres, navigation, permissions).
+    """
     centre = get_object_or_404(Centre, pk=centre_id)
     today = date.today()
     if year is None: year = today.year
@@ -54,70 +76,87 @@ def tour_de_service_view(request, centre_id, year=None, month=None):
     prev_month_date = (current_month_date - timedelta(days=1)).replace(day=1)
     next_month_date = (current_month_date.replace(day=28) + timedelta(days=4)).replace(day=1)
 
-    agents_du_centre = Agent.objects.filter(centre=centre, actif=True).order_by('trigram')
-    positions_du_centre = PositionJour.objects.filter(centre=centre)
-    
-    cal = calendar.Calendar()
-    days_in_month = [d for d in cal.itermonthdates(year, month) if d.month == month]
-
-    tours = TourDeService.objects.filter(agent__in=agents_du_centre, date__range=(days_in_month[0], days_in_month[-1])).select_related('position_matin', 'position_apres_midi')
-    
-    planning_data = {agent.id_agent: {} for agent in agents_du_centre}
-    for tour in tours:
-        planning_data[tour.agent_id][tour.date] = tour
-        
-    planning_json_data = {}
-    for tour in tours:
-        agent_id_key = tour.agent_id
-        date_key = tour.date.isoformat()
-        if agent_id_key not in planning_json_data:
-            planning_json_data[agent_id_key] = {}
-        planning_json_data[agent_id_key][date_key] = {
-            'position_matin_id': tour.position_matin_id, 'position_matin_nom': tour.position_matin.nom if tour.position_matin else "",
-            'position_apres_midi_id': tour.position_apres_midi_id, 'position_apres_midi_nom': tour.position_apres_midi.nom if tour.position_apres_midi else "",
-            'commentaire': tour.commentaire or ""
-        }
-
-    jours_fr = ["Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"]
-    days_formatted_for_template = [{"date": d, "jour_court": jours_fr[d.weekday()], "num": d.day} for d in days_in_month]
-    days_formatted_for_json = [{"date_iso": d.isoformat(), "jour_court": jours_fr[d.weekday()], "num": d.day, "weekday": d.weekday()} for d in days_in_month]
-
     context = {
         'centre': centre,
         'user_can_edit': request.user.has_perm('core.change_tourdeservice'),
         'current_month_display': current_month_date.strftime('%B %Y').capitalize(),
         'current_year': year,
         'current_month': month,
-        
-        'agents': agents_du_centre,
-        'days_in_month_formatted': days_formatted_for_template,
-        'planning_data': planning_data,
-        
-        'agents_json': json.dumps(list(agents_du_centre.values('id_agent', 'trigram', 'reference')), cls=DjangoJSONEncoder),
-        'days_json': json.dumps(days_formatted_for_json, cls=DjangoJSONEncoder),
-        'planning_json': json.dumps(planning_json_data, cls=DjangoJSONEncoder),
-        'positions_json': json.dumps(list(positions_du_centre.values('id', 'nom')), cls=DjangoJSONEncoder),
-
         'prev_month_url': reverse('tour-de-service-monthly', args=[centre.id, prev_month_date.year, prev_month_date.month]),
         'next_month_url': reverse('tour-de-service-monthly', args=[centre.id, next_month_date.year, next_month_date.month]),
     }
     return render(request, 'core/tour_de_service.html', context)
 
-# --- VUES AJAX ET API ---
+# ==============================================================================
+# SECTION III : API & VUES AJAX
+# ==============================================================================
+
+@login_required
+def api_get_planning_data(request, centre_id, year, month):
+    """
+    POINT D'API PRINCIPAL.
+    Renvoie toutes les données nécessaires pour construire le planning en frontend.
+    Appelé par le fichier JavaScript via fetch().
+    """
+    centre = get_object_or_404(Centre, pk=centre_id)
+    agents_du_centre = Agent.objects.filter(centre=centre, actif=True).order_by('trigram')
+    
+    cal = calendar.Calendar()
+    days_in_month = [d for d in cal.itermonthdates(year, month) if d.month == month]
+
+    tours = TourDeService.objects.filter(
+        agent__in=agents_du_centre, 
+        date__range=(days_in_month[0], days_in_month[-1])
+    ).select_related('position_matin', 'position_apres_midi')
+    
+    planning_data = {}
+    for tour in tours:
+        agent_id_key = tour.agent_id
+        date_key = tour.date.isoformat()
+        if agent_id_key not in planning_data:
+            planning_data[agent_id_key] = {}
+        planning_data[agent_id_key][date_key] = {
+            'position_matin_id': tour.position_matin_id,
+            'position_matin_nom': tour.position_matin.nom if tour.position_matin else "",
+            'position_apres_midi_id': tour.position_apres_midi_id,
+            'position_apres_midi_nom': tour.position_apres_midi.nom if tour.position_apres_midi else "",
+            'commentaire': tour.commentaire or ""
+        }
+
+    jours_fr = ["Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"]
+    days_formatted = [{"date_iso": d.isoformat(), "jour_court": jours_fr[d.weekday()], "num": d.day, "weekday": d.weekday()} for d in days_in_month]
+
+    response_data = {
+        'agents': list(agents_du_centre.values('id_agent', 'trigram', 'reference')),
+        'days': days_formatted,
+        'planning_data': planning_data,
+        # Note : les positions sont maintenant récupérées par une API séparée dans le JS
+    }
+    
+    return JsonResponse(response_data)
+
 @require_POST
 @login_required
 @permission_required('core.change_tourdeservice', raise_exception=True)
 def update_tour_de_service(request):
+    """
+    Met à jour ou crée une entrée de Tour de Service pour une cellule du planning.
+    """
     data = json.loads(request.body)
     try:
         position_matin_id = data.get('position_matin_id')
         position_aprem_id = data.get('position_apres_midi_id')
         if not position_aprem_id:
             position_aprem_id = position_matin_id
-        tour, created = TourDeService.objects.update_or_create(
+        
+        TourDeService.objects.update_or_create(
             agent_id=data.get('agent_id'),
             date=date.fromisoformat(data.get('date')),
-            defaults={'position_matin_id': position_matin_id, 'position_apres_midi_id': position_aprem_id, 'modifie_par': request.user}
+            defaults={
+                'position_matin_id': position_matin_id, 
+                'position_apres_midi_id': position_aprem_id, 
+                'modifie_par': request.user
+            }
         )
         return JsonResponse({'status': 'ok'})
     except Exception as e:
@@ -127,6 +166,9 @@ def update_tour_de_service(request):
 @login_required
 @permission_required('core.change_tourdeservice', raise_exception=True)
 def update_tour_de_service_comment(request):
+    """
+    Met à jour le commentaire pour une cellule du planning.
+    """
     data = json.loads(request.body)
     try:
         tour, created = TourDeService.objects.get_or_create(
@@ -141,23 +183,30 @@ def update_tour_de_service_comment(request):
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
+# ==============================================================================
+# SECTION IV : API POUR LA GESTION DES POSITIONS
+# ==============================================================================
+
 @login_required
 @permission_required('core.view_positionjour', raise_exception=True)
 def api_get_positions(request, centre_id):
-    positions = PositionJour.objects.filter(centre_id=centre_id).values('id', 'nom', 'description', 'categorie')
+    """ API pour lister les positions d'un centre, avec leur couleur. """
+    positions = PositionJour.objects.filter(centre_id=centre_id).values('id', 'nom', 'description', 'categorie', 'couleur')
     return JsonResponse(list(positions), safe=False)
 
 @require_POST
 @login_required
 @permission_required('core.add_positionjour', raise_exception=True)
 def api_add_position(request, centre_id):
+    """ API pour ajouter une nouvelle position. """
     data = json.loads(request.body)
     try:
         position = PositionJour.objects.create(
             centre_id=centre_id,
             nom=data.get('nom'),
             description=data.get('description'),
-            categorie=data.get('categorie')
+            categorie=data.get('categorie'),
+            couleur=data.get('couleur', '#FFFFFF') # Valeur par défaut de sécurité
         )
         return JsonResponse({'status': 'ok', 'id': position.id})
     except Exception as e:
@@ -167,12 +216,14 @@ def api_add_position(request, centre_id):
 @login_required
 @permission_required('core.change_positionjour', raise_exception=True)
 def api_update_position(request, position_id):
+    """ API pour modifier une position existante. """
     data = json.loads(request.body)
     try:
         position = PositionJour.objects.get(pk=position_id)
         position.nom = data.get('nom', position.nom)
         position.description = data.get('description', position.description)
         position.categorie = data.get('categorie', position.categorie)
+        position.couleur = data.get('couleur', position.couleur)
         position.save()
         return JsonResponse({'status': 'ok'})
     except PositionJour.DoesNotExist:
@@ -184,23 +235,29 @@ def api_update_position(request, position_id):
 @login_required
 @permission_required('core.delete_positionjour', raise_exception=True)
 def api_delete_position(request, position_id):
+    """ API pour supprimer une position. """
     try:
-        position = PositionJour.objects.get(pk=position_id)
-        position.delete()
+        PositionJour.objects.get(pk=position_id).delete()
         return JsonResponse({'status': 'ok'})
     except PositionJour.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Position non trouvée'}, status=404)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
+# ==============================================================================
+# SECTION V : GESTION DES VERSIONS
+# ==============================================================================
+
 @require_POST
 @login_required
 @permission_required('core.add_versiontourdeservice', raise_exception=True)
 def valider_tour_de_service(request, centre_id, year, month):
+    """
+    Crée un 'snapshot' validé du planning du mois courant pour un centre.
+    """
     centre = get_object_or_404(Centre, pk=centre_id)
     
     with transaction.atomic():
-        # 1. On récupère les données du planning "live"
         agents_du_centre = Agent.objects.filter(centre=centre, actif=True)
         premier_jour = date(int(year), int(month), 1)
         dernier_jour = premier_jour.replace(day=calendar.monthrange(int(year), int(month))[1])
@@ -218,65 +275,54 @@ def valider_tour_de_service(request, centre_id, year, month):
                     'trigram': tour.agent.trigram or tour.agent.reference,
                     'planning': {}
                 }
-            
             planning_snapshot[agent_key]['planning'][tour.date.isoformat()] = {
                 'position_matin': tour.position_matin.nom if tour.position_matin else None,
                 'position_apres_midi': tour.position_apres_midi.nom if tour.position_apres_midi else None,
                 'commentaire': tour.commentaire
             }
             
-        # 2. On calcule le nouveau numéro de version
-        versions_existantes = VersionTourDeService.objects.filter(
-            centre=centre, annee=year, mois=month
-        ).count()
+        versions_existantes = VersionTourDeService.objects.filter(centre=centre, annee=year, mois=month).count()
         nouveau_numero_index = versions_existantes + 1
-        
-        # Formatage du numéro (ex: "072025-1")
         numero_version_str = f"{str(month).zfill(2)}{year}-{nouveau_numero_index}"
 
-        # 3. On CRÉE la nouvelle version avec son numéro
         VersionTourDeService.objects.create(
             centre=centre,
             annee=year,
             mois=month,
-            numero_version=numero_version_str, # On enregistre le nouveau numéro
+            numero_version=numero_version_str,
             valide_par=request.user,
             donnees_planning=planning_snapshot
         )
     
     return JsonResponse({'status': 'ok', 'message': "Une nouvelle version du planning a été sauvegardée."})
 
-# --- VUES POUR LA CONSULTATION DES VERSIONS VALIDÉES ---
 @login_required
 def liste_versions_validees(request, centre_id):
+    """
+    Affiche l'historique des versions de planning validées pour un centre.
+    """
     centre = get_object_or_404(Centre, pk=centre_id)
     versions = VersionTourDeService.objects.filter(centre=centre).order_by('-date_validation')
-    
-    context = {
-        'centre': centre,
-        'versions': versions
-    }
+    context = {'centre': centre, 'versions': versions}
     return render(request, 'core/liste_versions.html', context)
 
 @login_required
 def voir_version_validee(request, version_id):
+    """
+    Affiche le contenu d'une version de planning archivée (en lecture seule).
+    """
     version = get_object_or_404(VersionTourDeService, pk=version_id)
     planning_data = version.donnees_planning
     
-    agents_dans_version = sorted(planning_data.keys(), key=lambda k: planning_data[k]['trigram'])
-    
-    premier_jour = date(version.annee, version.mois, 1)
     cal = calendar.Calendar()
     days_in_month = [d for d in cal.itermonthdates(version.annee, version.mois) if d.month == version.mois]
-
     jours_fr = ["Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"]
     days_formatted = [{"date": d, "jour_court": jours_fr[d.weekday()], "num": d.day} for d in days_in_month]
     
     context = {
         'version': version,
         'centre': version.centre,
-        'agents': agents_dans_version,
         'days_in_month_formatted': days_formatted,
-        'planning_data': planning_data
+        'planning_data': planning_data,
     }
     return render(request, 'core/voir_version.html', context)

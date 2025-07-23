@@ -1,149 +1,80 @@
 {% extends "base.html" %}
 {% load static %}
-{% load custom_filters %} 
 
 {% block title %}Tour de Service - {{ centre.code_centre }}{% endblock %}
 
 {% block page_specific_styles %}
-<style>
-    /* Styles pour la grille du planning */
-    #planning-grid th, #planning-grid td { 
-        white-space: nowrap; 
-        text-align: center;
-        vertical-align: middle !important;
-        padding: 0.4rem; 
-    }
-    .day-col, .date-col { /* MODIFIÉ : Ajout de .date-col */
-        min-width: 55px; 
-        font-size: 0.9rem; 
-    }
-    .agent-col { 
-        text-align: left !important;
-        font-weight: bold; 
-        padding-left: 0.75rem !important;
-    }
-    .weekend { 
-        background-color: #f0f0f0 !important; 
-        color: #6c757d;
-    }
-    
-    /* Styles pour les cellules interactives */
-    .planning-cell { 
-        position: relative; 
-        min-height: 50px; 
-    }
-    .planning-cell.editable { 
-        cursor: pointer; 
-    }
-    .planning-cell.editable:hover { 
-        background-color: #e9ecef; 
-    }
-    .planning-cell .view-mode.has-comment { 
-        font-weight: bold; 
-    }
-
-    .view-mode .morning, .view-mode .afternoon {
-        display: block;
-        line-height: 1.2;
-    }
-    .detailed-view .afternoon { 
-        display: block !important; 
-    }
-    .detailed-view .morning:not(:empty)::after { 
-        content: '';
-    }
-
-    .edit-mode div {
-        margin-bottom: 2px;
-    }
-    .edit-mode select { 
-        width: 100%; 
-        font-size: 0.8rem; 
-        border: 1px solid #007bff; 
-    }
-
-    body.hide-weekends .weekend { 
-        display: none; 
-    }
-
-    @media print {
-        body > .wrapper > nav#sidebar, .btn-group, .mb-2, .modal, .modal-backdrop, #logout-link, .user-info a[href*="admin"] {
-            display: none !important;
-        }
-        body > .wrapper, body > .wrapper > #content {
-            width: 100% !important; margin: 0 !important; padding: 0 !important; float: none !important;
-        }
-        .container-fluid { border: none !important; padding: 0 !important; }
-        body { font-size: 10pt; }
-        .table-bordered, .table-bordered th, .table-bordered td { border: 1px solid #dee2e6 !important; }
-        .weekend { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        a { text-decoration: none; color: black; }
-    }
-</style>
+{# On charge notre fichier CSS externe qui contient tous les styles de la page. #}
+<link rel="stylesheet" href="{% static 'css/tour_de_service.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4">
-    {% if error_message %}
-        <div class="alert alert-danger">
-            <h4 class="alert-heading">Erreur de Configuration</h4>
-            <p>{{ error_message }}</p>
-            <hr>
-            <a href="{% url 'admin:index' %}" class="btn btn-primary">Aller à l'Administration</a>
-        </div>
-    {% else %}
-        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
-            <div class="d-flex align-items-center">
-                <h3 class="mb-0 me-3">Tour de Service [{{ centre.code_centre }}] - {{ current_month_display }}</h3>
-                <a href="{% url 'liste-versions-validees' centre.id %}" class="btn btn-sm btn-outline-info">
-                     <i class="bi bi-clock-history"></i> Voir les versions
-                </a>
-            </div>
-        </div>
+{% comment %}
+  Ce conteneur principal passe la configuration de Django au JavaScript 
+  via des attributs data-*. C'est le pont entre le backend et le frontend.
+{% endcomment %}
+<div id="planning-container" 
+    data-centre-id="{{ centre.id }}" 
+    data-year="{{ current_year }}" 
+    data-month="{{ current_month }}" 
+    data-can-edit="{{ user_can_edit|yesno:'True,False' }}" 
+    data-csrf-token="{{ csrf_token }}"
+    class="container-fluid mt-4">
 
-        <div class="mb-3 d-flex flex-wrap align-items-center">
-            <div class="btn-group me-3 mb-2" role="group">
-                <a href="{{ prev_month_url }}" class="btn btn-outline-secondary">« Précédent</a>
-                <a href="{% url 'tour-de-service-centre' centre.id %}" class="btn btn-outline-secondary">Aujourd'hui</a>
-                <a href="{{ next_month_url }}" class="btn btn-outline-secondary">Suivant »</a>
-            </div>
-            <div class="mb-2">
-                <button id="toggle-detailed-view" class="btn btn-sm btn-info">Vue Détaillée</button>
-                <button id="toggle-weekends" class="btn btn-sm btn-info">Masquer Week-ends</button>
-                
-                {% if perms.core.change_positionjour %}
-                <button id="config-positions-btn" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#config-positions-modal">
-                    <i class="bi bi-gear"></i> Configurer
-                </button>
-                {% endif %}
-                
-                <button id="print-btn" class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-printer"></i>
-                </button>
-
-                <button id="invert-view-btn" class="btn btn-sm btn-outline-primary">
-                    <i class="bi bi-arrow-down-up"></i> Inverser
-                </button>
-                
-                {% if perms.core.add_versiontourdeservice %}
-                <button id="validate-planning-btn" class="btn btn-sm btn-success">
-                    <i class="bi bi-check-circle"></i> Valider le mois
-                </button>
-                {% endif %}
-            </div>
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+        <div class="d-flex align-items-center">
+            <h3 class="mb-0 me-3">Tour de Service [{{ centre.code_centre }}] - {{ current_month_display }}</h3>
+            <a href="{% url 'liste-versions-validees' centre.id %}" class="btn btn-sm btn-outline-info">
+                 <i class="bi bi-clock-history"></i> Voir les versions
+            </a>
         </div>
+    </div>
 
-        <div class="table-responsive">
-            <table id="planning-grid" class="table table-bordered table-sm">
-                <thead class="thead-light">
-                    <!-- Généré par JavaScript -->
-                </thead>
-                <tbody>
-                    <!-- Généré par JavaScript -->
-                </tbody>
-            </table>
+    <div class="mb-3 d-flex flex-wrap align-items-center">
+        <div class="btn-group me-3 mb-2" role="group">
+            <a href="{{ prev_month_url }}" class="btn btn-outline-secondary">« Précédent</a>
+            <a href="{% url 'tour-de-service-centre' centre.id %}" class="btn btn-outline-secondary">Aujourd'hui</a>
+            <a href="{{ next_month_url }}" class="btn btn-outline-secondary">Suivant »</a>
         </div>
-    {% endif %}
+        <div class="mb-2">
+            <button id="toggle-detailed-view" class="btn btn-sm btn-info">Vue Détaillée</button>
+            <button id="toggle-weekends" class="btn btn-sm btn-info">Masquer Week-ends</button>
+            
+            {% if perms.core.change_positionjour %}
+            <button class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#config-positions-modal">
+                <i class="bi bi-gear"></i> Configurer
+            </button>
+            {% endif %}
+            
+            <button id="print-btn" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-printer"></i>
+            </button>
+
+            <button id="invert-view-btn" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-arrow-down-up"></i> Inverser
+            </button>
+            
+            {% if perms.core.add_versiontourdeservice %}
+            <button id="validate-planning-btn" class="btn btn-sm btn-success">
+                <i class="bi bi-check-circle"></i> Valider le mois
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <div id="planning-loader">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <strong class="ms-3">Chargement du planning...</strong>
+        </div>
+        
+        <table id="planning-grid" class="table table-bordered table-sm">
+            <thead id="planning-grid-head"></thead>
+            <tbody id="planning-grid-body"></tbody>
+        </table>
+    </div>
 </div>
 
 <!-- Modale pour le commentaire (Bootstrap 5) -->
@@ -183,6 +114,7 @@
                             <th>Nom</th>
                             <th>Description</th>
                             <th>Catégorie</th>
+                            <th>Couleur</th>
                             <th style="width: 120px;">Actions</th>
                         </tr>
                     </thead>
@@ -193,26 +125,11 @@
                 <hr>
                 <h6>Ajouter une nouvelle position</h6>
                 <form id="add-position-form" class="row g-3 align-items-end">
-                    <div class="col-md-3">
-                        <label for="new-pos-nom" class="form-label">Nom</label>
-                        <input type="text" class="form-control form-control-sm" id="new-pos-nom" required>
-                    </div>
-                    <div class="col-md-4">
-                        <label for="new-pos-desc" class="form-label">Description</label>
-                        <input type="text" class="form-control form-control-sm" id="new-pos-desc">
-                    </div>
-                    <div class="col-md-3">
-                        <label for="new-pos-cat" class="form-label">Catégorie</label>
-                        <select id="new-pos-cat" class="form-select form-select-sm" required>
-                            <option value="" disabled selected>Choisir...</option>
-                            <option value="SITE">Travail sur site</option>
-                            <option value="HORS_SITE">Travail hors site</option>
-                            <option value="NON_TRAVAIL">Non travail</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary btn-sm w-100">Ajouter</button>
-                    </div>
+                    <div class="col-md-3"><label for="new-pos-nom" class="form-label">Nom</label><input type="text" class="form-control form-control-sm" id="new-pos-nom" required></div>
+                    <div class="col-md-3"><label for="new-pos-desc" class="form-label">Description</label><input type="text" class="form-control form-control-sm" id="new-pos-desc"></div>
+                    <div class="col-md-3"><label for="new-pos-cat" class="form-label">Catégorie</label><select id="new-pos-cat" class="form-select form-select-sm" required><option value="" disabled selected>Choisir...</option><option value="SITE">Travail sur site</option><option value="HORS_SITE">Travail hors site</option><option value="NON_TRAVAIL">Non travail</option></select></div>
+                    <div class="col-md-1"><label for="new-pos-color" class="form-label">Coul.</label><input type="color" class="form-control form-control-color form-control-sm" id="new-pos-color" value="#FFFFFF"></div>
+                    <div class="col-md-2"><button type="submit" class="btn btn-primary btn-sm w-100">Ajouter</button></div>
                 </form>
             </div>
         </div>
@@ -223,338 +140,6 @@
 
 {% block scripts %}
  {{ block.super }}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // --- PARTIE 1: DONNÉES ET ÉTAT GLOBAL ---
-    const agents = JSON.parse('{{ agents_json|safe }}');
-    const days = JSON.parse('{{ days_json|safe }}');
-    const planningData = JSON.parse('{{ planning_json|safe }}');
-    const positions = JSON.parse('{{ positions_json|safe }}');
-    const canEdit = {{ user_can_edit|yesno:"true,false" }};
-    const csrfToken = '{{ csrf_token }}';
-    
-    const grid = document.getElementById('planning-grid');
-    const gridHead = grid.querySelector('thead');
-    const gridBody = grid.querySelector('tbody');
-    const commentModalEl = document.getElementById('comment-modal');
-    const commentModal = commentModalEl ? new bootstrap.Modal(commentModalEl) : null;
-    
-    let isViewInverted = false;
-    let activeCell = null;
-
-    // --- PARTIE 2: FONCTIONS DE RENDU DU TABLEAU ---
-    
-    function createCell(agent, day) {
-        const tour = planningData[agent.id_agent]?.[day.date_iso] || {};
-        const cell = document.createElement('td');
-        cell.className = `planning-cell ${day.weekday >= 5 ? 'weekend' : ''} ${canEdit ? 'editable' : ''}`;
-        
-        cell.dataset.agentId = agent.id_agent;
-        cell.dataset.date = day.date_iso;
-        cell.dataset.positionMatinId = tour.position_matin_id || '';
-        cell.dataset.positionApremId = tour.position_apres_midi_id || '';
-        cell.dataset.comment = tour.commentaire || '';
-        cell.title = tour.commentaire || '';
-
-        cell.innerHTML = `
-            <span class="view-mode ${tour.commentaire ? 'has-comment' : ''}">
-                <span class="morning">${tour.position_matin_nom || ""}</span>
-                <span class="afternoon" style="display:none;">${tour.position_apres_midi_nom || ""}</span>
-            </span>
-            <span class="edit-mode" style="display:none;"></span>
-        `;
-        return cell;
-    }
-
-    function renderTable() {
-        gridHead.innerHTML = '';
-        gridBody.innerHTML = '';
-        const headerRow = document.createElement('tr');
-
-        if (!isViewInverted) {
-            headerRow.innerHTML = `<th class="agent-col">Agent</th>` + days.map(d => 
-                `<th class="day-col ${d.weekday >= 5 ? 'weekend' : ''}">${d.jour_court}<br>${d.num}</th>`
-            ).join('');
-            gridHead.appendChild(headerRow);
-
-            agents.forEach(agent => {
-                const bodyRow = document.createElement('tr');
-                bodyRow.innerHTML = `<td class="agent-col">${agent.trigram || agent.reference}</td>`;
-                days.forEach(day => {
-                    bodyRow.appendChild(createCell(agent, day));
-                });
-                gridBody.appendChild(bodyRow);
-            });
-        } else {
-            headerRow.innerHTML = `<th class="agent-col">Date</th>` + agents.map(a => 
-                `<th class="day-col">${a.trigram || a.reference}</th>`
-            ).join('');
-            gridHead.appendChild(headerRow);
-
-            days.forEach(day => {
-                const bodyRow = document.createElement('tr');
-                bodyRow.className = `${day.weekday >= 5 ? 'weekend' : ''}`;
-                bodyRow.innerHTML = `<td class="agent-col date-col">${day.jour_court} ${day.num}</td>`;
-                agents.forEach(agent => {
-                    bodyRow.appendChild(createCell(agent, day));
-                });
-                gridBody.appendChild(bodyRow);
-            });
-        }
-        attachGridEvents();
-    }
-
-    // --- PARTIE 3: FONCTIONS D'INTERACTION ---
-    function switchToEditMode(cell) {
-        if (!canEdit || cell === activeCell) return;
-        if (activeCell) switchToViewMode(activeCell);
-        activeCell = cell;
-        const viewMode = cell.querySelector('.view-mode');
-        const editMode = cell.querySelector('.edit-mode');
-        const matinId = cell.dataset.positionMatinId;
-        const apremId = cell.dataset.positionApremId || matinId;
-        const createSelect = (id, selectedValue) => {
-            let options = '<option value="">---</option>';
-            positions.forEach(p => {
-                options += `<option value="${p.id}" ${p.id == selectedValue ? 'selected' : ''}>${p.nom}</option>`;
-            });
-            return `<select id="${id}" class="form-control-sm">${options}</select>`;
-        };
-        editMode.innerHTML = `<div>${createSelect('edit-matin', matinId)}</div><div>${createSelect('edit-aprem', apremId)}</div>`;
-        viewMode.style.display = 'none';
-        editMode.style.display = 'block';
-        editMode.querySelector('#edit-matin').focus();
-        editMode.querySelectorAll('select').forEach(select => {
-            select.addEventListener('change', () => saveCell(cell));
-        });
-    }
-
-    function switchToViewMode(cell) {
-        if (!cell) return;
-        const viewMode = cell.querySelector('.view-mode');
-        const editMode = cell.querySelector('.edit-mode');
-        editMode.innerHTML = '';
-        viewMode.style.display = 'block';
-        editMode.style.display = 'none';
-        if (cell === activeCell) activeCell = null;
-    }
-
-    async function saveCell(cell) {
-        const matinSelect = cell.querySelector('#edit-matin');
-        const apremSelect = cell.querySelector('#edit-aprem');
-        if (apremSelect.value === '' && matinSelect.value !== '') {
-            apremSelect.value = matinSelect.value;
-        }
-        cell.dataset.positionMatinId = matinSelect.value;
-        cell.dataset.positionApremId = apremSelect.value;
-        cell.querySelector('.morning').textContent = matinSelect.options[matinSelect.selectedIndex].text.replace('---','');
-        cell.querySelector('.afternoon').textContent = apremSelect.options[apremSelect.selectedIndex].text.replace('---','');
-        try {
-            await fetch("{% url 'ajax-update-tour' %}", {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-                body: JSON.stringify({
-                    agent_id: cell.dataset.agentId,
-                    date: cell.dataset.date,
-                    position_matin_id: cell.dataset.positionMatinId || null,
-                    position_apres_midi_id: cell.dataset.positionApremId || null,
-                })
-            });
-        } catch (error) { console.error('Erreur sauvegarde cellule:', error); }
-    }
-
-    async function saveComment(agentId, date, commentText) {
-        const cell = grid.querySelector(`[data-agent-id='${agentId}'][data-date='${date}']`);
-        if(!cell) return;
-        try {
-            const response = await fetch("{% url 'ajax-update-comment' %}", {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-                body: JSON.stringify({ agent_id: agentId, date: date, commentaire: commentText })
-            });
-            const data = await response.json();
-            cell.dataset.comment = commentText;
-            cell.title = commentText;
-            cell.querySelector('.view-mode').classList.toggle('has-comment', data.comment_exists);
-            if(commentModal) commentModal.hide();
-        } catch (error) { console.error('Erreur sauvegarde commentaire:', error); }
-    }
-    
-    function attachGridEvents() {
-        if (!grid) return;
-        document.addEventListener('click', e => {
-            if (activeCell && !activeCell.contains(e.target)) switchToViewMode(activeCell);
-        }, true);
-        grid.addEventListener('click', e => {
-            const cell = e.target.closest('.planning-cell.editable');
-            if (cell) { e.stopPropagation(); switchToEditMode(cell); }
-        });
-        grid.addEventListener('contextmenu', e => {
-            const cell = e.target.closest('.planning-cell.editable');
-            if (!cell || !commentModal) return;
-            e.preventDefault();
-            const agent = agents.find(a => a.id_agent == cell.dataset.agentId);
-            const day = days.find(d => d.date_iso == cell.dataset.date);
-            const identifier = isViewInverted ? `${day.jour_court} ${day.num}` : (agent.trigram || agent.reference);
-            commentModalEl.querySelector('#comment-agent-id').value = cell.dataset.agentId;
-            commentModalEl.querySelector('#comment-date').value = cell.dataset.date;
-            commentModalEl.querySelector('#comment-textarea').value = cell.dataset.comment;
-            commentModalEl.querySelector('#comment-modal-title').textContent = `${identifier} - ${cell.dataset.date}`;
-            commentModal.show();
-        });
-    }
-    
-    renderTable();
-
-    if(commentModalEl){
-        commentModalEl.querySelector('#save-comment-btn').addEventListener('click', () => {
-            const agentId = commentModalEl.querySelector('#comment-agent-id').value;
-            const date = commentModalEl.querySelector('#comment-date').value;
-            const comment = commentModalEl.querySelector('#comment-textarea').value;
-            saveComment(agentId, date, comment);
-        });
-        commentModalEl.querySelector('#delete-comment-btn').addEventListener('click', () => {
-            const agentId = commentModalEl.querySelector('#comment-agent-id').value;
-            const date = commentModalEl.querySelector('#comment-date').value;
-            saveComment(agentId, date, '');
-        });
-    }
-
-    document.getElementById('toggle-detailed-view').addEventListener('click', () => grid.classList.toggle('detailed-view'));
-    document.getElementById('toggle-weekends').addEventListener('click', () => document.body.classList.toggle('hide-weekends'));
-    document.getElementById('print-btn').addEventListener('click', () => window.print());
-    document.getElementById('invert-view-btn').addEventListener('click', () => { isViewInverted = !isViewInverted; renderTable(); });
-
-    const configModalEl = document.getElementById('config-positions-modal');
-    if (configModalEl) {
-        const positionsListBody = document.getElementById('positions-list-body');
-        const addPositionForm = document.getElementById('add-position-form');
-        const loadPositions = async () => {
-            try {
-                const response = await fetch(`/api/centre/{{ centre.id }}/positions/`);
-                const positionsData = await response.json();
-                positionsListBody.innerHTML = '';
-                positionsData.forEach(pos => {
-                    const row = document.createElement('tr');
-                    row.dataset.posId = pos.id;
-                    const categorieDisplay = pos.categorie.replace('_', ' ').toLowerCase();
-                    row.innerHTML = `
-                        <td data-field="nom">${pos.nom}</td>
-                        <td data-field="description">${pos.description}</td>
-                        <td data-field="categorie" data-value="${pos.categorie}" class="text-capitalize">${categorieDisplay}</td>
-                        <td>
-                            <button class="btn btn-sm btn-primary" onclick="editPosition(this)">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button class="btn btn-sm btn-danger" onclick="deletePosition(${pos.id})">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </td>
-                    `;
-                    positionsListBody.appendChild(row);
-                });
-            } catch (error) {
-                console.error("Erreur lors du chargement des positions:", error);
-                positionsListBody.innerHTML = '<tr><td colspan="4" class="text-danger">Erreur de chargement.</td></tr>';
-            }
-        };
-        configModalEl.addEventListener('show.bs.modal', loadPositions);
-        configModalEl.addEventListener('hidden.bs.modal', () => location.reload());
-        addPositionForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const nom = document.getElementById('new-pos-nom').value;
-            const description = document.getElementById('new-pos-desc').value;
-            const categorie = document.getElementById('new-pos-cat').value;
-            if (!nom || !categorie) { alert('Le nom et la catégorie sont obligatoires.'); return; }
-            await fetch(`/api/centre/{{ centre.id }}/positions/add/`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-                body: JSON.stringify({ nom, description, categorie })
-            });
-            addPositionForm.reset();
-            loadPositions();
-        });
-    }
-// --- LOGIQUE POUR LE BOUTON DE VALIDATION (VERSION FINALE) ---
-    const validateBtn = document.getElementById('validate-planning-btn');
-    if (validateBtn) {
-        validateBtn.addEventListener('click', function() {
-            if (confirm("Êtes-vous sûr de vouloir valider (ou mettre à jour) la version actuelle de ce planning ?")) {
-                
-                // On récupère les données directement depuis le contexte Django, c'est 100% fiable.
-                const centreId = '{{ centre.id }}';
-                const year = '{{ current_year }}';
-                const month = '{{ current_month }}';
-
-                const validationUrl = `/planning/centre/${centreId}/${year}/${month}/valider/`;
-
-                fetch(validationUrl, {
-                    method: 'POST',
-                    headers: { 'X-CSRFToken': csrfToken }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'ok') {
-                        alert(data.message);
-                    } else {
-                        alert("Une erreur est survenue : " + data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error("Erreur critique lors de la validation:", error);
-                    alert("Une erreur critique de communication avec le serveur est survenue.");
-                });
-            }
-        });
-    }
-});;
-
-function editPosition(button) {
-    const row = button.closest('tr');
-    const nomCell = row.querySelector('[data-field="nom"]');
-    const descCell = row.querySelector('[data-field="description"]');
-    const catCell = row.querySelector('[data-field="categorie"]');
-    const nomValue = nomCell.textContent;
-    const descValue = descCell.textContent;
-    const catValue = catCell.dataset.value;
-    nomCell.innerHTML = `<input type="text" class="form-control form-control-sm" value="${nomValue}">`;
-    descCell.innerHTML = `<input type="text" class="form-control form-control-sm" value="${descValue}">`;
-    catCell.innerHTML = `<select class="form-select form-select-sm">
-        <option value="SITE" ${catValue === 'SITE' ? 'selected' : ''}>Travail sur site</option>
-        <option value="HORS_SITE" ${catValue === 'HORS_SITE' ? 'selected' : ''}>Travail hors site</option>
-        <option value="NON_TRAVAIL" ${catValue === 'NON_TRAVAIL' ? 'selected' : ''}>Non travail</option>
-    </select>`;
-    button.innerHTML = '<i class="bi bi-check-lg"></i>';
-    button.classList.replace('btn-primary', 'btn-success');
-    button.onclick = () => savePosition(button);
-}
-async function savePosition(button) {
-    const row = button.closest('tr');
-    const positionId = row.dataset.posId;
-    const csrfToken = '{{ csrf_token }}';
-    const nom = row.querySelector('[data-field="nom"] input').value;
-    const description = row.querySelector('[data-field="description"] input').value;
-    const categorie = row.querySelector('[data-field="categorie"] select').value;
-    await fetch(`/api/position/${positionId}/update/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-        body: JSON.stringify({ nom, description, categorie })
-    });
-    const configModalEl = document.getElementById('config-positions-modal');
-    const event = new Event('show.bs.modal');
-    configModalEl.dispatchEvent(event);
-}
-function deletePosition(positionId) {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cette position ?')) {
-        fetch(`/api/position/${positionId}/delete/`, {
-            method: 'POST',
-            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
-        }).then(() => {
-            const configModalEl = document.getElementById('config-positions-modal');
-            const event = new Event('show.bs.modal');
-            configModalEl.dispatchEvent(event);
-        });
-    }
-}
-</script>
+{# On charge notre fichier JS externe qui contient toute la logique de l'application #}
+<script src="{% static 'js/tour_de_service.js' %}"></script>
 {% endblock scripts %}
