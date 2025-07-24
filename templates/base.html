@@ -1,6 +1,6 @@
 {% comment %}
     Fichier : templates/base.html
-    (VERSION AVEC LE NOUVEAU BOUTON TOUR DE SERVICE)
+    (VERSION CORRIGÉE AVEC LE BON NOM D'URL POUR LA FEUILLE DE TEMPS)
 {% endcomment %}
 
 {% load static %}
@@ -35,30 +35,40 @@
                     </div>
     
                     <ul class="list-unstyled components">
-                        {% if effective_perms.core.view_agent %}
+                        {# --- SECTION OPÉRATIONNELLE --- #}
+                        {% if perms.core.view_agent %}
                             <li><a href="{% url 'liste-agents' %}"><i class="bi bi-people-fill"></i>Agents</a></li>
                         {% endif %}
-                        <li><a href="#"><i class="bi bi-mortarboard-fill"></i>Modules de Formation</a></li>
-                        <li><a href="#"><i class="bi bi-card-checklist"></i>Licences</a></li>
-
-                        {# --- NOUVEAU BOUTON AJOUTÉ ICI --- #}
-                        {# On affiche le lien si l'utilisateur est un agent (ou un superuser) #}
-                        {% if user.agent_profile or user.is_staff %}
+                        
+                        {% if perms.core.view_tourdeservice %}
                             <li><a href="{% url 'selecteur-centre' %}"><i class="bi bi-calendar-week"></i>Tour de Service</a></li>
                         {% endif %}
-                        {# --- FIN DE L'AJOUT --- #}
-
+                        
+                        {# ========================================================== #}
+                        {# CORRECTION : On utilise le bon nom d'URL 'feuille-temps-jour' #}
+                        {# ========================================================== #}
+                        {% if perms.core.view_feuilletemps %}
+                            {% if user.agent_profile.centre %}
+                                <li><a href="{% url 'feuille-temps-jour' user.agent_profile.centre.id %}"><i class="bi bi-clock-fill"></i>Feuille de Temps</a></li>
+                            {% endif %}
+                        {% endif %}
+                        
+                        <li><a href="#"><i class="bi bi-mortarboard-fill"></i>Modules de Formation</a></li>
+                        <li><a href="#"><i class="bi bi-card-checklist"></i>Licences</a></li>
+                        
                         <hr>
-                        {% if effective_perms.core.view_role %}
+                        
+                        {# --- SECTION ADMINISTRATION --- #}
+                        {% if perms.auth.view_user or perms.core.view_role %}
                         <li>
                             <a href="#adminSubmenu" data-bs-toggle="collapse" aria-expanded="false" class="dropdown-toggle">
                                 <i class="bi bi-gear-fill"></i>Administration
                             </a>
                             <ul class="collapse list-unstyled" id="adminSubmenu">
-                                {% if effective_perms.auth.view_user %}
+                                {% if perms.auth.view_user %}
                                     <li><a href="#" class="ps-4">Gestion Utilisateurs</a></li>
                                 {% endif %}
-                                {% if effective_perms.core.view_parametre %}
+                                {% if perms.core.view_parametre %}
                                     <li><a href="#" class="ps-4">Paramètres</a></li>
                                 {% endif %}
                             </ul>

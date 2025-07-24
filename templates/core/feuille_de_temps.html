@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Feuille de Temps - {{ centre.code_centre }}{% endblock %}
+
+{% block page_specific_styles %}
+<link rel="stylesheet" href="{% static 'css/feuille_temps.css' %}">
+{% endblock %}
+
+{% block content %}
+<div id="feuille-temps-container" 
+    data-centre-id="{{ centre.id }}" 
+    data-jour-str="{{ jour_str }}" 
+    data-can-edit="{{ user_can_edit|yesno:'true,false' }}"
+    data-est-cloturee="{{ est_cloturee|yesno:'true,false' }}"
+    data-can-reouvrir="{{ user_can_reouvrir|yesno:'true,false' }}"
+    data-csrf-token="{{ csrf_token }}"
+    class="container-fluid mt-4">
+
+    <!-- Zone de navigation et de statut -->
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+        <h3 class="mb-0">Feuille de Temps du {{ date_jour|date:"d F Y" }} - [{{ centre.code_centre }}]</h3>
+        <div class="ms-auto d-flex align-items-center">
+            <div class="btn-group me-3">
+                <a href="{{ jour_precedent_url }}" class="btn btn-outline-secondary">« Jour Précédent</a>
+                {% if jour_suivant_url %}
+                <a href="{{ jour_suivant_url }}" class="btn btn-outline-secondary">Jour Suivant »</a>
+                {% else %}
+                <a href="#" class="btn btn-outline-secondary disabled" aria-disabled="true">Jour Suivant »</a>
+                {% endif %}
+            </div>
+            <div>
+                {% if not est_cloturee and user_can_edit %}
+                    <button id="cloture-btn" class="btn btn-success">✔️ Clôturer la journée</button>
+                {% endif %}
+                {% if est_cloturee and user_can_reouvrir %}
+                    <button id="reouvrir-btn" class="btn btn-warning">🔄 Rouvrir la journée</button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    {% if est_cloturee %}
+        <div class="alert alert-info text-center">Cette journée a été clôturée et n'est plus modifiable.</div>
+    {% endif %}
+
+    {% if verrou_par %}
+    <div class="alert alert-warning">
+        <h4 class="alert-heading">Accès en lecture seule</h4>
+        <p>Le contrôle de la feuille de temps est actuellement pris par <strong>{{ verrou_par.trigram }}</strong>. Vous ne pouvez pas modifier les heures.</p>
+        <button id="force-verrou-btn" class="btn btn-danger">Forcer la prise de main</button>
+    </div>
+    {% endif %}
+
+    <div id="loader" class="text-center p-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Chargement...</span>
+        </div>
+        <p class="mt-2">Chargement des données du jour...</p>
+    </div>
+
+    <div id="error-message" class="alert alert-danger" style="display:none;"></div>
+    
+    <div class="table-responsive">
+        <table class="table table-sm table-bordered table-striped align-middle" id="feuille-temps-table" style="display:none;">
+            <thead class="thead-light">
+                <tr>
+                    <th style="width: 10%;">Trigramme</th>
+                    <th style="width: 15%;" class="text-center">Position Matin</th>
+                    <th style="width: 15%;" class="text-center">Position Après-midi</th>
+                    <th style="width: 25%;">Commentaire TDS</th>
+                    <th style="width: 12%;">Heure Arrivée</th>
+                    <th style="width: 12%;">Heure Départ</th>
+                    <th style="width: 6%;">Alertes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Les lignes seront générées ici par le JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modale de Confirmation pour les vacations de nuit -->
+<div class="modal fade" id="confirmation-nuit-modal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Heure de départ invalide ou vacation de nuit ?</h5>
+            </div>
+            <div class="modal-body">
+                <p>L'heure de départ saisie (<strong id="modal-heure-depart"></strong>) est antérieure à l'heure d'arrivée (<strong id="modal-heure-arrivee"></strong>).</p>
+                <p>Veuillez confirmer la situation :</p>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <button type="button" class="btn btn-primary" id="modal-btn-corriger">C'est une erreur, je corrige</button>
+                <button type="button" class="btn btn-secondary" id="modal-btn-confirmer-nuit">Confirmer le départ au lendemain (J+1)</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modale de Récapitulatif avant clôture -->
+<div class="modal fade" id="recap-cloture-modal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="recap-cloture-modal-title">Récapitulatif avant clôture</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Veuillez vérifier les durées de travail calculées avant de clôturer définitivement la journée.</p>
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>Trigramme</th>
+                            <th>Heures Saisies (Arrivée - Départ)</th>
+                            <th>Durée Calculée</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recap-cloture-table-body">
+                        <!-- Le contenu sera généré par le JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-success" id="modal-btn-confirmer-cloture">Confirmer et Clôturer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script src="{% static 'js/feuille_temps.js' %}"></script>
+{% endblock %}

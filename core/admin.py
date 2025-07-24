@@ -1,4 +1,4 @@
-# Fichier : core/admin.py (VERSION STABLE COMPLÈTE - FIN ÉTAPE 4)
+# Fichier : core/admin.py (VERSION COMPLÈTE ET MISE À JOUR)
 
 from django.contrib import admin
 from .models import (
@@ -7,7 +7,7 @@ from .models import (
     Formation, Evaluation, Habilitation, Affectation,
     # Section II: Vols
     Client, Vol, ControleVol, AuditHeuresControle,
-    # Section III: Paramétrage (sans Delegation)
+    # Section III: Paramétrage
     Parametre, ValeurParametre, Role, AgentRole, Delegation,
     # Section IV: Documentaire
     DocumentType, Document, DocumentVersion, SignatureCircuit,
@@ -18,7 +18,12 @@ from .models import (
     ResponsableQSCentral, EvenementQS, RecommendationQS, ActionQS, 
     AuditQS, EvaluationRisqueQS, NotificationQS,
     # Section VII : TDS
-    PositionJour, TourDeService, TourDeServiceHistorique,VersionTourDeService,
+    PositionJour, TourDeService, TourDeServiceHistorique, VersionTourDeService,
+    
+    # ==========================================================================
+    # IMPORTATION DES NOUVEAUX MODÈLES
+    # ==========================================================================
+    FeuilleTempsEntree, FeuilleTempsVerrou, FeuilleTempsCloture
 )
 
 # ==============================================================================
@@ -65,20 +70,14 @@ class ModuleAdmin(admin.ModelAdmin):
     list_filter = ('module_type', 'module')
     search_fields = ('sujet', 'item', 'precisions')
 
-@admin.register(Qualification)
-class QualificationAdmin(admin.ModelAdmin): pass
-@admin.register(Mention)
-class MentionAdmin(admin.ModelAdmin): pass
-@admin.register(CertificatMed)
-class CertificatMedAdmin(admin.ModelAdmin): pass
-@admin.register(Organisme)
-class OrganismeAdmin(admin.ModelAdmin): pass
-@admin.register(Evaluation)
-class EvaluationAdmin(admin.ModelAdmin): pass
-@admin.register(Habilitation)
-class HabilitationAdmin(admin.ModelAdmin): pass
-@admin.register(Affectation)
-class AffectationAdmin(admin.ModelAdmin): pass
+# Enregistrement simple pour les autres modèles de la section
+admin.site.register(Qualification)
+admin.site.register(Mention)
+admin.site.register(CertificatMed)
+admin.site.register(Organisme)
+admin.site.register(Evaluation)
+admin.site.register(Habilitation)
+admin.site.register(Affectation)
 
 # ==============================================================================
 # SECTION II : GESTION DES VOLS
@@ -96,19 +95,15 @@ class ClientAdmin(admin.ModelAdmin):
     list_display = ('nom', 'contact', 'email')
     search_fields = ('nom', 'contact', 'email')
 
-@admin.register(ControleVol)
-class ControleVolAdmin(admin.ModelAdmin): pass
-@admin.register(AuditHeuresControle)
-class AuditHeuresControleAdmin(admin.ModelAdmin): pass
+admin.site.register(ControleVol)
+admin.site.register(AuditHeuresControle)
 
 # ==============================================================================
 # SECTION III : PARAMETRAGE DYNAMIQUE ET GESTION DES ROLES
 # ==============================================================================
 
-@admin.register(Parametre)
-class ParametreAdmin(admin.ModelAdmin): pass
-@admin.register(ValeurParametre)
-class ValeurParametreAdmin(admin.ModelAdmin): pass
+admin.site.register(Parametre)
+admin.site.register(ValeurParametre)
 
 @admin.register(Role)
 class RoleAdmin(admin.ModelAdmin):
@@ -141,12 +136,9 @@ class DocumentAdmin(admin.ModelAdmin):
     list_filter = ('type_document', 'est_archive', 'centres_visibles')
     search_fields = ('titre', 'reference', 'description')
 
-@admin.register(DocumentType)
-class DocumentTypeAdmin(admin.ModelAdmin): pass
-@admin.register(DocumentVersion)
-class DocumentVersionAdmin(admin.ModelAdmin): pass
-@admin.register(SignatureCircuit)
-class SignatureCircuitAdmin(admin.ModelAdmin): pass
+admin.site.register(DocumentType)
+admin.site.register(DocumentVersion)
+admin.site.register(SignatureCircuit)
 
 # ==============================================================================
 # SECTION V : GESTION DU CHANGEMENT ET MRR
@@ -158,20 +150,13 @@ class MRRAdmin(admin.ModelAdmin):
     list_filter = ('statut',)
     search_fields = ('intitule',)
 
-@admin.register(CentreRole)
-class CentreRoleAdmin(admin.ModelAdmin): pass
-@admin.register(ResponsableSMS)
-class ResponsableSMSAdmin(admin.ModelAdmin): pass
-@admin.register(MRRSignataire)
-class MRRSignataireAdmin(admin.ModelAdmin): pass
-@admin.register(MRRProgression)
-class MRRProgressionAdmin(admin.ModelAdmin): pass
-@admin.register(Changement)
-class ChangementAdmin(admin.ModelAdmin): pass
-@admin.register(Action)
-class ActionAdmin(admin.ModelAdmin): pass
-@admin.register(Notification)
-class NotificationAdmin(admin.ModelAdmin): pass
+admin.site.register(CentreRole)
+admin.site.register(ResponsableSMS)
+admin.site.register(MRRSignataire)
+admin.site.register(MRRProgression)
+admin.site.register(Changement)
+admin.site.register(Action)
+admin.site.register(Notification)
 
 # ==============================================================================
 # SECTION VI : QUALITE/SECURITE DES VOLS (QS/SMS)
@@ -183,18 +168,12 @@ class EvenementQSAdmin(admin.ModelAdmin):
     list_filter = ('statut', 'niveau_gravite', 'centre')
     search_fields = ('description', 'analyse', 'rapporteur__trigram')
 
-@admin.register(ResponsableQSCentral)
-class ResponsableQSCentralAdmin(admin.ModelAdmin): pass
-@admin.register(RecommendationQS)
-class RecommendationQSAdmin(admin.ModelAdmin): pass
-@admin.register(ActionQS)
-class ActionQSAdmin(admin.ModelAdmin): pass
-@admin.register(AuditQS)
-class AuditQSAdmin(admin.ModelAdmin): pass
-@admin.register(EvaluationRisqueQS)
-class EvaluationRisqueQSAdmin(admin.ModelAdmin): pass
-@admin.register(NotificationQS)
-class NotificationQSAdmin(admin.ModelAdmin): pass
+admin.site.register(ResponsableQSCentral)
+admin.site.register(RecommendationQS)
+admin.site.register(ActionQS)
+admin.site.register(AuditQS)
+admin.site.register(EvaluationRisqueQS)
+admin.site.register(NotificationQS)
 
 # ==============================================================================
 # SECTION VII : TDS
@@ -218,24 +197,44 @@ class TourDeServiceAdmin(admin.ModelAdmin):
 class TourDeServiceHistoriqueAdmin(admin.ModelAdmin):
     list_display = ('date', 'agent', 'type_modification', 'modifie_par', 'modifie_le')
     list_filter = ('type_modification', 'date')
-    
-    # Sécurité : On empêche la modification manuelle de l'historique
-    def has_add_permission(self, request):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
+    def has_add_permission(self, request): return False
+    def has_change_permission(self, request, obj=None): return False
+    def has_delete_permission(self, request, obj=None): return False
 
 @admin.register(VersionTourDeService)
 class VersionTourDeServiceAdmin(admin.ModelAdmin):
     list_display = ('__str__', 'valide_par', 'date_validation')
     list_filter = ('centre', 'annee', 'mois', 'valide_par')
     readonly_fields = ('centre', 'annee', 'mois', 'valide_par', 'date_validation', 'donnees_planning')
+    def has_add_permission(self, request): return False
+    def has_change_permission(self, request, obj=None): return False
+
+# ==============================================================================
+# SECTION VIII : GESTION DES FEUILLES DE TEMPS
+# ==============================================================================
+
+@admin.register(FeuilleTempsEntree)
+class FeuilleTempsEntreeAdmin(admin.ModelAdmin):
+    """ Améliore l'affichage des entrées de feuille de temps dans l'admin. """
+    list_display = ('agent', 'date_jour', 'heure_arrivee', 'heure_depart', 'modifie_par', 'modifie_le')
+    list_filter = ('date_jour', 'agent__centre')
+    search_fields = ('agent__trigram', 'agent__nom')
+    date_hierarchy = 'date_jour'
+    readonly_fields = ('modifie_le',)
+
+@admin.register(FeuilleTempsVerrou)
+class FeuilleTempsVerrouAdmin(admin.ModelAdmin):
+    """ Permet de voir et de supprimer manuellement les verrous si nécessaire. """
+    list_display = ('centre', 'chef_de_quart', 'verrouille_a')
+    actions = ['supprimer_verrous_selectionnes']
     
-    def has_add_permission(self, request):
-        return False
-    def has_change_permission(self, request, obj=None):
-        return False
+    def supprimer_verrous_selectionnes(self, request, queryset):
+        queryset.delete()
+    supprimer_verrous_selectionnes.short_description = "Supprimer les verrous sélectionnés"
+
+@admin.register(FeuilleTempsCloture)
+class FeuilleTempsClotureAdmin(admin.ModelAdmin):
+    """ Permet de visualiser les clôtures. """
+    list_display = ('date_jour', 'centre', 'cloture_par', 'cloture_le', 'reouverte_par')
+    list_filter = ('centre', 'date_jour')
+    readonly_fields = ('cloture_par', 'cloture_le', 'reouverte_par', 'reouverte_le')
