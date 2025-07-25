@@ -1,10 +1,7 @@
-# ==============================================================================
-# Fichier : core/urls.py (VERSION REFACTORISÉE FINALE)
-# ==============================================================================
+# Fichier : core/urls.py
 
 from django.urls import path
-# On importe maintenant nos modules de vues spécifiques
-from .views import general, planning, feuille_temps
+from .views import general, planning, feuille_temps, cahier_de_marche
 
 urlpatterns = [
     # --- Vues Générales ---
@@ -39,4 +36,9 @@ urlpatterns = [
     path('api/feuille-temps/verrou/forcer/', feuille_temps.api_forcer_verrou, name='api-forcer-verrou'),
     path('api/feuille-temps/cloturer/', feuille_temps.api_cloturer_journee, name='api-cloturer-journee'),
     path('api/feuille-temps/reouvrir/', feuille_temps.api_reouvrir_journee, name='api-reouvrir-journee'),
+    
+    # --- Cahier de Marche ---
+    path('cahier-de-marche/centre/<int:centre_id>/<str:jour>/', cahier_de_marche.cahier_de_marche_view, name='cahier-de-marche'),
+    path('cahier-de-marche/centre/<int:centre_id>/panne/ajouter/', cahier_de_marche.ajouter_panne_view, name='ajouter-panne'),
+    path('cahier-de-marche/centre/<int:centre_id>/evenement/ajouter/', cahier_de_marche.ajouter_evenement_view, name='ajouter-evenement'),
 ]

@@ -9,3 +9,7 @@ from .mrr import CentreRole, ResponsableSMS, MRR, MRRSignataire, MRRProgression,
 from .qualite import ResponsableQSCentral, EvenementQS, RecommendationQS, ActionQS, AuditQS, EvaluationRisqueQS, NotificationQS
 from .planning import PositionJour, TourDeService, TourDeServiceHistorique, VersionTourDeService
 from .feuille_temps import FeuilleTempsEntree, FeuilleTempsVerrou, FeuilleTempsCloture
+
+# Importation des nouveaux modèles séparés
+from .panne import PanneCentre
+from .evenement import CategorieEvenement, EvenementCentre

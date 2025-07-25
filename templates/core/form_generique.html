@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% comment %}
+    Fichier : templates/core/form_generique.html
+    Auteur : Gemini pour GIRREX
+    Date de mise à jour : 25/07/2025
+    Description : 
+    Template réutilisable pour l'affichage de formulaires simples.
+    Il utilise la librairie `django-crispy-forms` pour un rendu propre et rapide
+    des champs de formulaire avec le style Bootstrap.
+
+    Variables requises dans le contexte de la vue :
+    - `form` : L'instance du formulaire Django à afficher.
+    - `titre` : Le titre à afficher en haut de la page et dans la carte.
+    - `centre` : L'objet Centre concerné, pour l'affichage dans l'en-tête.
+{% endcomment %}
+
+{# Chargement de la librairie de tags pour crispy-forms #}
+{% load crispy_forms_tags %}
+
+{# Le titre de la page (onglet du navigateur) est dynamique #}
+{% block title %}{{ titre }} - GIRREX{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        {# On centre le formulaire à l'écran #}
+        <div class="col-md-8 offset-md-2">
+            
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    {# Le titre de la carte est dynamique et affiche le nom du centre #}
+                    <h4>{{ titre }} - {{ centre.nom_centre }}</h4>
+                </div>
+                <div class="card-body">
+                    {# Le formulaire est envoyé avec la méthode POST. `novalidate` empêche la validation HTML5 #}
+                    {# par défaut pour laisser Django gérer entièrement la validation. #}
+                    <form method="post" novalidate>
+                        
+                        {# Le token CSRF est une sécurité essentielle de Django contre les attaques Cross-Site Request Forgery. #}
+                        {% csrf_token %}
+                        
+                        {# La magie de Crispy Forms : le tag `|crispy` transforme l'objet formulaire Django #}
+                        {# en un HTML propre, structuré avec des `div`, des `label`, des `input` et des messages d'aide. #}
+                        {{ form|crispy }}
+                        
+                        <div class="d-flex justify-content-end mt-4">
+                            {# Bouton "Annuler" qui utilise l'historique du navigateur pour revenir à la page précédente. #}
+                            {# `request.META.HTTP_REFERER` contient l'URL de la page d'où vient l'utilisateur. #}
+                            <a href="{{ request.META.HTTP_REFERER|escape }}" class="btn btn-secondary me-2">Annuler</a>
+                            
+                            {# Le bouton de soumission principal du formulaire. #}
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-2"></i>Enregistrer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

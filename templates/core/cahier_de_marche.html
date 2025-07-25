@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Cahier de Marche - {{ centre.code_centre }} - {{ jour_selectionne|date:"d/m/Y" }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Cahier de Marche - {{ centre.nom_centre }}</h2>
+        <h4>{{ jour_selectionne|date:"l d F Y" }}</h4>
+    </div>
+
+    <!-- Le sélecteur de date ne change pas -->
+    <form class="form-inline mb-4" method="get" action="{% url 'cahier-de-marche' centre_id=centre.id jour='__DATE__' %}">
+        <label for="date-selector" class="me-2">Changer de jour :</label>
+        <input type="date" id="date-selector" class="form-control" value="{{ jour_selectionne|date:'Y-m-d' }}">
+        <script>
+            document.getElementById('date-selector').addEventListener('change', function() {
+                let newDate = this.value;
+                if (newDate) {
+                    let url = "{% url 'cahier-de-marche' centre_id=centre.id jour='__DATE__' %}".replace('__DATE__', newDate);
+                    window.location.href = url;
+                }
+            });
+        </script>
+    </form>
+
+    <div class="row">
+        <!-- Colonne de gauche pour les pannes et événements -->
+        <div class="col-lg-8">
+            
+            <!-- SECTION PANNES -->
+            <h3 class="h4 mb-3"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Pannes</h3>
+            <div class="list-group mb-4">
+                {% for panne in pannes %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">{{ panne.equipement_concerne }}</h5>
+                            <small>
+                                {% if panne.statut == 'EN_COURS' %}
+                                    <span class="badge bg-danger">En cours</span>
+                                {% else %}
+                                    <span class="badge bg-success">Résolue</span>
+                                {% endif %}
+                            </small>
+                        </div>
+                        <p class="mb-1">{{ panne.description }}</p>
+                        <small class="text-muted">Début : {{ panne.date_heure_debut|date:"d/m/Y H:i" }} | Par : {{ panne.auteur }}</small>
+                    </div>
+                {% empty %}
+                    <div class="list-group-item text-muted">Aucune panne active pour ce jour.</div>
+                {% endfor %}
+            </div>
+
+            <!-- SECTION ÉVÉNEMENTS -->
+            <h3 class="h4 mb-3"><i class="bi bi-info-circle-fill text-primary me-2"></i>Événements</h3>
+            <div class="list-group mb-4">
+                {% for evt in evenements %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">{{ evt.titre }}</h5>
+                            <small class="text-muted">{{ evt.date_heure_evenement|date:"H:i" }}</small>
+                        </div>
+                        <p class="mb-1">{{ evt.description }}</p>
+                        <small class="text-muted">Catégorie : {{ evt.categorie.nom }} | Par : {{ evt.auteur }}</small>
+                    </div>
+                {% empty %}
+                     <div class="list-group-item text-muted">Aucun événement consigné pour ce jour.</div>
+                {% endfor %}
+            </div>
+
+        </div>
+
+        <!-- Colonne de droite pour les mouvements -->
+        <div class="col-lg-4">
+            
+            <!-- SECTION MOUVEMENTS DU PERSONNEL -->
+            <h3 class="h4 mb-3"><i class="bi bi-people-fill me-2"></i>Mouvements</h3>
+            <ul class="list-group">
+                {% for mouvement in mouvements %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            {% if mouvement.type == 'arrivee' %}
+                                <i class="bi bi-box-arrow-in-right text-success me-2"></i>
+                            {% else %}
+                                <i class="bi bi-box-arrow-left text-danger me-2"></i>
+                            {% endif %}
+                            {{ mouvement.agent }}
+                        </div>
+                        <span class="badge bg-secondary rounded-pill">{{ mouvement.timestamp|date:"H:i" }}</span>
+                    </li>
+                {% empty %}
+                    <li class="list-group-item text-muted">Aucun pointage pour ce jour.</li>
+                {% endfor %}
+            </ul>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

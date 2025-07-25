@@ -1,4 +1,4 @@
-# Fichier : core/admin.py (VERSION COMPLÈTE ET MISE À JOUR)
+# Fichier : core/admin.py
 
 from django.contrib import admin
 from .models import (
@@ -19,11 +19,13 @@ from .models import (
     AuditQS, EvaluationRisqueQS, NotificationQS,
     # Section VII : TDS
     PositionJour, TourDeService, TourDeServiceHistorique, VersionTourDeService,
-    
-    # ==========================================================================
-    # IMPORTATION DES NOUVEAUX MODÈLES
-    # ==========================================================================
-    FeuilleTempsEntree, FeuilleTempsVerrou, FeuilleTempsCloture
+    # SECTION VIII : GESTION DES FEUILLES DE TEMPS
+    FeuilleTempsEntree, FeuilleTempsVerrou, FeuilleTempsCloture,
+
+    # Importation des nouveaux modèles depuis leurs fichiers dédiés
+    PanneCentre,
+    CategorieEvenement,
+    EvenementCentre
 )
 
 # ==============================================================================
@@ -70,7 +72,6 @@ class ModuleAdmin(admin.ModelAdmin):
     list_filter = ('module_type', 'module')
     search_fields = ('sujet', 'item', 'precisions')
 
-# Enregistrement simple pour les autres modèles de la section
 admin.site.register(Qualification)
 admin.site.register(Mention)
 admin.site.register(CertificatMed)
@@ -238,3 +239,29 @@ class FeuilleTempsClotureAdmin(admin.ModelAdmin):
     list_display = ('date_jour', 'centre', 'cloture_par', 'cloture_le', 'reouverte_par')
     list_filter = ('centre', 'date_jour')
     readonly_fields = ('cloture_par', 'cloture_le', 'reouverte_par', 'reouverte_le')
+
+# ==============================================================================
+# SECTION IX : ACTIVITÉ DU CENTRE
+# ==============================================================================
+
+@admin.register(PanneCentre)
+class PanneCentreAdmin(admin.ModelAdmin):
+    list_display = ('date_heure_debut', 'equipement_concerne', 'criticite', 'statut', 'centre', 'auteur', 'notification_generale')
+    list_filter = ('centre', 'criticite', 'statut', 'date_heure_debut')
+    search_fields = ('equipement_concerne', 'description', 'auteur__trigram')
+    autocomplete_fields = ['centre', 'auteur']
+    date_hierarchy = 'date_heure_debut'
+
+@admin.register(CategorieEvenement)
+class CategorieEvenementAdmin(admin.ModelAdmin):
+    list_display = ('nom', 'centre', 'couleur')
+    list_filter = ('centre',)
+    search_fields = ('nom', 'description')
+
+@admin.register(EvenementCentre)
+class EvenementCentreAdmin(admin.ModelAdmin):
+    list_display = ('date_heure_evenement', 'titre', 'categorie', 'centre', 'auteur', 'notification_generale')
+    list_filter = ('centre', 'categorie', 'date_heure_evenement')
+    search_fields = ('titre', 'description', 'auteur__trigram')
+    autocomplete_fields = ['centre', 'auteur', 'categorie']
+    date_hierarchy = 'date_heure_evenement'

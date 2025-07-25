@@ -1,6 +1,13 @@
 {% comment %}
     Fichier : templates/base.html
-    (VERSION CORRIGÉE AVEC LE BON NOM D'URL POUR LA FEUILLE DE TEMPS)
+    Auteur : Gemini pour GIRREX
+    Date de mise à jour : 25/07/2025
+    Description : 
+    Template de base de l'application GIRREX. Il définit la structure globale de toutes les pages,
+    incluant la barre de navigation latérale (sidebar) et la zone de contenu principal.
+
+    Cette version intègre le menu extensible "Cahier de Marche" avec une icône de chevron
+    pour indiquer l'interactivité.
 {% endcomment %}
 
 {% load static %}
@@ -15,6 +22,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
     
     {% block page_specific_styles %}{% endblock %}
@@ -36,22 +44,62 @@
     
                     <ul class="list-unstyled components">
                         {# --- SECTION OPÉRATIONNELLE --- #}
-                        {% if perms.core.view_agent %}
+                        {% if effective_perms.core.view_agent %}
                             <li><a href="{% url 'liste-agents' %}"><i class="bi bi-people-fill"></i>Agents</a></li>
                         {% endif %}
                         
-                        {% if perms.core.view_tourdeservice %}
+                        {% if effective_perms.core.view_tourdeservice %}
                             <li><a href="{% url 'selecteur-centre' %}"><i class="bi bi-calendar-week"></i>Tour de Service</a></li>
                         {% endif %}
                         
-                        {# ========================================================== #}
-                        {# CORRECTION : On utilise le bon nom d'URL 'feuille-temps-jour' #}
-                        {# ========================================================== #}
-                        {% if perms.core.view_feuilletemps %}
-                            {% if user.agent_profile.centre %}
-                                <li><a href="{% url 'feuille-temps-jour' user.agent_profile.centre.id %}"><i class="bi bi-clock-fill"></i>Feuille de Temps</a></li>
-                            {% endif %}
+                        
+                        {# =================================================================================== #}
+                        {# == DEBUT : BLOC DU NOUVEAU MENU EXTENSIBLE "CAHIER DE MARCHE"                     == #}
+                        {# =================================================================================== #}
+                        
+                        {% if effective_perms.core.view_feuilletemps and centre_agent %}
+                        <li class="nav-item">
+                            
+                            {# MODIFICATION : Le lien est transformé en conteneur Flexbox pour bien aligner les éléments. #}
+                            {# - `d-flex` : active le mode Flexbox.                                                  #}
+                            {# - `justify-content-between` : pousse les éléments enfants aux extrémités (gauche/droite). #}
+                            {# - `align-items-center` : centre verticalement les éléments.                             #}
+                            <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#collapseCahierDeMarche" data-bs-toggle="collapse" aria-expanded="false">
+                                
+                                {# Ce div regroupe l'icône principale et le texte pour qu'ils restent ensemble à gauche. #}
+                                <div>
+                                    <i class="bi bi-book"></i>
+                                    <span>Cahier de Marche</span>
+                                </div>
+                                
+                                {# NOUVEAU : L'icône de chevron qui indique que le menu est cliquable. #}
+                                {# La classe `sidebar-chevron` sera utilisée par notre CSS pour la faire pivoter. #}
+                                <i class="bi bi-chevron-right sidebar-chevron"></i>
+                            </a>
+                            
+                            <ul class="collapse list-unstyled" id="collapseCahierDeMarche">
+                                <li class="sidebar-submenu-header">Saisie & Modification</li>
+
+                                {% if verrou_operationnel and verrou_operationnel.chef_de_quart == request.user.agent_profile %}
+                                    <li><a href="{% url 'feuille-temps-specific-jour' centre_agent.id verrou_operationnel.verrouille_a|date:'Y-m-d' %}" class="ps-4">Feuille d'heure</a></li>
+                                    <li><a href="{% url 'ajouter-panne' centre_agent.id %}" class="ps-4">Signaler une Panne</a></li>
+                                    <li><a href="{% url 'ajouter-evenement' centre_agent.id %}" class="ps-4">Consigner un Événement</a></li>
+                                {% else %}
+                                    <li><span class="ps-4 disabled" title="Vous devez prendre le service pour accéder à ces fonctions.">Feuille d'heure</span></li>
+                                    <li><span class="ps-4 disabled" title="Vous devez prendre le service pour accéder à ces fonctions.">Signaler une Panne</span></li>
+                                    <li><span class="ps-4 disabled" title="Vous devez prendre le service pour accéder à ces fonctions.">Consigner un Événement</span></li>
+                                {% endif %}
+                                
+                                <li class="sidebar-submenu-header">Consultation</li>
+                                
+                                <li><a href="{% url 'cahier-de-marche' centre_agent.id today|date:'Y-m-d' %}" class="ps-4">Chronologie du Jour</a></li>
+                            </ul>
+                        </li>
                         {% endif %}
+
+                        {# =================================================================================== #}
+                        {# == FIN : BLOC DU NOUVEAU MENU EXTENSIBLE "CAHIER DE MARCHE"                       == #}
+                        {# =================================================================================== #}
                         
                         <li><a href="#"><i class="bi bi-mortarboard-fill"></i>Modules de Formation</a></li>
                         <li><a href="#"><i class="bi bi-card-checklist"></i>Licences</a></li>
@@ -59,16 +107,16 @@
                         <hr>
                         
                         {# --- SECTION ADMINISTRATION --- #}
-                        {% if perms.auth.view_user or perms.core.view_role %}
+                        {% if effective_perms.auth.view_user or effective_perms.core.view_role %}
                         <li>
                             <a href="#adminSubmenu" data-bs-toggle="collapse" aria-expanded="false" class="dropdown-toggle">
                                 <i class="bi bi-gear-fill"></i>Administration
                             </a>
                             <ul class="collapse list-unstyled" id="adminSubmenu">
-                                {% if perms.auth.view_user %}
+                                {% if effective_perms.auth.view_user %}
                                     <li><a href="#" class="ps-4">Gestion Utilisateurs</a></li>
                                 {% endif %}
-                                {% if perms.core.view_parametre %}
+                                {% if effective_perms.core.view_parametre %}
                                     <li><a href="#" class="ps-4">Paramètres</a></li>
                                 {% endif %}
                             </ul>
@@ -101,7 +149,6 @@
         {% block content %}{% endblock %}
     </div>
 </div>
-
 
 {% if user.is_authenticated %}
 <form id="logout-form" method="post" action="{% url 'logout' %}" style="display: none;">
