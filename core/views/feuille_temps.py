@@ -5,7 +5,7 @@
 
 import json
 from datetime import date, timedelta, datetime
-
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
@@ -16,7 +16,7 @@ from django.views.decorators.http import require_POST
 # On utilise un import relatif pour accéder aux modules de la même application
 from ..models import (
     Agent, Centre, FeuilleTempsEntree, FeuilleTempsVerrou, FeuilleTempsCloture,
-    PositionJour, VersionTourDeService
+    PositionJour, VersionTourDeService, ServiceJournalier
 )
 from ..services import verifier_regles_horaires
 
@@ -194,3 +194,51 @@ def api_reouvrir_journee(request):
     cloture.reouverte_le = timezone.now()
     cloture.save()
     return JsonResponse({'status': 'ok'})
+
+@login_required
+@permission_required('core.open_close_service', raise_exception=True)
+def gerer_service_view(request, centre_id):
+    """
+    Gère l'ouverture et la clôture du service journalier via une page de confirmation.
+    """
+    centre = get_object_or_404(Centre, pk=centre_id)
+    today = date.today()
+    service = ServiceJournalier.objects.filter(centre=centre, date_jour=today).first()
+    
+    action = 'ouvrir' if not service else 'cloturer'
+    
+    if request.method == 'POST':
+        # --- CAS 1: On ouvre le service ---
+        if action == 'ouvrir':
+            ServiceJournalier.objects.create(
+                centre=centre,
+                date_jour=today,
+                cdq_ouverture=request.user.agent_profile,
+                heure_ouverture=timezone.now().time(),
+                ouvert_par=request.user,
+                statut=ServiceJournalier.StatutJournee.OUVERTE
+            )
+            messages.success(request, f"Le service pour le {today.strftime('%d/%m/%Y')} a été ouvert avec succès.")
+        
+        # --- CAS 2: On clôture le service ---
+        elif service.statut == ServiceJournalier.StatutJournee.OUVERTE:
+            service.cdq_cloture = request.user.agent_profile
+            service.heure_cloture = timezone.now().time()
+            service.cloture_par = request.user
+            service.statut = ServiceJournalier.StatutJournee.CLOTUREE
+            service.save()
+            messages.success(request, f"Le service pour le {today.strftime('%d/%m/%Y')} a été clôturé avec succès.")
+            
+        else:
+            messages.warning(request, "L'action demandée n'est pas valide (le service est peut-être déjà clôturé).")
+
+        # On redirige vers le cahier de marche du jour pour voir le résultat
+        return redirect('cahier-de-marche', centre_id=centre.id, jour=today.strftime('%Y-%m-%d'))
+
+    # Si la méthode est GET, on affiche la page de confirmation
+    context = {
+        'centre': centre,
+        'service': service,
+        'action': action
+    }
+    return render(request, 'core/gerer_service.html', context)

@@ -20,12 +20,15 @@ from .models import (
     # Section VII : TDS
     PositionJour, TourDeService, TourDeServiceHistorique, VersionTourDeService,
     # SECTION VIII : GESTION DES FEUILLES DE TEMPS
-    FeuilleTempsEntree, FeuilleTempsVerrou, FeuilleTempsCloture,
+    FeuilleTempsEntree, FeuilleTempsVerrou,
 
     # Importation des nouveaux modèles depuis leurs fichiers dédiés
     PanneCentre,
     CategorieEvenement,
-    EvenementCentre
+    EvenementCentre,
+
+    # NOUVEAU : On importe le nouveau modèle
+    ServiceJournalier
 )
 
 # ==============================================================================
@@ -233,12 +236,12 @@ class FeuilleTempsVerrouAdmin(admin.ModelAdmin):
         queryset.delete()
     supprimer_verrous_selectionnes.short_description = "Supprimer les verrous sélectionnés"
 
-@admin.register(FeuilleTempsCloture)
-class FeuilleTempsClotureAdmin(admin.ModelAdmin):
-    """ Permet de visualiser les clôtures. """
-    list_display = ('date_jour', 'centre', 'cloture_par', 'cloture_le', 'reouverte_par')
-    list_filter = ('centre', 'date_jour')
-    readonly_fields = ('cloture_par', 'cloture_le', 'reouverte_par', 'reouverte_le')
+#@admin.register(FeuilleTempsCloture)
+#class FeuilleTempsClotureAdmin(admin.ModelAdmin):
+ #   """ Permet de visualiser les clôtures. """
+  #  list_display = ('date_jour', 'centre', 'cloture_par', 'cloture_le', 'reouverte_par')
+   # list_filter = ('centre', 'date_jour')
+    #readonly_fields = ('cloture_par', 'cloture_le', 'reouverte_par', 'reouverte_le')
 
 # ==============================================================================
 # SECTION IX : ACTIVITÉ DU CENTRE
@@ -265,3 +268,14 @@ class EvenementCentreAdmin(admin.ModelAdmin):
     search_fields = ('titre', 'description', 'auteur__trigram')
     autocomplete_fields = ['centre', 'auteur', 'categorie']
     date_hierarchy = 'date_heure_evenement'
+
+# ==============================================================================
+# NOUVELLE SECTION X : GESTION DU SERVICE JOURNALIER
+# ==============================================================================
+
+@admin.register(ServiceJournalier)
+class ServiceJournalierAdmin(admin.ModelAdmin):
+    list_display = ('date_jour', 'centre', 'statut', 'cdq_ouverture', 'heure_ouverture', 'cdq_cloture', 'vise_par', 'date_visa')
+    list_filter = ('statut', 'centre', 'date_jour')
+    search_fields = ('cdq_ouverture__trigram', 'cdq_cloture__trigram', 'vise_par__username')
+    readonly_fields = ('ouvert_par', 'cloture_par', 'vise_par', 'date_visa')

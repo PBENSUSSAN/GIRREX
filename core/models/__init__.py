@@ -13,3 +13,4 @@ from .feuille_temps import FeuilleTempsEntree, FeuilleTempsVerrou, FeuilleTempsC
 # Importation des nouveaux modèles séparés
 from .panne import PanneCentre
 from .evenement import CategorieEvenement, EvenementCentre
+from .service_journalier import ServiceJournalier

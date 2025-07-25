@@ -78,6 +78,21 @@
                             </a>
                             
                             <ul class="collapse list-unstyled" id="collapseCahierDeMarche">
+                                <li class="sidebar-submenu-header">Actions du Service</li>
+                                {% if centre_agent %}
+                                    {# CAS 1 : Le service du jour est ouvert, on propose de le fermer #}
+                                    {% if service_du_jour and service_du_jour.statut == 'OUVERTE' %}
+                                        <li><a href="{% url 'gerer-service' centre_agent.id %}" class="ps-4 text-danger fw-bold"><i class="bi bi-stop-circle-fill me-1"></i>Fermer le Service</a></li>
+
+                                    {# CAS 2 : Le service n'a pas encore été ouvert, on propose de l'ouvrir #}
+                                    {% elif not service_du_jour %}
+                                        <li><a href="{% url 'gerer-service' centre_agent.id %}" class="ps-4 text-primary fw-bold"><i class="bi bi-play-circle-fill me-1"></i>Ouvrir le Service</a></li>
+            
+                                    {# CAS 3 : Le service est déjà fermé ou visé, on n'affiche rien ou un message #}
+                                    {% else %}
+                                        <li><span class="ps-4 disabled" title="Le service pour aujourd'hui est déjà clôturé.">Service Clôturé</span></li>
+                                    {% endif %}
+                                {% endif %}
                                 <li class="sidebar-submenu-header">Saisie & Modification</li>
 
                                 {% if verrou_operationnel and verrou_operationnel.chef_de_quart == request.user.agent_profile %}

@@ -28,6 +28,7 @@ urlpatterns = [
     # --- Feuille de Temps ---
     path('feuille-temps/centre/<int:centre_id>/', feuille_temps.feuille_de_temps_view, name='feuille-temps-jour'),
     path('feuille-temps/centre/<int:centre_id>/<str:jour>/', feuille_temps.feuille_de_temps_view, name='feuille-temps-specific-jour'),
+    path('service/centre/<int:centre_id>/gerer/', feuille_temps.gerer_service_view, name='gerer-service'),
     
     # --- API Feuille de Temps ---
     path('api/feuille-temps/<int:centre_id>/<str:jour>/', feuille_temps.api_get_feuille_temps_data, name='api-get-feuille-temps'),
@@ -41,4 +42,5 @@ urlpatterns = [
     path('cahier-de-marche/centre/<int:centre_id>/<str:jour>/', cahier_de_marche.cahier_de_marche_view, name='cahier-de-marche'),
     path('cahier-de-marche/centre/<int:centre_id>/panne/ajouter/', cahier_de_marche.ajouter_panne_view, name='ajouter-panne'),
     path('cahier-de-marche/centre/<int:centre_id>/evenement/ajouter/', cahier_de_marche.ajouter_evenement_view, name='ajouter-evenement'),
+    path('cahier-de-marche/centre/<int:centre_id>/panne/<int:panne_id>/resoudre/', cahier_de_marche.resoudre_panne_view, name='resoudre-panne'),
 ]

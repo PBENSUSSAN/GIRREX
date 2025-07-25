@@ -2,7 +2,7 @@
 
 from django.utils.functional import SimpleLazyObject
 from .permissions import has_effective_permission
-from .models import FeuilleTempsVerrou
+from .models import FeuilleTempsVerrou, ServiceJournalier
 from datetime import date
 
 # ==============================================================================
@@ -76,5 +76,10 @@ def girrex_global_context(request):
             # pour éviter une requête supplémentaire lors de l'accès à `verrou.chef_de_quart`.
             verrou = FeuilleTempsVerrou.objects.select_related('chef_de_quart').filter(centre=agent_centre).first()
             context_data['verrou_operationnel'] = verrou
-            
+        
+        service_du_jour = ServiceJournalier.objects.select_related('cdq_ouverture').filter(
+            centre=agent_centre, 
+            date_jour=date.today()
+        ).first()
+        context_data['service_du_jour'] = service_du_jour    
     return context_data

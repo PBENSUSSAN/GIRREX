@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if action == 'ouvrir' %}
+        Confirmation d'Ouverture du Service
+    {% else %}
+        Confirmation de Clôture du Service
+    {% endif %}
+    - GIRREX
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h4>
+                        {% if action == 'ouvrir' %}
+                            <i class="bi bi-play-circle-fill text-primary"></i> Ouvrir le Service Journalier
+                        {% else %}
+                            <i class="bi bi-stop-circle-fill text-danger"></i> Clôturer le Service Journalier
+                        {% endif %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <p><strong>Centre :</strong> {{ centre.nom_centre }}</p>
+                    <p><strong>Date :</strong> {% now "d/m/Y" %}</p>
+                    <hr>
+                    
+                    {% if action == 'ouvrir' %}
+                        <p class="lead">
+                            Vous êtes sur le point d'ouvrir le service en tant que Chef de Quart.
+                            Votre nom (<strong>{{ user.agent_profile }}</strong>) sera enregistré comme CDQ d'ouverture.
+                        </p>
+                    {% else %}
+                        <p class="lead">
+                           Vous êtes sur le point de clôturer le service.
+                           Votre nom (<strong>{{ user.agent_profile }}</strong>) sera enregistré comme CDQ de clôture.
+                        </p>
+                    {% endif %}
+                    
+                    <p>Voulez-vous confirmer cette action ?</p>
+
+                    <form method="post" class="mt-4">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-end">
+                            <a href="{{ request.META.HTTP_REFERER|escape }}" class="btn btn-secondary me-2">Annuler</a>
+                            <button type="submit" class="btn {% if action == 'ouvrir' %}btn-primary{% else %}btn-danger{% endif %}">
+                                <i class="bi bi-check-circle me-2"></i>Confirmer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
