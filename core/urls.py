@@ -25,18 +25,18 @@ urlpatterns = [
     path('api/position/<int:position_id>/delete/', planning.api_delete_position, name='api-delete-position'),
     path('planning/centre/<int:centre_id>/<int:year>/<int:month>/valider/', planning.valider_tour_de_service, name='valider-tour-de-service'), 
     
-    # --- Feuille de Temps ---
+    # --- Feuille de Temps & Service ---
     path('feuille-temps/centre/<int:centre_id>/', feuille_temps.feuille_de_temps_view, name='feuille-temps-jour'),
     path('feuille-temps/centre/<int:centre_id>/<str:jour>/', feuille_temps.feuille_de_temps_view, name='feuille-temps-specific-jour'),
-    path('service/centre/<int:centre_id>/gerer/', feuille_temps.gerer_service_view, name='gerer-service'),
+    
+    # URL CORRIGÉE ET SIMPLIFIÉE POUR LA GESTION DU SERVICE
+    path('service/centre/<int:centre_id>/<str:action>/', feuille_temps.gerer_service_view, name='gerer-service'),
     
     # --- API Feuille de Temps ---
     path('api/feuille-temps/<int:centre_id>/<str:jour>/', feuille_temps.api_get_feuille_temps_data, name='api-get-feuille-temps'),
     path('api/feuille-temps/update/', feuille_temps.api_update_feuille_temps, name='api-update-feuille-temps'),
     path('api/feuille-temps/valider-horaires/', feuille_temps.api_valider_horaires, name='api-valider-horaires'),
     path('api/feuille-temps/verrou/forcer/', feuille_temps.api_forcer_verrou, name='api-forcer-verrou'),
-    path('api/feuille-temps/cloturer/', feuille_temps.api_cloturer_journee, name='api-cloturer-journee'),
-    path('api/feuille-temps/reouvrir/', feuille_temps.api_reouvrir_journee, name='api-reouvrir-journee'),
     
     # --- Cahier de Marche ---
     path('cahier-de-marche/centre/<int:centre_id>/<str:jour>/', cahier_de_marche.cahier_de_marche_view, name='cahier-de-marche'),

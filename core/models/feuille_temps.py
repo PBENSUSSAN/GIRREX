@@ -4,8 +4,8 @@
 # ==============================================================================
 
 from django.db import models
-from django.contrib.auth.models import User
-from .rh import Agent, Centre  # Import relatif depuis le fichier rh.py du même paquet
+from django.conf import settings # NOUVEAU : Import de settings
+from .rh import Agent, Centre
 
 # ==============================================================================
 # SECTION VIII : GESTION DES FEUILLES DE TEMPS JOURNALIÈRES
@@ -18,8 +18,8 @@ class FeuilleTempsEntree(models.Model):
     heure_arrivee = models.TimeField(null=True, blank=True)
     heure_depart = models.TimeField(null=True, blank=True)
     
-    # Trace qui a fait la dernière modification et quand
-    modifie_par = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    # On garde le lien vers User ici, c'est déjà cohérent.
+    modifie_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     modifie_le = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -40,7 +40,7 @@ class FeuilleTempsEntree(models.Model):
 class FeuilleTempsVerrou(models.Model):
     """ Gère le verrou d'édition pour un centre afin d'éviter les conflits. """
     centre = models.OneToOneField(Centre, on_delete=models.CASCADE, primary_key=True, related_name='verrou_feuille_temps')
-    chef_de_quart = models.ForeignKey(Agent, on_delete=models.CASCADE)
+    chef_de_quart = models.ForeignKey(Agent, on_delete=models.CASCADE) # <-- On remet le nom original
     verrouille_a = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -50,24 +50,28 @@ class FeuilleTempsVerrou(models.Model):
         return f"Feuille de temps de {self.centre.code_centre} verrouillée par {self.chef_de_quart}"
 
 
-class FeuilleTempsCloture(models.Model):
-    """ Enregistre la clôture d'une journée de pointage pour un centre. """
-    centre = models.ForeignKey(Centre, on_delete=models.PROTECT)
-    date_jour = models.DateField()
+# ==============================================================================
+# MODÈLE OBSOLÈTE : Ce modèle est maintenant remplacé par ServiceJournalier
+# et ServiceJournalierHistorique. Il peut être supprimé ou conservé pour
+# archive le temps de la migration des données.
+# ==============================================================================
+# class FeuilleTempsCloture(models.Model):
+#     """ Enregistre la clôture d'une journée de pointage pour un centre. """
+#     centre = models.ForeignKey(Centre, on_delete=models.PROTECT)
+#     date_jour = models.DateField()
     
-    cloture_par = models.ForeignKey(User, on_delete=models.PROTECT, related_name='journees_cloturees')
-    cloture_le = models.DateTimeField(auto_now_add=True)
+#     cloture_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='journees_cloturees')
+#     cloture_le = models.DateTimeField(auto_now_add=True)
     
-    # Pour la traçabilité en cas de réouverture
-    reouverte_par = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='journees_reouvertes')
-    reouverte_le = models.DateTimeField(null=True, blank=True)
+#     reouverte_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name='journees_reouvertes')
+#     reouverte_le = models.DateTimeField(null=True, blank=True)
 
-    class Meta:
-        verbose_name = "Journée de Pointage Clôturée"
-        unique_together = ('centre', 'date_jour')
-        permissions = [
-            ("reouvrir_feuilletemps", "Peut rouvrir une journée de pointage clôturée"),
-        ]
+#     class Meta:
+#         verbose_name = "Journée de Pointage Clôturée (Obsolète)"
+#         unique_together = ('centre', 'date_jour')
+#         permissions = [
+#             ("reouvrir_feuilletemps", "Peut rouvrir une journée de pointage clôturée"),
+#         ]
 
-    def __str__(self):
-        return f"Clôture du {self.date_jour} pour {self.centre.code_centre}"
+#     def __str__(self):
+#         return f"Clôture du {self.date_jour} pour {self.centre.code_centre}"

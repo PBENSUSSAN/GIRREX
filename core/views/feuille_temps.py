@@ -1,82 +1,118 @@
-# ==============================================================================
-# Fichier : core/views/feuille_temps.py
-# Vues et API pour le module "Feuille de Temps".
-# ==============================================================================
+# Fichier : core/views/feuille_temps.py (VERSION FINALE ET COMPLÈTE)
 
 import json
 from datetime import date, timedelta, datetime
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
+from django.db import transaction
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-# On utilise un import relatif pour accéder aux modules de la même application
 from ..models import (
-    Agent, Centre, FeuilleTempsEntree, FeuilleTempsVerrou, FeuilleTempsCloture,
-    PositionJour, VersionTourDeService, ServiceJournalier
+    Agent, Centre, FeuilleTempsEntree, FeuilleTempsVerrou, ServiceJournalier,
+    PositionJour, VersionTourDeService, ServiceJournalierHistorique
 )
 from ..services import verifier_regles_horaires
-
 
 @login_required
 @permission_required('core.view_feuilletemps', raise_exception=True)
 def feuille_de_temps_view(request, centre_id, jour=None):
-    """ Sert la page squelette pour la Feuille de Temps d'un jour donné (aujourd'hui par défaut). """
     centre = get_object_or_404(Centre, pk=centre_id)
     jour_str = jour or date.today().isoformat()
     date_jour = date.fromisoformat(jour_str)
-
     jour_precedent = (date_jour - timedelta(days=1)).isoformat()
     jour_suivant = (date_jour + timedelta(days=1)).isoformat()
     peut_aller_au_suivant = date_jour < date.today()
-
-    user_can_edit = request.user.has_perm('core.change_feuilletemps')
-    verrou_par = None
-    est_cloturee = FeuilleTempsCloture.objects.filter(centre=centre, date_jour=date_jour, reouverte_le__isnull=True).exists()
-
-    if est_cloturee:
-        user_can_edit = False
-    elif user_can_edit:
-        FeuilleTempsVerrou.objects.filter(centre=centre, verrouille_a__lt=timezone.now() - timedelta(hours=1)).delete()
-        verrou, created = FeuilleTempsVerrou.objects.get_or_create(
-            centre=centre, defaults={'chef_de_quart': request.user.agent_profile}
-        )
-        if not created and verrou.chef_de_quart != request.user.agent_profile:
-            user_can_edit = False
-            verrou_par = verrou.chef_de_quart
-            
+    service_journalier = ServiceJournalier.objects.filter(centre=centre, date_jour=date_jour).first()
+    verrou = FeuilleTempsVerrou.objects.filter(centre=centre).first()
+    est_cloturee = service_journalier and service_journalier.statut in [ServiceJournalier.StatutJournee.CLOTUREE, ServiceJournalier.StatutJournee.VISEE]
+    verrou_par = verrou.chef_de_quart if verrou else None
+    user_can_edit = not est_cloturee and request.user.has_perm('core.change_feuilletemps')
     context = {
         'centre': centre, 'jour_str': jour_str, 'date_jour': date_jour, 'user_can_edit': user_can_edit,
         'verrou_par': verrou_par, 'est_cloturee': est_cloturee,
-        'user_can_reouvrir': request.user.has_perm('core.reouvrir_feuilletemps'),
         'jour_precedent_url': reverse('feuille-temps-specific-jour', args=[centre.id, jour_precedent]),
         'jour_suivant_url': reverse('feuille-temps-specific-jour', args=[centre.id, jour_suivant]) if peut_aller_au_suivant else None,
     }
     return render(request, 'core/feuille_de_temps.html', context)
 
+@login_required
+@require_POST
+def gerer_service_view(request, centre_id, action):
+    centre = get_object_or_404(Centre, pk=centre_id)
+    today = date.today()
+    
+    # On utilise la même logique que le context_processor pour trouver sur quel service agir.
+    service_a_modifier = ServiceJournalier.objects.filter(
+        centre=centre, statut=ServiceJournalier.StatutJournee.OUVERTE
+    ).order_by('-date_jour').first()
+
+    # Si on ouvre, le service n'existe pas encore.
+    if action == 'ouvrir':
+        service_a_modifier = None
+
+    if not hasattr(request.user, 'agent_profile'):
+        messages.error(request, "Action impossible : votre compte utilisateur n'est pas lié à un profil Agent.")
+        return redirect(reverse('home'))
+
+    try:
+        with transaction.atomic():
+            agent_qui_agit = request.user.agent_profile
+            
+            if action == 'ouvrir' and not service_a_modifier and request.user.has_perm('core.open_close_service'):
+                nouveau_service = ServiceJournalier.objects.create(centre=centre, date_jour=today, cdq_ouverture=agent_qui_agit, heure_ouverture=timezone.now().time(), ouvert_par=request.user, statut=ServiceJournalier.StatutJournee.OUVERTE)
+                FeuilleTempsVerrou.objects.update_or_create(centre=centre, defaults={'chef_de_quart': agent_qui_agit})
+                ServiceJournalierHistorique.objects.create(service_journalier=nouveau_service, type_action=ServiceJournalierHistorique.ActionType.OUVERTURE, modifie_par=request.user, agent_action=agent_qui_agit)
+                messages.success(request, f"Le service du {today.strftime('%d/%m/%Y')} a été ouvert. Vous avez le contrôle.")
+
+            elif action == 'cloturer' and service_a_modifier and service_a_modifier.statut == 'OUVERTE' and request.user.has_perm('core.open_close_service'):
+                service_a_modifier.cdq_cloture = agent_qui_agit
+                service_a_modifier.heure_cloture = timezone.now().time()
+                service_a_modifier.cloture_par = request.user
+                service_a_modifier.statut = ServiceJournalier.StatutJournee.CLOTUREE
+                service_a_modifier.save()
+                FeuilleTempsVerrou.objects.filter(centre=centre).delete()
+                ServiceJournalierHistorique.objects.create(service_journalier=service_a_modifier, type_action=ServiceJournalierHistorique.ActionType.CLOTURE, modifie_par=request.user, agent_action=agent_qui_agit)
+                messages.success(request, f"Le service du {service_a_modifier.date_jour.strftime('%d/%m/%Y')} a été clôturé.")
+
+            elif action == 'reouvrir' and request.user.has_perm('core.reopen_service'):
+                 # Pour rouvrir, il faut cibler un service spécifique. Cette action se fera depuis la page du Cahier de Marche.
+                 # On trouve le service clôturé d'aujourd'hui pour le rouvrir.
+                 service_a_reouvrir = ServiceJournalier.objects.filter(centre=centre, date_jour=today, statut=ServiceJournalier.StatutJournee.CLOTUREE).first()
+                 if service_a_reouvrir:
+                    service_a_reouvrir.statut = ServiceJournalier.StatutJournee.OUVERTE
+                    service_a_reouvrir.cdq_cloture, service_a_reouvrir.heure_cloture, service_a_reouvrir.cloture_par = None, None, None
+                    service_a_reouvrir.save()
+                    FeuilleTempsVerrou.objects.update_or_create(centre=centre, defaults={'chef_de_quart': agent_qui_agit})
+                    ServiceJournalierHistorique.objects.create(service_journalier=service_a_reouvrir, type_action=ServiceJournalierHistorique.ActionType.REOUVERTURE, modifie_par=request.user, agent_action=agent_qui_agit)
+                    messages.success(request, f"Le service du {today.strftime('%d/%m/%Y')} a été ROUVERT. Vous avez le contrôle.")
+                 else:
+                    messages.error(request, "Aucun service clôturé aujourd'hui n'a été trouvé pour être rouvert.")
+            
+            else:
+                messages.error(request, "Action non autorisée ou non valide.")
+    except Exception as e:
+        messages.error(request, f"Une erreur technique est survenue : {e}")
+
+    return redirect('cahier-de-marche', centre_id=centre.id, jour=today.strftime('%Y-%m-%d'))
 
 @login_required
 @permission_required('core.view_feuilletemps', raise_exception=True)
 def api_get_feuille_temps_data(request, centre_id, jour):
-    """ API qui renvoie les données du jour, en incluant l'état de clôture. """
     centre = get_object_or_404(Centre, pk=centre_id)
     date_jour = date.fromisoformat(jour)
-    est_cloturee = FeuilleTempsCloture.objects.filter(centre=centre, date_jour=date_jour, reouverte_le__isnull=True).exists()
-    
-    version_tds = VersionTourDeService.objects.filter(
-        centre=centre, annee=date_jour.year, mois=date_jour.month
-    ).order_by('-date_validation').first()
-
+    service = ServiceJournalier.objects.filter(centre=centre, date_jour=date_jour).first()
+    est_cloturee = service and service.statut != ServiceJournalier.StatutJournee.OUVERTE
+    version_tds = VersionTourDeService.objects.filter(centre=centre, annee=date_jour.year, mois=date_jour.month).order_by('-date_validation').first()
     if not version_tds:
         return JsonResponse({'error': 'Aucune version validée du TDS trouvée pour ce mois.'}, status=404)
-
     tds_data = version_tds.donnees_planning
     date_jour_iso = date_jour.isoformat()
     agents_ids_prevus = [int(aid) for aid, p in tds_data.items() if date_jour_iso in p.get('planning', {})]
-
     planning_du_jour = []
     if agents_ids_prevus:
         agents_obj = {a.id_agent: a for a in Agent.objects.filter(id_agent__in=agents_ids_prevus)}
@@ -84,44 +120,23 @@ def api_get_feuille_temps_data(request, centre_id, jour):
         for agent_id in agents_ids_prevus:
             agent = agents_obj.get(agent_id)
             if not agent: continue
-            
             planning_data = tds_data.get(str(agent_id), {}).get('planning', {}).get(date_jour_iso, {})
             pointage = pointages_existants.get(agent_id)
             pos_matin_nom = planning_data.get('position_matin')
-            
-            categorie = "NON_TRAVAIL"
+            categorie = "NON-TRAVAIL"
             if pos_matin_nom:
-                try:
-                    categorie = PositionJour.objects.get(nom=pos_matin_nom, centre=centre).categorie
+                try: categorie = PositionJour.objects.get(nom=pos_matin_nom, centre=centre).categorie
                 except PositionJour.DoesNotExist: pass
-
-            planning_du_jour.append({
-                'agent_id': agent.id_agent, 'trigram': agent.trigram,
-                'position_matin': pos_matin_nom or 'N/A',
-                'position_apres_midi': planning_data.get('position_apres_midi') or 'N/A',
-                'commentaire_tds': planning_data.get('commentaire', ''),
-                'heure_arrivee': pointage.heure_arrivee.strftime('%H:%M') if pointage and pointage.heure_arrivee else '',
-                'heure_depart': pointage.heure_depart.strftime('%H:%M') if pointage and pointage.heure_depart else '',
-                'categorie': categorie,
-            })
-        
-    return JsonResponse({
-        'planning_du_jour': sorted(planning_du_jour, key=lambda x: x['trigram']),
-        'est_cloturee': est_cloturee
-    })
-
+            planning_du_jour.append({'agent_id': agent.id_agent, 'trigram': agent.trigram, 'position_matin': pos_matin_nom or 'N/A', 'position_apres_midi': planning_data.get('position_apres_midi') or 'N/A', 'commentaire_tds': planning_data.get('commentaire', ''), 'heure_arrivee': pointage.heure_arrivee.strftime('%H:%M') if pointage and pointage.heure_arrivee else '', 'heure_depart': pointage.heure_depart.strftime('%H:%M') if pointage and pointage.heure_depart else '', 'categorie': categorie,})
+    return JsonResponse({'planning_du_jour': sorted(planning_du_jour, key=lambda x: x['trigram']), 'est_cloturee': est_cloturee})
 
 @require_POST
 @login_required
 @permission_required('core.change_feuilletemps', raise_exception=True)
 def api_update_feuille_temps(request):
-    """ API pour sauvegarder une heure de la Feuille de Temps. """
     data = json.loads(request.body)
     try:
-        entree, _ = FeuilleTempsEntree.objects.get_or_create(
-            agent_id=data.get('agent_id'), date_jour=date.fromisoformat(data.get('date_jour')),
-            defaults={'modifie_par': request.user}
-        )
+        entree, _ = FeuilleTempsEntree.objects.get_or_create(agent_id=data.get('agent_id'), date_jour=date.fromisoformat(data.get('date_jour')), defaults={'modifie_par': request.user})
         valeur = data.get('valeur')
         setattr(entree, data.get('champ'), valeur if valeur else None)
         entree.modifie_par = request.user
@@ -130,12 +145,10 @@ def api_update_feuille_temps(request):
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
-
 @require_POST
 @login_required
 @permission_required('core.change_feuilletemps', raise_exception=True)
 def api_valider_horaires(request):
-    """ API pour la validation en temps réel des règles horaires. """
     data = json.loads(request.body)
     try:
         agent = Agent.objects.get(pk=data['agent_id'])
@@ -148,97 +161,11 @@ def api_valider_horaires(request):
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
-
 @require_POST
 @login_required
 @permission_required('core.change_feuilletemps', raise_exception=True)
 def api_forcer_verrou(request):
-    """ API pour forcer la prise de main sur la Feuille de Temps. """
     data = json.loads(request.body)
     centre = get_object_or_404(Centre, pk=data['centre_id'])
-    FeuilleTempsVerrou.objects.update_or_create(
-        centre=centre, 
-        defaults={'chef_de_quart': request.user.agent_profile, 'verrouille_a': timezone.now()}
-    )
+    FeuilleTempsVerrou.objects.update_or_create(centre=centre, defaults={'chef_de_quart': request.user.agent_profile, 'verrouille_a': timezone.now()})
     return JsonResponse({'status': 'ok'})
-
-
-@require_POST
-@login_required
-@permission_required('core.change_feuilletemps', raise_exception=True)
-def api_cloturer_journee(request):
-    """ API pour clôturer ou re-clôturer une journée de pointage. """
-    data = json.loads(request.body)
-    centre = get_object_or_404(Centre, pk=data['centre_id'])
-    date_jour = date.fromisoformat(data['date_jour'])
-    FeuilleTempsCloture.objects.update_or_create(
-        centre=centre, date_jour=date_jour,
-        defaults={
-            'cloture_par': request.user, 'cloture_le': timezone.now(),
-            'reouverte_par': None, 'reouverte_le': None,
-        }
-    )
-    return JsonResponse({'status': 'ok'})
-
-
-@require_POST
-@login_required
-@permission_required('core.reouvrir_feuilletemps', raise_exception=True)
-def api_reouvrir_journee(request):
-    """ API pour rouvrir une journée (nécessite une permission spéciale). """
-    data = json.loads(request.body)
-    centre = get_object_or_404(Centre, pk=data['centre_id'])
-    date_jour = date.fromisoformat(data['date_jour'])
-    cloture = get_object_or_404(FeuilleTempsCloture, centre=centre, date_jour=date_jour, reouverte_le__isnull=True)
-    cloture.reouverte_par = request.user
-    cloture.reouverte_le = timezone.now()
-    cloture.save()
-    return JsonResponse({'status': 'ok'})
-
-@login_required
-@permission_required('core.open_close_service', raise_exception=True)
-def gerer_service_view(request, centre_id):
-    """
-    Gère l'ouverture et la clôture du service journalier via une page de confirmation.
-    """
-    centre = get_object_or_404(Centre, pk=centre_id)
-    today = date.today()
-    service = ServiceJournalier.objects.filter(centre=centre, date_jour=today).first()
-    
-    action = 'ouvrir' if not service else 'cloturer'
-    
-    if request.method == 'POST':
-        # --- CAS 1: On ouvre le service ---
-        if action == 'ouvrir':
-            ServiceJournalier.objects.create(
-                centre=centre,
-                date_jour=today,
-                cdq_ouverture=request.user.agent_profile,
-                heure_ouverture=timezone.now().time(),
-                ouvert_par=request.user,
-                statut=ServiceJournalier.StatutJournee.OUVERTE
-            )
-            messages.success(request, f"Le service pour le {today.strftime('%d/%m/%Y')} a été ouvert avec succès.")
-        
-        # --- CAS 2: On clôture le service ---
-        elif service.statut == ServiceJournalier.StatutJournee.OUVERTE:
-            service.cdq_cloture = request.user.agent_profile
-            service.heure_cloture = timezone.now().time()
-            service.cloture_par = request.user
-            service.statut = ServiceJournalier.StatutJournee.CLOTUREE
-            service.save()
-            messages.success(request, f"Le service pour le {today.strftime('%d/%m/%Y')} a été clôturé avec succès.")
-            
-        else:
-            messages.warning(request, "L'action demandée n'est pas valide (le service est peut-être déjà clôturé).")
-
-        # On redirige vers le cahier de marche du jour pour voir le résultat
-        return redirect('cahier-de-marche', centre_id=centre.id, jour=today.strftime('%Y-%m-%d'))
-
-    # Si la méthode est GET, on affiche la page de confirmation
-    context = {
-        'centre': centre,
-        'service': service,
-        'action': action
-    }
-    return render(request, 'core/gerer_service.html', context)

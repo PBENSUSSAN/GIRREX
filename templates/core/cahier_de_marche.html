@@ -1,3 +1,4 @@
+<!-- Fichier : templates/core/cahier_de_marche.html (VERSION AVEC MISE EN PAGE EN GRILLE) -->
 {% extends "base.html" %}
 {% load static %}
 
@@ -10,16 +11,14 @@
         <h4>{{ jour_selectionne|date:"l d F Y" }}</h4>
     </div>
 
-    <!-- Sélecteur de date -->
-    <form class="form-inline mb-4" method="get" action="{% url 'cahier-de-marche' centre_id=centre.id jour='__DATE__' %}">
+    <!-- MODIFICATION : Ajout d'une classe au formulaire pour le cibler en CSS -->
+    <form class="mb-4 date-selector-form" method="get" action="{% url 'cahier-de-marche' centre_id=centre.id jour='__DATE__' %}">
         <label for="date-selector" class="me-2">Changer de jour :</label>
-        <input type="date" id="date-selector" class="form-control" value="{{ jour_selectionne|date:'Y-m-d' }}" style="max-width: 200px;">
+        <input type="date" id="date-selector" class="form-control" value="{{ jour_selectionne|date:'Y-m-d' }}">
         <script>
-            // Ce petit script peut rester ici car il est très court et spécifique à cet input.
             document.getElementById('date-selector').addEventListener('change', function() {
                 let newDate = this.value;
                 if (newDate) {
-                    // On construit l'URL dynamiquement
                     let url = "{% url 'cahier-de-marche' centre_id=centre.id jour='__DATE__' %}".replace('__DATE__', newDate);
                     window.location.href = url;
                 }
@@ -27,118 +26,102 @@
         </script>
     </form>
 
-    <div class="alert alert-secondary mb-4">
-        <h5 class="alert-heading">État du Service</h5>
-        <hr>
-        {% if service_journalier %}
-            <p class="mb-1">
-                <i class="bi bi-box-arrow-in-right text-success"></i>
-                <strong>Ouverture :</strong> Service ouvert par <strong>{{ service_journalier.cdq_ouverture }}</strong> à <strong>{{ service_journalier.heure_ouverture|time:"H:i" }}</strong>.
-            </p>
-            {% if service_journalier.cdq_cloture %}
-                <p class="mb-0">
-                    <i class="bi bi-box-arrow-left text-danger"></i>
-                    <strong>Clôture :</strong> Service clôturé par <strong>{{ service_journalier.cdq_cloture }}</strong> à <strong>{{ service_journalier.heure_cloture|time:"H:i" }}</strong>.
-                </p>
-            {% else %}
-                <p class="mb-0 text-muted">
-                    <i class="bi bi-hourglass-split"></i>
-                    Service actuellement en cours.
-                </p>
-            {% endif %}
-        {% else %}
-            <p class="mb-0 text-danger">
-                <i class="bi bi-x-circle-fill"></i>
-                <strong>Le service pour cette journée n'a pas été ouvert.</strong>
-            </p>
-        {% endif %}
-    </div>
+    <!-- ============================================================================== -->
+    <!-- DÉBUT DE LA NOUVELLE STRUCTURE EN GRILLE                                     -->
+    <!-- ============================================================================== -->
+    <div class="row g-4">  <!-- g-4 ajoute un espacement entre les colonnes -->
 
-    <div class="row">
-        <!-- Colonne de gauche pour les pannes et événements -->
-        <div class="col-lg-8">
-            
-            <!-- SECTION PANNES -->
-            <h3 class="h4 mb-3"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Pannes</h3>
-            <div class="list-group mb-4">
-                {% for panne in pannes %}
-                    <div class="list-group-item">
-                        <div class="d-flex w-100 justify-content-between">
-                            <h5 class="mb-1">{{ panne.equipement_concerne }}</h5>
-                            <small>
-                                <span class="badge {% if panne.statut == 'EN_COURS' %}bg-danger{% else %}bg-success{% endif %}">
-                                    {{ panne.get_statut_display }} {# Utilise la méthode du modèle pour un affichage propre #}
-                                </span>
-                            </small>
-                        </div>
-                        <p class="mb-1">{{ panne.description }}</p>
-                        <div class="d-flex justify-content-between align-items-center mt-2">
-                            <small class="text-muted">Début : {{ panne.date_heure_debut|date:"d/m/Y H:i" }} | Par : {{ panne.auteur }}</small>
-                            
-                            {% if panne.statut == 'EN_COURS' and effective_perms.core.resolve_pannecentre and verrou_operationnel and verrou_operationnel.chef_de_quart == request.user.agent_profile %}
-                                <button class="btn btn-sm btn-success resolve-panne-btn" 
-                                        data-url="{% url 'resoudre-panne' centre_id=centre.id panne_id=panne.id %}">
-                                    <i class="bi bi-check-circle me-1"></i>Résoudre
-                                </button>
-                            {% endif %}
-                        </div>
-                    </div>
-                {% empty %}
-                    <div class="list-group-item text-muted">Aucune panne consignée pour ce jour.</div>
-                {% endfor %}
+        <!-- PREMIÈRE LIGNE : Historique et Mouvements -->
+        <div class="col-md-6">
+            <div class="card h-100-flex shadow-sm">
+                <div class="card-header"><h5 class="mb-0"><i class="bi bi-clock-history text-info me-2"></i>Historique du Service</h5></div>
+                <ul class="list-group list-group-flush" id="historique-service-list">
+                    {% for item in historique_service %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                {% if item.type_action == 'OUVERTURE' %}<i class="bi bi-play-circle-fill text-success me-2"></i><strong>Ouverture</strong> par {{ item.agent_action }}{% endif %}
+                                {% if item.type_action == 'CLOTURE' %}<i class="bi bi-stop-circle-fill text-danger me-2"></i><strong>Clôture</strong> par {{ item.agent_action }}{% endif %}
+                                {% if item.type_action == 'REOUVERTURE' %}<i class="bi bi-arrow-counterclockwise text-warning me-2"></i><strong>Réouverture</strong> par {{ item.agent_action }}{% endif %}
+                            </div>
+                            <span class="badge bg-secondary rounded-pill">{{ item.timestamp|date:"H:i:s" }}</span>
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item text-muted">Service non ouvert pour ce jour.</li>
+                    {% endfor %}
+                </ul>
             </div>
-
-            <!-- SECTION ÉVÉNEMENTS -->
-            <h3 class="h4 mb-3"><i class="bi bi-info-circle-fill text-primary me-2"></i>Événements</h3>
-            <div class="list-group mb-4">
-                {% for evt in evenements %}
-                    <div class="list-group-item">
-                        <div class="d-flex w-100 justify-content-between">
-                            <h5 class="mb-1">{{ evt.titre }}</h5>
-                            <small class="text-muted">{{ evt.date_heure_evenement|date:"H:i" }}</small>
-                        </div>
-                        <p class="mb-1">{{ evt.description }}</p>
-                        <small class="text-muted">Catégorie : {{ evt.categorie.nom }} | Par : {{ evt.auteur }}</small>
-                    </div>
-                {% empty %}
-                     <div class="list-group-item text-muted">Aucun événement consigné pour ce jour.</div>
-                {% endfor %}
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100-flex shadow-sm">
+                <div class="card-header"><h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>Mouvements</h5></div>
+                <ul class="list-group list-group-flush">
+                     {% for mouvement in mouvements %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                {% if mouvement.type == 'arrivee' %}<i class="bi bi-box-arrow-in-right text-success me-2"></i>{% else %}<i class="bi bi-box-arrow-left text-danger me-2"></i>{% endif %}
+                                {{ mouvement.agent }}
+                            </div>
+                            <span class="badge bg-secondary rounded-pill">{{ mouvement.timestamp|date:"H:i" }}</span>
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item text-muted">Aucun pointage pour ce jour.</li>
+                    {% endfor %}
+                </ul>
             </div>
-
         </div>
 
-        <!-- Colonne de droite pour les mouvements -->
-        <div class="col-lg-4">
-            
-            <!-- SECTION MOUVEMENTS DU PERSONNEL -->
-            <h3 class="h4 mb-3"><i class="bi bi-people-fill me-2"></i>Mouvements</h3>
-            <ul class="list-group">
-                {% for mouvement in mouvements %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                            {% if mouvement.type == 'arrivee' %}
-                                <i class="bi bi-box-arrow-in-right text-success me-2"></i>
-                            {% else %}
-                                <i class="bi bi-box-arrow-left text-danger me-2"></i>
-                            {% endif %}
-                            {{ mouvement.agent }}
+        <!-- DEUXIÈME LIGNE : Pannes et Événements -->
+        <div class="col-md-6 mt-4">
+            <div class="card h-100-flex shadow-sm">
+                <div class="card-header"><h5 class="mb-0"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Pannes</h5></div>
+                <div class="list-group list-group-flush">
+                    {% for panne in pannes %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">{{ panne.equipement_concerne }}</h5>
+                                <small>{% if panne.statut == 'EN_COURS' %}<span class="badge bg-danger">En cours</span>{% else %}<span class="badge bg-success">Résolue</span>{% endif %}</small>
+                            </div>
+                            <p class="mb-1">{{ panne.description }}</p>
+                            <div class="d-flex justify-content-between align-items-center mt-2">
+                                <small class="text-muted">Début : {{ panne.date_heure_debut|date:"d/m/Y H:i" }} | Par : {{ panne.auteur }}</small>
+                                {% if panne.statut == 'EN_COURS' and verrou_operationnel and verrou_operationnel.chef_de_quart == request.user.agent_profile and effective_perms.core.resolve_pannecentre %}
+                                    <button class="btn btn-sm btn-success resolve-panne-btn" data-url="{% url 'resoudre-panne' centre_id=centre.id panne_id=panne.id %}" data-csrf="{{ csrf_token }}"><i class="bi bi-check-circle me-1"></i>Résoudre</button>
+                                {% endif %}
+                            </div>
                         </div>
-                        <span class="badge bg-secondary rounded-pill">{{ mouvement.timestamp|date:"H:i" }}</span>
-                    </li>
-                {% empty %}
-                    <li class="list-group-item text-muted">Aucun pointage pour ce jour.</li>
-                {% endfor %}
-            </ul>
-
+                    {% empty %}
+                        <div class="list-group-item text-muted">Aucune panne active pour ce jour.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mt-4">
+            <div class="card h-100-flex shadow-sm">
+                <div class="card-header"><h5 class="mb-0"><i class="bi bi-info-circle-fill text-primary me-2"></i>Événements</h5></div>
+                <div class="list-group list-group-flush">
+                    {% for evt in evenements %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">{{ evt.titre }}</h5>
+                                <small class="text-muted">{{ evt.date_heure_evenement|date:"H:i" }}</small>
+                            </div>
+                            <p class="mb-1">{{ evt.description }}</p>
+                            <small class="text-muted">Catégorie : {{ evt.categorie.nom }} | Par : {{ evt.auteur }}</small>
+                        </div>
+                    {% empty %}
+                         <div class="list-group-item text-muted">Aucun événement consigné pour ce jour.</div>
+                    {% endfor %}
+                </div>
+            </div>
         </div>
     </div>
+    <!-- ============================================================================== -->
+    <!-- FIN DE LA NOUVELLE STRUCTURE EN GRILLE                                       -->
+    <!-- ============================================================================== -->
 </div>
-{% endblock content %}
-
+{% endblock %}
 
 {% block scripts %}
-    {{ block.super }} {# Conserve les scripts du template de base 'base.html' #}
-    
-    {# Charge notre fichier JavaScript externe #}
+    {{ block.super }}
     <script src="{% static 'js/cahier_de_marche.js' %}"></script>
 {% endblock scripts %}

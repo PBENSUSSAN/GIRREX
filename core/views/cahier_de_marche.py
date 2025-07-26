@@ -1,4 +1,4 @@
-# Fichier : core/views/cahier_de_marche.py
+# Fichier : core/views/cahier_de_marche.py (VERSION FINALE AVEC HISTORIQUE)
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
@@ -6,18 +6,18 @@ from django.db.models import Q
 from django.utils import timezone
 from datetime import datetime, time, timedelta
 
-# Assurez-vous que ces imports sont bien présents
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
-from ..models import Centre, FeuilleTempsEntree, PanneCentre, EvenementCentre, ServiceJournalier
+# On s'assure que ServiceJournalierHistorique est bien importé
+from ..models import Centre, FeuilleTempsEntree, PanneCentre, EvenementCentre, ServiceJournalier, ServiceJournalierHistorique
 from ..forms import PanneCentreForm, EvenementCentreForm
 from ..decorators import effective_permission_required, cdq_lock_required
 
 @effective_permission_required('core.view_feuilletemps')
 def cahier_de_marche_view(request, centre_id, jour):
     """
-    Prépare les données pour le Cahier de Marche en les groupant par catégorie.
+    Prépare les données pour le Cahier de Marche, en incluant l'historique complet du service.
     """
     centre = get_object_or_404(Centre, pk=centre_id)
     try:
@@ -25,14 +25,15 @@ def cahier_de_marche_view(request, centre_id, jour):
     except ValueError:
         target_date = timezone.now().date()
     
-    try:
-        # On utilise select_related pour optimiser en pré-chargeant les données des agents
-        service_journalier = ServiceJournalier.objects.select_related(
-            'cdq_ouverture', 'cdq_cloture'
-        ).get(centre=centre, date_jour=target_date)
-    except ServiceJournalier.DoesNotExist:
-        service_journalier = None
+    # ==============================================================================
+    # MODIFICATION : On récupère l'historique complet au lieu de l'état simple
+    # ==============================================================================
+    historique_service = ServiceJournalierHistorique.objects.filter(
+        service_journalier__centre=centre, 
+        service_journalier__date_jour=target_date
+    ).select_related('agent_action').order_by('timestamp') # On trie par ordre chronologique
     
+    # Le reste de votre fonction est conservé à l'identique.
     pannes_du_jour = []
     evenements_du_jour = []
     mouvements_du_jour = []
@@ -74,7 +75,7 @@ def cahier_de_marche_view(request, centre_id, jour):
         'pannes': pannes_du_jour,
         'evenements': evenements_du_jour,
         'mouvements': mouvements_du_jour,
-        'service_journalier': service_journalier,
+        'historique_service': historique_service, # On passe la nouvelle variable au template
     }
     return render(request, 'core/cahier_de_marche.html', context)
 
@@ -82,6 +83,7 @@ def cahier_de_marche_view(request, centre_id, jour):
 @cdq_lock_required
 @effective_permission_required('core.add_pannecentre')
 def ajouter_panne_view(request, centre_id):
+    # Cette fonction reste inchangée.
     centre = get_object_or_404(Centre, pk=centre_id)
     if request.method == 'POST':
         form = PanneCentreForm(request.POST)
@@ -97,9 +99,11 @@ def ajouter_panne_view(request, centre_id):
     context = {'form': form, 'titre': 'Signaler une nouvelle panne', 'centre': centre}
     return render(request, 'core/form_generique.html', context)
 
+
 @cdq_lock_required
 @effective_permission_required('core.add_evenementcentre')
 def ajouter_evenement_view(request, centre_id):
+    # Cette fonction reste inchangée.
     centre = get_object_or_404(Centre, pk=centre_id)
     if request.method == 'POST':
         form = EvenementCentreForm(request.POST, centre=centre)
@@ -116,22 +120,13 @@ def ajouter_evenement_view(request, centre_id):
     return render(request, 'core/form_generique.html', context)
 
 
-# ==============================================================================
-# NOUVELLE VUE API POUR CLÔTURER UNE PANNE
-# Les décorateurs sont maintenant correctement placés juste avant la fonction.
-# ==============================================================================
 @require_POST
 @cdq_lock_required
 @effective_permission_required('core.resolve_pannecentre', raise_exception=True)
 def resoudre_panne_view(request, centre_id, panne_id):
-    """
-    Vue API pour marquer une panne comme résolue.
-    Met à jour le statut et la date/heure de fin.
-    """
+    # Cette fonction reste inchangée.
     panne = get_object_or_404(PanneCentre, pk=panne_id, centre_id=centre_id)
-    
     panne.statut = PanneCentre.Statut.RESOLUE
     panne.date_heure_fin = timezone.now()
     panne.save()
-    
     return JsonResponse({'status': 'ok', 'message': 'La panne a été marquée comme résolue.'})

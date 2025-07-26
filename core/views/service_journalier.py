@@ -51,47 +51,8 @@ class ServiceJournalier(models.Model):
         ordering = ['-date_jour', 'centre']
         permissions = [
             ("open_close_service", "Peut ouvrir et clôturer le service journalier"),
-            ("visa_service", "Peut viser un service journalier clôturé"),
-            ("reopen_service", "Peut rouvrir un service journalier clôturé"),
+            ("visa_service", "Peut viser un service journalier clôturé"), # Nouvelle permission
         ]
 
     def __str__(self):
         return f"Service du {self.date_jour} pour {self.centre.code_centre} ({self.statut})"
-
-
-# ==============================================================================
-# AJOUT : NOUVEAU MODÈLE POUR L'HISTORIQUE DES ACTIONS
-# ==============================================================================
-
-class ServiceJournalierHistorique(models.Model):
-    """ Stocke un enregistrement de chaque action (ouverture, clôture, etc.) sur un service. """
-    class ActionType(models.TextChoices):
-        OUVERTURE = 'OUVERTURE', 'Ouverture'
-        CLOTURE = 'CLOTURE', 'Clôture'
-        REOUVERTURE = 'REOUVERTURE', 'Réouverture'
-
-    # CORRECTION : On ajoute un default=1 pour que la migration passe sans poser de question.
-    # Cette valeur ne sera jamais utilisée car notre vue fournira toujours une valeur réelle.
-    service_journalier = models.ForeignKey(ServiceJournalier, on_delete=models.CASCADE, related_name="historique", default=1)
-    
-    # CORRECTION : On ajoute une valeur par défaut pour le CharField.
-    type_action = models.CharField(
-        max_length=20, 
-        choices=ActionType.choices, 
-        verbose_name="Type d'action",
-        default=ActionType.OUVERTURE 
-    )
-    
-    # CORRECTION : On ajoute un default=1 pour les autres ForeignKeys.
-    modifie_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, verbose_name="Utilisateur", default=1)
-    agent_action = models.ForeignKey(Agent, on_delete=models.PROTECT, verbose_name="Agent", default=1)
-    
-    timestamp = models.DateTimeField(auto_now_add=True, verbose_name="Horodatage")
-
-    class Meta:
-        verbose_name = "Historique du Service Journalier"
-        verbose_name_plural = "Historiques des Services Journaliers"
-        ordering = ['-timestamp']
-
-    def __str__(self):
-        return f"{self.type_action} sur {self.service_journalier} par {self.agent_action} le {self.timestamp.strftime('%d/%m/%Y %H:%M')}"

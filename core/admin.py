@@ -27,8 +27,9 @@ from .models import (
     CategorieEvenement,
     EvenementCentre,
 
-    # NOUVEAU : On importe le nouveau modèle
-    ServiceJournalier
+    # On importe les nouveaux modèles
+    ServiceJournalier,
+    ServiceJournalierHistorique
 )
 
 # ==============================================================================
@@ -219,7 +220,6 @@ class VersionTourDeServiceAdmin(admin.ModelAdmin):
 
 @admin.register(FeuilleTempsEntree)
 class FeuilleTempsEntreeAdmin(admin.ModelAdmin):
-    """ Améliore l'affichage des entrées de feuille de temps dans l'admin. """
     list_display = ('agent', 'date_jour', 'heure_arrivee', 'heure_depart', 'modifie_par', 'modifie_le')
     list_filter = ('date_jour', 'agent__centre')
     search_fields = ('agent__trigram', 'agent__nom')
@@ -228,20 +228,12 @@ class FeuilleTempsEntreeAdmin(admin.ModelAdmin):
 
 @admin.register(FeuilleTempsVerrou)
 class FeuilleTempsVerrouAdmin(admin.ModelAdmin):
-    """ Permet de voir et de supprimer manuellement les verrous si nécessaire. """
     list_display = ('centre', 'chef_de_quart', 'verrouille_a')
     actions = ['supprimer_verrous_selectionnes']
     
     def supprimer_verrous_selectionnes(self, request, queryset):
         queryset.delete()
     supprimer_verrous_selectionnes.short_description = "Supprimer les verrous sélectionnés"
-
-#@admin.register(FeuilleTempsCloture)
-#class FeuilleTempsClotureAdmin(admin.ModelAdmin):
- #   """ Permet de visualiser les clôtures. """
-  #  list_display = ('date_jour', 'centre', 'cloture_par', 'cloture_le', 'reouverte_par')
-   # list_filter = ('centre', 'date_jour')
-    #readonly_fields = ('cloture_par', 'cloture_le', 'reouverte_par', 'reouverte_le')
 
 # ==============================================================================
 # SECTION IX : ACTIVITÉ DU CENTRE
@@ -270,7 +262,7 @@ class EvenementCentreAdmin(admin.ModelAdmin):
     date_hierarchy = 'date_heure_evenement'
 
 # ==============================================================================
-# NOUVELLE SECTION X : GESTION DU SERVICE JOURNALIER
+# SECTION X : GESTION DU SERVICE JOURNALIER
 # ==============================================================================
 
 @admin.register(ServiceJournalier)
@@ -279,3 +271,26 @@ class ServiceJournalierAdmin(admin.ModelAdmin):
     list_filter = ('statut', 'centre', 'date_jour')
     search_fields = ('cdq_ouverture__trigram', 'cdq_cloture__trigram', 'vise_par__username')
     readonly_fields = ('ouvert_par', 'cloture_par', 'vise_par', 'date_visa')
+    date_hierarchy = 'date_jour'
+    def has_add_permission(self, request):
+        return False
+
+# ==============================================================================
+# NOUVELLE SECTION XI : HISTORIQUE DU SERVICE JOURNALIER
+# ==============================================================================
+
+@admin.register(ServiceJournalierHistorique)
+class ServiceJournalierHistoriqueAdmin(admin.ModelAdmin):
+    """ Affiche l'historique des actions sur le service journalier. """
+    list_display = ('timestamp', 'service_journalier', 'type_action', 'agent_action', 'modifie_par')
+    list_filter = ('type_action', 'timestamp', 'agent_action__centre')
+    search_fields = ('agent_action__trigram', 'modifie_par__username')
+    
+    readonly_fields = ('service_journalier', 'type_action', 'modifie_par', 'agent_action', 'timestamp')
+
+    #def has_add_permission(self, request):
+     #   return False
+    #def has_change_permission(self, request, obj=None):
+     #   return False
+    #def has_delete_permission(self, request, obj=None):
+     #   return False

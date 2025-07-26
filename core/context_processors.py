@@ -1,4 +1,4 @@
-# Fichier : core/context_processors.py
+# Fichier : core/context_processors.py (VERSION FINALE ET COMPLÈTE)
 
 from django.utils.functional import SimpleLazyObject
 from .permissions import has_effective_permission
@@ -6,80 +6,59 @@ from .models import FeuilleTempsVerrou, ServiceJournalier
 from datetime import date
 
 # ==============================================================================
-# PROCESSEUR POUR LES PERMISSIONS EFFECTIVES (CODE EXISTANT CONSERVÉ)
+# PROCESSEUR POUR LES PERMISSIONS EFFECTIVES (INCHANGÉ)
 # ==============================================================================
 
 class EffectivePermissions:
-    """
-    Un objet qui imite le `perms` de Django mais utilise notre logique de vérification.
-    """
-    def __init__(self, user):
-        self._user = user
-
-    def __contains__(self, perm_name):
-        return has_effective_permission(self._user, perm_name)
-
-    def __getattr__(self, app_label):
-        return AppPermissions(self._user, app_label)
-
-    def __iter__(self):
-        # Nécessaire pour que des constructions comme `{% if 'perm' in perms %}` fonctionnent.
-        return iter([])
+    def __init__(self, user): self._user = user
+    def __contains__(self, perm_name): return has_effective_permission(self._user, perm_name)
+    def __getattr__(self, app_label): return AppPermissions(self._user, app_label)
+    def __iter__(self): return iter([])
 
 class AppPermissions:
-    """Représente les permissions pour une application."""
-    def __init__(self, user, app_label):
-        self._user = user
-        self._app_label = app_label
+    def __init__(self, user, app_label): self._user, self._app_label = user, app_label
+    def __getattr__(self, perm_name): return has_effective_permission(self._user, f"{self._app_label}.{perm_name}")
 
-    def __getattr__(self, perm_name):
-        perm_path = f"{self._app_label}.{perm_name}"
-        return has_effective_permission(self._user, perm_path)
-
-def get_effective_perms(user):
-    return EffectivePermissions(user)
+def get_effective_perms(user): return EffectivePermissions(user)
 
 def effective_permissions_processor(request):
-    """
-    Ajoute `effective_perms` au contexte de tous les templates.
-    """
-    return {
-        'effective_perms': SimpleLazyObject(lambda: get_effective_perms(request.user))
-    }
+    return {'effective_perms': SimpleLazyObject(lambda: get_effective_perms(request.user))}
 
 # ==============================================================================
-# NOUVEAU PROCESSEUR POUR LE CONTEXTE GLOBAL (VERROU, CENTRE, DATE)
+# PROCESSEUR GLOBAL (VERSION CORRIGÉE POUR INCLURE LE VERROU)
 # ==============================================================================
 
 def girrex_global_context(request):
     """
-    Injecte des variables globales liées à l'état opérationnel 
-    (verrou, centre de l'agent, date du jour) dans le contexte de tous les templates.
-    Ceci est essentiel pour que la sidebar (base.html) puisse afficher l'état
-    du verrouillage en temps réel sur n'importe quelle page.
+    Injecte des variables globales liées à l'état opérationnel dans le contexte.
     """
     context_data = {
         'today': date.today(),
-        'verrou_operationnel': None, # On nomme la variable différemment pour éviter tout conflit
+        'verrou_operationnel': None,
         'centre_agent': None,
+        'service_du_jour': None, 
     }
-
-    # La logique ne s'exécute que pour les utilisateurs connectés ayant un profil Agent.
-    # C'est une optimisation pour ne pas faire de requêtes inutiles pour les anonymes.
     if request.user.is_authenticated and hasattr(request.user, 'agent_profile'):
         agent_centre = request.user.agent_profile.centre
         context_data['centre_agent'] = agent_centre
-        
         if agent_centre:
-            # On cherche le verrou pour le centre de l'agent connecté.
-            # 'select_related' optimise la requête en pré-chargeant les données du chef de quart
-            # pour éviter une requête supplémentaire lors de l'accès à `verrou.chef_de_quart`.
+            # CORRECTION : On s'assure que le verrou est TOUJOURS recherché.
+            # C'est cette variable qui manquait et qui faisait disparaître le bouton.
             verrou = FeuilleTempsVerrou.objects.select_related('chef_de_quart').filter(centre=agent_centre).first()
             context_data['verrou_operationnel'] = verrou
-        
-        service_du_jour = ServiceJournalier.objects.select_related('cdq_ouverture').filter(
-            centre=agent_centre, 
-            date_jour=date.today()
-        ).first()
-        context_data['service_du_jour'] = service_du_jour    
+            
+            # La logique pour le service actif reste la même (elle est correcte)
+            service_actif = ServiceJournalier.objects.filter(
+                centre=agent_centre, 
+                statut=ServiceJournalier.StatutJournee.OUVERTE
+            ).order_by('-date_jour').first()
+
+            if not service_actif:
+                 service_actif = ServiceJournalier.objects.filter(
+                    centre=agent_centre,
+                    date_jour=date.today()
+                 ).first()
+            
+            context_data['service_du_jour'] = service_actif
+            
     return context_data

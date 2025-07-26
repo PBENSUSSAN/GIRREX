@@ -11,9 +11,9 @@
 <div id="feuille-temps-container" 
     data-centre-id="{{ centre.id }}" 
     data-jour-str="{{ jour_str }}" 
+    {# CORRECTION 1 : On utilise la variable 'user_can_edit' préparée par la vue. C'est plus propre et ça évite les erreurs de syntaxe. #}
     data-can-edit="{{ user_can_edit|yesno:'true,false' }}"
     data-est-cloturee="{{ est_cloturee|yesno:'true,false' }}"
-    data-can-reouvrir="{{ user_can_reouvrir|yesno:'true,false' }}"
     data-csrf-token="{{ csrf_token }}"
     class="container-fluid mt-4">
 
@@ -29,25 +29,18 @@
                 <a href="#" class="btn btn-outline-secondary disabled" aria-disabled="true">Jour Suivant »</a>
                 {% endif %}
             </div>
-            <div>
-                {% if not est_cloturee and user_can_edit %}
-                    <button id="cloture-btn" class="btn btn-success">✔️ Clôturer la journée</button>
-                {% endif %}
-                {% if est_cloturee and user_can_reouvrir %}
-                    <button id="reouvrir-btn" class="btn btn-warning">🔄 Rouvrir la journée</button>
-                {% endif %}
-            </div>
         </div>
     </div>
     
     {% if est_cloturee %}
-        <div class="alert alert-info text-center">Cette journée a été clôturée et n'est plus modifiable.</div>
+        <div class="alert alert-info text-center">Cette journée a été clôturée et n'est plus modifiable. Pour la rouvrir, utilisez le lien dans le menu "Cahier de Marche".</div>
     {% endif %}
 
-    {% if verrou_par %}
+    {# CORRECTION 2 : On utilise le nom de champ correct 'chef_de_quart' et on compare avec 'request.user.agent_profile' #}
+    {% if verrou_par and verrou_par != request.user.agent_profile %}
     <div class="alert alert-warning">
         <h4 class="alert-heading">Accès en lecture seule</h4>
-        <p>Le contrôle de la feuille de temps est actuellement pris par <strong>{{ verrou_par.trigram }}</strong>. Vous ne pouvez pas modifier les heures.</p>
+        <p>Le contrôle de la feuille de temps est actuellement pris par <strong>{{ verrou_par }}</strong>. Vous ne pouvez pas modifier les heures.</p>
         <button id="force-verrou-btn" class="btn btn-danger">Forcer la prise de main</button>
     </div>
     {% endif %}
@@ -81,7 +74,7 @@
     </div>
 </div>
 
-<!-- Modale de Confirmation pour les vacations de nuit -->
+<!-- Le reste de votre fichier (modales, scripts) est correct et reste inchangé -->
 <div class="modal fade" id="confirmation-nuit-modal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -100,7 +93,6 @@
     </div>
 </div>
 
-<!-- Modale de Récapitulatif avant clôture -->
 <div class="modal fade" id="recap-cloture-modal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">

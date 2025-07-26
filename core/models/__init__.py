@@ -1,6 +1,6 @@
 # Fichier : core/models/__init__.py
 
-# On importe explicitement chaque modèle depuis nos nouveaux fichiers.
+# On importe explicitement chaque modèle depuis les fichiers dédiés.
 from .rh import Centre, Agent, Licence, Qualification, Mention, CertificatMed, Module, Organisme, Formation, Evaluation, Habilitation, Affectation
 from .vols import Client, Vol, ControleVol, AuditHeuresControle
 from .parametrage import Parametre, ValeurParametre, Role, AgentRole, Delegation
@@ -8,9 +8,13 @@ from .documentaire import DocumentType, Document, DocumentVersion, SignatureCirc
 from .mrr import CentreRole, ResponsableSMS, MRR, MRRSignataire, MRRProgression, Changement, Action, Notification
 from .qualite import ResponsableQSCentral, EvenementQS, RecommendationQS, ActionQS, AuditQS, EvaluationRisqueQS, NotificationQS
 from .planning import PositionJour, TourDeService, TourDeServiceHistorique, VersionTourDeService
-from .feuille_temps import FeuilleTempsEntree, FeuilleTempsVerrou, FeuilleTempsCloture
 
-# Importation des nouveaux modèles séparés
+# CORRECTION : On retire 'FeuilleTempsCloture' de cette ligne car le modèle n'existe plus.
+from .feuille_temps import FeuilleTempsEntree, FeuilleTempsVerrou
+
+# Importation des modèles séparés pour le cahier de marche
 from .panne import PanneCentre
 from .evenement import CategorieEvenement, EvenementCentre
-from .service_journalier import ServiceJournalier
+
+# On importe ServiceJournalier ET ServiceJournalierHistorique depuis le même fichier.
+from .service_journalier import ServiceJournalier, ServiceJournalierHistorique
