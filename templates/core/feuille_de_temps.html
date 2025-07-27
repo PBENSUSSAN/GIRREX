@@ -11,7 +11,6 @@
 <div id="feuille-temps-container" 
     data-centre-id="{{ centre.id }}" 
     data-jour-str="{{ jour_str }}" 
-    {# CORRECTION 1 : On utilise la variable 'user_can_edit' préparée par la vue. C'est plus propre et ça évite les erreurs de syntaxe. #}
     data-can-edit="{{ user_can_edit|yesno:'true,false' }}"
     data-est-cloturee="{{ est_cloturee|yesno:'true,false' }}"
     data-csrf-token="{{ csrf_token }}"
@@ -36,7 +35,9 @@
         <div class="alert alert-info text-center">Cette journée a été clôturée et n'est plus modifiable. Pour la rouvrir, utilisez le lien dans le menu "Cahier de Marche".</div>
     {% endif %}
 
-    {# CORRECTION 2 : On utilise le nom de champ correct 'chef_de_quart' et on compare avec 'request.user.agent_profile' #}
+    <!-- ============================================================================== -->
+    <!-- CORRECTION : On vérifie que 'verrou_par' existe et qu'il n'est pas l'utilisateur actuel -->
+    <!-- ============================================================================== -->
     {% if verrou_par and verrou_par != request.user.agent_profile %}
     <div class="alert alert-warning">
         <h4 class="alert-heading">Accès en lecture seule</h4>
@@ -67,14 +68,14 @@
                     <th style="width: 6%;">Alertes</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="table-body">
                 <!-- Les lignes seront générées ici par le JavaScript -->
             </tbody>
         </table>
     </div>
 </div>
 
-<!-- Le reste de votre fichier (modales, scripts) est correct et reste inchangé -->
+<!-- Le reste du fichier (modales, scripts) est correct et reste inchangé -->
 <div class="modal fade" id="confirmation-nuit-modal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog">
         <div class="modal-content">

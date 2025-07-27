@@ -1,4 +1,4 @@
-<!-- Fichier : templates/base.html (VERSION FINALE ET COMPLÈTE) -->
+<!-- Fichier : templates/base.html -->
 {% load static %}
 <!DOCTYPE html>
 <html lang="fr">
@@ -51,13 +51,31 @@
                                             </li>
                                         {% endif %}
                                     {% elif service_du_jour.statut == 'OUVERTE' %}
-                                        {% if effective_perms.core.open_close_service %}
-                                            <li>
-                                                <form action="{% url 'gerer-service' centre_agent.id 'cloturer' %}" method="post" class="ps-4">
-                                                    {% csrf_token %}
-                                                    <button type="submit" class="btn btn-link nav-link text-danger fw-bold p-0"><i class="bi bi-stop-circle-fill me-1"></i>Fermer le Service</button>
-                                                </form>
-                                            </li>
+                                        <!-- ============================================================================== -->
+                                        <!-- CORRECTION : On vérifie QUI est le détenteur du verrou                       -->
+                                        <!-- ============================================================================== -->
+                                        {% if verrou_operationnel and verrou_operationnel.chef_de_quart == request.user.agent_profile %}
+                                            {# C'est bien l'utilisateur actuel qui a le contrôle, on affiche "Fermer" #}
+                                            {% if effective_perms.core.open_close_service %}
+                                                <li>
+                                                    <form action="{% url 'gerer-service' centre_agent.id 'cloturer' %}" method="post" class="ps-4">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="btn btn-link nav-link text-danger fw-bold p-0"><i class="bi bi-stop-circle-fill me-1"></i>Fermer le Service</button>
+                                                    </form>
+                                                </li>
+                                            {% endif %}
+                                        {% else %}
+                                              {% if effective_perms.core.change_feuilletemps %}
+                                                <li>
+                                                    <form action="{% url 'gerer-service' centre_agent.id 'forcer-prise' %}" method="post" class="ps-4" title="Service pris par {{ verrou_operationnel.chef_de_quart }}. Cliquez pour forcer.">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="btn btn-link nav-link text-warning fw-bold p-0"><i class="bi bi-shield-lock-fill me-1"></i>Forcer la Prise</button>
+                                                    </form>
+                                                </li>
+                                            {% else %}
+                                                {# Si l'utilisateur n'a même pas la permission de forcer #}
+                                                <li><span class="ps-4 disabled" title="Le service est actuellement pris par {{ verrou_operationnel.chef_de_quart }}.">Service Pris</span></li>
+                                            {% endif %}
                                         {% endif %}
                                     {% elif service_du_jour.statut == 'CLOTUREE' %}
                                         {% if effective_perms.core.reopen_service %}

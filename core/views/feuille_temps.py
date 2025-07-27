@@ -1,4 +1,4 @@
-# Fichier : core/views/feuille_temps.py (VERSION FINALE ET COMPLÈTE)
+# Fichier : core/views/feuille_temps.py (VERSION CORRIGÉE ET COMPLÈTE)
 
 import json
 from datetime import date, timedelta, datetime
@@ -80,8 +80,6 @@ def gerer_service_view(request, centre_id, action):
                 messages.success(request, f"Le service du {service_a_modifier.date_jour.strftime('%d/%m/%Y')} a été clôturé.")
 
             elif action == 'reouvrir' and request.user.has_perm('core.reopen_service'):
-                 # Pour rouvrir, il faut cibler un service spécifique. Cette action se fera depuis la page du Cahier de Marche.
-                 # On trouve le service clôturé d'aujourd'hui pour le rouvrir.
                  service_a_reouvrir = ServiceJournalier.objects.filter(centre=centre, date_jour=today, statut=ServiceJournalier.StatutJournee.CLOTUREE).first()
                  if service_a_reouvrir:
                     service_a_reouvrir.statut = ServiceJournalier.StatutJournee.OUVERTE
@@ -92,6 +90,23 @@ def gerer_service_view(request, centre_id, action):
                     messages.success(request, f"Le service du {today.strftime('%d/%m/%Y')} a été ROUVERT. Vous avez le contrôle.")
                  else:
                     messages.error(request, "Aucun service clôturé aujourd'hui n'a été trouvé pour être rouvert.")
+            
+            # ==============================================================================
+            # BLOC CORRIGÉ / AJOUTÉ : GESTION DU FORÇAGE DE PRISE DE MAIN
+            # ==============================================================================
+            elif action == 'forcer-prise' and service_a_modifier and request.user.has_perm('core.change_feuilletemps'):
+                verrou = FeuilleTempsVerrou.objects.filter(centre=centre).first()
+                if verrou:
+                    ancien_cdq = verrou.chef_de_quart
+                    verrou.chef_de_quart = agent_qui_agit
+                    verrou.verrouille_a = timezone.now()
+                    verrou.save()
+                    messages.warning(request, f"Vous avez forcé la prise de contrôle qui était détenue par {ancien_cdq}. Vous avez maintenant la main.")
+                else:
+                    # Sécurité : si le service est ouvert mais qu'aucun verrou n'existe (cas anormal), on le crée.
+                    FeuilleTempsVerrou.objects.update_or_create(centre=centre, defaults={'chef_de_quart': agent_qui_agit})
+                    messages.success(request, "Vous avez pris le contrôle du service.")
+            # ==============================================================================
             
             else:
                 messages.error(request, "Action non autorisée ou non valide.")
