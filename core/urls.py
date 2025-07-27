@@ -1,7 +1,7 @@
 # Fichier : core/urls.py
 
 from django.urls import path
-from .views import general, planning, feuille_temps, cahier_de_marche
+from .views import general, planning, feuille_temps, cahier_de_marche, zone
 
 urlpatterns = [
     # --- Vues Générales ---
@@ -43,4 +43,8 @@ urlpatterns = [
     path('cahier-de-marche/centre/<int:centre_id>/panne/ajouter/', cahier_de_marche.ajouter_panne_view, name='ajouter-panne'),
     path('cahier-de-marche/centre/<int:centre_id>/evenement/ajouter/', cahier_de_marche.ajouter_evenement_view, name='ajouter-evenement'),
     path('cahier-de-marche/centre/<int:centre_id>/panne/<int:panne_id>/resoudre/', cahier_de_marche.resoudre_panne_view, name='resoudre-panne'),
+
+     # --- gestion zone ---
+    path('gestion-zone/centre/<int:centre_id>/', zone.gestion_zone_view, name='gestion-zone'),
+    path('gestion-zone/zone/<int:centre_id>/<int:zone_id>/<str:action>/', zone.activer_desactiver_zone_view, name='activer-desactiver-zone'),
 ]

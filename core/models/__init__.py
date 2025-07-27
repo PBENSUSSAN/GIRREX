@@ -18,3 +18,6 @@ from .evenement import CategorieEvenement, EvenementCentre
 
 # On importe ServiceJournalier ET ServiceJournalierHistorique depuis le même fichier.
 from .service_journalier import ServiceJournalier, ServiceJournalierHistorique
+
+# On importe les zones et leu activité
+from .zone import Zone, ActiviteZone

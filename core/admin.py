@@ -29,7 +29,11 @@ from .models import (
 
     # On importe les nouveaux modèles
     ServiceJournalier,
-    ServiceJournalierHistorique
+    ServiceJournalierHistorique,
+    
+    # On importe les modèles zones
+    Zone,
+    ActiviteZone
 )
 
 # ==============================================================================
@@ -288,9 +292,52 @@ class ServiceJournalierHistoriqueAdmin(admin.ModelAdmin):
     
     readonly_fields = ('service_journalier', 'type_action', 'modifie_par', 'agent_action', 'timestamp')
 
+    
+
+# ==============================================================================
+# NOUVELLE SECTION XII : gesiton zones
+# ==============================================================================
+@admin.register(Zone)
+class ZoneAdmin(admin.ModelAdmin):
+    """ Interface d'administration pour les Zones. """
+    list_display = ('nom', 'centre', 'est_active', 'derniere_activite', 'dernier_agent')
+    list_filter = ('centre', 'est_active')
+    search_fields = ('nom', 'description', 'centre__code_centre')
+    ordering = ('centre', 'nom')
+    
+    # On met les champs de statut en lecture seule, car ils seront gérés
+    # par la logique métier de l'application, pas manuellement.
+    readonly_fields = ('est_active', 'derniere_activite', 'dernier_agent')
+    
+    fieldsets = (
+        (None, {
+            'fields': ('nom', 'description', 'centre')
+        }),
+        ('État Actuel (géré automatiquement)', {
+            'classes': ('collapse',), # On peut masquer cette section par défaut
+            'fields': readonly_fields,
+        }),
+    )
+
+@admin.register(ActiviteZone)
+class ActiviteZoneAdmin(admin.ModelAdmin):
+    """ Interface d'administration pour l'historique des activités de zone. """
+    list_display = ('timestamp', 'zone', 'type_action', 'agent_action', 'service_journalier')
+    list_filter = ('timestamp', 'type_action', 'zone__centre')
+    search_fields = ('zone__nom', 'agent_action__trigram')
+    date_hierarchy = 'timestamp'
+    
+    # Cette section doit être en lecture seule, c'est un journal de bord.
+    #readonly_fields = ('zone', 'type_action', 'timestamp', 'agent_action', 'service_journalier')
+    readonly_fields = ('timestamp',)
+    autocomplete_fields = ['zone', 'agent_action', 'service_journalier']
+
+    # On empêche la création, modification ou suppression manuelle depuis l'admin.
     #def has_add_permission(self, request):
      #   return False
+
     #def has_change_permission(self, request, obj=None):
-     #   return False
+    #    return False
+
     #def has_delete_permission(self, request, obj=None):
      #   return False

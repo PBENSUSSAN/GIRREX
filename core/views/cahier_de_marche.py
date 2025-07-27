@@ -10,7 +10,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
 # On s'assure que ServiceJournalierHistorique est bien importé
-from ..models import Centre, FeuilleTempsEntree, PanneCentre, EvenementCentre, ServiceJournalier, ServiceJournalierHistorique
+from ..models import Centre, FeuilleTempsEntree, PanneCentre, EvenementCentre, ServiceJournalier, ServiceJournalierHistorique, ActiviteZone
 from ..forms import PanneCentreForm, EvenementCentreForm
 from ..decorators import effective_permission_required, cdq_lock_required
 
@@ -55,6 +55,12 @@ def cahier_de_marche_view(request, centre_id, jour):
     ).order_by('date_heure_evenement')
     evenements_du_jour = list(evenements_query)
 
+    activites_zone_du_jour = list(ActiviteZone.objects.filter(
+        zone__centre=centre,
+        timestamp__gte=start_of_day,
+        timestamp__lte=end_of_day
+    ).select_related('zone', 'agent_action').order_by('timestamp'))
+
     pointages = FeuilleTempsEntree.objects.filter(agent__centre=centre, date_jour=target_date)
     for p in pointages:
         if p.heure_arrivee:
@@ -75,7 +81,8 @@ def cahier_de_marche_view(request, centre_id, jour):
         'pannes': pannes_du_jour,
         'evenements': evenements_du_jour,
         'mouvements': mouvements_du_jour,
-        'historique_service': historique_service, # On passe la nouvelle variable au template
+        'historique_service': historique_service,
+        'activites_zone': activites_zone_du_jour,
     }
     return render(request, 'core/cahier_de_marche.html', context)
 

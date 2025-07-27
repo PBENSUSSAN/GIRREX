@@ -51,9 +51,6 @@
                                             </li>
                                         {% endif %}
                                     {% elif service_du_jour.statut == 'OUVERTE' %}
-                                        <!-- ============================================================================== -->
-                                        <!-- CORRECTION : On vérifie QUI est le détenteur du verrou                       -->
-                                        <!-- ============================================================================== -->
                                         {% if verrou_operationnel and verrou_operationnel.chef_de_quart == request.user.agent_profile %}
                                             {# C'est bien l'utilisateur actuel qui a le contrôle, on affiche "Fermer" #}
                                             {% if effective_perms.core.open_close_service %}
@@ -98,10 +95,19 @@
                                     <li><a href="{% url 'feuille-temps-specific-jour' centre_agent.id today|date:'Y-m-d' %}" class="ps-4">Feuille d'heure</a></li>
                                     <li><a href="{% url 'ajouter-panne' centre_agent.id %}" class="ps-4">Signaler une Panne</a></li>
                                     <li><a href="{% url 'ajouter-evenement' centre_agent.id %}" class="ps-4">Consigner un Événement</a></li>
+                                    <!-- ===================================== -->
+                                    <!--   NOUVEAU LIEN ACTIF AJOUTÉ ICI     -->
+                                    <!-- ===================================== -->
+                                    <li><a href="{% url 'gestion-zone' centre_agent.id %}" class="ps-4">Gestion Zone</a></li>
+
                                 {% else %}
                                     <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle pour accéder à cette fonction.">Feuille d'heure</span></li>
                                     <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle pour accéder à cette fonction.">Signaler une Panne</span></li>
                                     <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle pour accéder à cette fonction.">Consigner un Événement</span></li>
+                                    <!-- ===================================== -->
+                                    <!-- NOUVEAU LIEN DÉSACTIVÉ AJOUTÉ ICI   -->
+                                    <!-- ===================================== -->
+                                    <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle pour accéder à cette fonction.">Gestion Zone</span></li>
                                 {% endif %}
                                 
                                 <li class="sidebar-submenu-header">Consultation</li>

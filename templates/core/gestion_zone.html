@@ -1,0 +1,139 @@
+<!-- Fichier : templates/core/gestion_zone.html (VERSION FINALE AVEC COMPORTEMENT CORRIGÉ) -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block page_specific_styles %}
+<link rel="stylesheet" href="{% static 'css/gestion_zone.css' %}">
+{% endblock %}
+
+{% block title %}{{ titre }} - {{ centre.code_centre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3>{{ titre }} - [{{ centre.nom_centre }}]</h3>
+        <a href="{% url 'cahier-de-marche' centre.id today|date:'Y-m-d' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Retour au Cahier de Marche
+        </a>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- COLONNE DE GAUCHE : PILOTAGE (reste ouverte et haute) -->
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <a href="#collapsePilotage" data-bs-toggle="collapse" class="card-header collapsible-header d-flex justify-content-between align-items-center" aria-expanded="true">
+                    <h5 class="mb-0">Pilotage des Zones</h5>
+                    <i class="bi bi-chevron-down"></i>
+                </a>
+                <div id="collapsePilotage" class="collapse show">
+                    <div class="scrollable-card-content" style="max-height: 80vh;">
+                        <div class="list-group list-group-flush">
+                            {% for zone in zones_pilotage %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ zone.nom }}</h6>
+                                    <small class="text-muted">{{ zone.description|default:"Aucune description." }}</small>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    {% if zone.est_active %}
+                                        <span class="badge bg-success me-3">Active</span>
+                                        <form action="{% url 'activer-desactiver-zone' centre.id zone.id 'desactiver' %}" method="post">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-danger">
+                                                <i class="bi bi-stop-circle-fill me-1"></i>Désactiver
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <span class="badge bg-secondary me-3">Inactive</span>
+                                        <form action="{% url 'activer-desactiver-zone' centre.id zone.id 'activer' %}" method="post">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-primary">
+                                                <i class="bi bi-play-circle-fill me-1"></i>Activer
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="list-group-item">
+                                <p class="text-muted mb-0">Aucune zone n'est configurée pour ce centre.</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLONNE DE DROITE : SUIVI -->
+        <div class="col-md-6 d-flex flex-column gap-4">
+            
+            <!-- CARTE DU HAUT : HISTORIQUE (fermée par défaut) -->
+            <div class="card shadow-sm">
+                 <a href="#collapseHistoriqueJour" data-bs-toggle="collapse" class="card-header collapsible-header d-flex justify-content-between align-items-center" aria-expanded="false">
+                    <h5 class="mb-0">Historique du Jour</h5>
+                    <i class="bi bi-chevron-down"></i>
+                </a>
+                <!-- NOTE : On retire la classe "show" pour que la carte soit fermée -->
+                <div id="collapseHistoriqueJour" class="collapse">
+                    <div class="scrollable-card-content">
+                        <ul class="list-group list-group-flush">
+                            {% for activite in historique_jour %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        {% if activite.type_action == 'ACTIVATION' %}
+                                            <i class="bi bi-toggle-on text-success me-2"></i><strong>Activation</strong>
+                                        {% else %}
+                                            <i class="bi bi-toggle-off text-danger me-2"></i><strong>Désactivation</strong>
+                                        {% endif %}
+                                        de {{ activite.zone.nom }}
+                                    </div>
+                                    <span class="badge bg-secondary rounded-pill">{{ activite.timestamp|date:"H:i:s" }}</span>
+                                </li>
+                            {% empty %}
+                                <li class="list-group-item text-muted">Aucune activité pour ce jour.</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARTE DU BAS : STATISTIQUES (fermée par défaut) -->
+            <div class="card shadow-sm">
+                <a href="#collapseBilan" data-bs-toggle="collapse" class="card-header collapsible-header d-flex justify-content-between align-items-center" aria-expanded="false">
+                    <h5 class="mb-0">Bilan de la Journée</h5>
+                    <i class="bi bi-chevron-down"></i>
+                </a>
+                <!-- NOTE : On retire la classe "show" pour que la carte soit fermée -->
+                <div id="collapseBilan" class="collapse">
+                    <div class="scrollable-card-content">
+                        <table class="table table-sm table-striped mb-0">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Zone</th>
+                                    <th class="text-center">Activations</th>
+                                    <th class="text-center">Durée Cumulée</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stat in stats_zones %}
+                                <tr>
+                                    <td>{{ stat.nom }}</td>
+                                    <td class="text-center">{{ stat.nombre_activations }}</td>
+                                    <td class="text-center">{{ stat.duree_totale_formatee }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted">Aucune donnée à afficher.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
