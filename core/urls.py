@@ -47,4 +47,12 @@ urlpatterns = [
      # --- gestion zone ---
     path('gestion-zone/centre/<int:centre_id>/', zone.gestion_zone_view, name='gestion-zone'),
     path('gestion-zone/zone/<int:centre_id>/<int:zone_id>/<str:action>/', zone.activer_desactiver_zone_view, name='activer-desactiver-zone'),
+
+    
+    # AJOUT : D'ÉDITION DES ZONES
+    
+    path('api/zones/list/<int:centre_id>/', zone.api_get_zones, name='api-zone-list'),
+    path('api/zones/add/<int:centre_id>/', zone.api_add_zone, name='api-zone-add'),
+    path('api/zones/update/<int:zone_id>/', zone.api_update_zone, name='api-zone-update'),
+    path('api/zones/delete/<int:zone_id>/', zone.api_delete_zone, name='api-zone-delete'),
 ]

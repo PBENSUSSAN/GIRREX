@@ -1,11 +1,13 @@
 # Fichier : core/views/zone.py
 
+import json
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.utils import timezone
 from django.db import transaction
 from django.urls import reverse
 from django.views.decorators.http import require_POST
+from django.http import JsonResponse
 from datetime import datetime, time
 
 # On importe les modèles et les décorateurs nécessaires
@@ -138,3 +140,67 @@ def activer_desactiver_zone_view(request, centre_id, zone_id, action):
         messages.error(request, f"Une erreur technique est survenue : {e}")
 
     return redirect('gestion-zone', centre_id=centre_id)
+
+# ==============================================================================
+# MODIFICATION 2 : NOUVELLES VUES API POUR LA MODALE D'ÉDITION
+# ==============================================================================
+
+@effective_permission_required('core.view_zone')
+def api_get_zones(request, centre_id):
+    """ API pour lister les zones d'un centre. Renvoie du JSON. """
+    zones = Zone.objects.filter(centre_id=centre_id).values('id', 'nom', 'description').order_by('nom')
+    return JsonResponse(list(zones), safe=False)
+
+@require_POST
+@effective_permission_required('core.add_zone')
+def api_add_zone(request, centre_id):
+    """ API pour ajouter une nouvelle zone. """
+    try:
+        data = json.loads(request.body)
+        nom = data.get('nom')
+        description = data.get('description', '')
+        if not nom:
+            return JsonResponse({'status': 'error', 'message': 'Le nom est requis.'}, status=400)
+        
+        zone, created = Zone.objects.get_or_create(
+            centre_id=centre_id, 
+            nom=nom,
+            defaults={'description': description}
+        )
+        if not created:
+             return JsonResponse({'status': 'error', 'message': f"La zone '{nom}' existe déjà pour ce centre."}, status=400)
+
+        return JsonResponse({'status': 'ok', 'message': f"La zone '{zone.nom}' a été ajoutée."})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+@require_POST
+@effective_permission_required('core.change_zone')
+def api_update_zone(request, zone_id):
+    """ API pour modifier une zone existante. """
+    try:
+        data = json.loads(request.body)
+        nom = data.get('nom')
+        description = data.get('description', '')
+        if not nom:
+            return JsonResponse({'status': 'error', 'message': 'Le nom est requis.'}, status=400)
+
+        zone = get_object_or_404(Zone, pk=zone_id)
+        zone.nom = nom
+        zone.description = description
+        zone.save()
+        return JsonResponse({'status': 'ok', 'message': f"La zone '{zone.nom}' a été mise à jour."})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+@require_POST
+@effective_permission_required('core.delete_zone')
+def api_delete_zone(request, zone_id):
+    """ API pour supprimer une zone. """
+    try:
+        zone = get_object_or_404(Zone, pk=zone_id)
+        nom_zone = zone.nom
+        zone.delete()
+        return JsonResponse({'status': 'ok', 'message': f"La zone '{nom_zone}' a été supprimée."})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)

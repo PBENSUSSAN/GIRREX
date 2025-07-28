@@ -1,0 +1,71 @@
+/* ==========================================================================
+   Feuille de style pour le module "Feuille de Temps"
+   ========================================================================== */
+
+/* --- Style général de la table --- */
+#feuille-temps-table {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+#feuille-temps-table thead th {
+    background-color: #f8f9fa; /* Un gris très clair pour l'en-tête */
+    font-weight: 600; /* Police un peu plus grasse */
+    vertical-align: middle;
+}
+
+#feuille-temps-table tbody tr:hover {
+    background-color: #eef7ff; /* Un surlignage bleu clair au survol de la ligne */
+}
+
+#feuille-temps-table td {
+    vertical-align: middle; /* Pour que tout soit bien centré verticalement */
+}
+
+/* --- Style des champs de saisie (inputs) --- */
+input[type="time"].form-control {
+    border: 1px solid #ced4da;
+    border-radius: .25rem;
+    padding: .375rem .75rem;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.075);
+    transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+}
+
+input[type="time"].form-control:focus {
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* --- Style spécifique pour les champs désactivés (NON_TRAVAIL) --- */
+input[type="time"].form-control:disabled {
+    background-color: #f0f0f0; /* Fond gris plus visible */
+    border-style: dashed;     /* Bordure en pointillés pour signifier "non applicable" */
+    cursor: not-allowed;      /* Curseur "interdit" */
+}
+
+/* --- Mise en valeur de l'icône d'alerte --- */
+.validation-icon {
+    display: none; /* Toujours caché par défaut */
+    font-size: 1.3rem; /* On l'agrandit un peu */
+    color: #dc3545; /* Couleur rouge "danger" de Bootstrap */
+    cursor: help;
+    transition: transform 0.2s ease-in-out;
+}
+
+.validation-icon:hover {
+    transform: scale(1.2); /* Effet de zoom au survol pour inciter au clic/survol */
+}
+
+/* --- Style de la colonne "Trigramme" pour la mettre en valeur --- */
+#feuille-temps-table td:first-child strong {
+    font-size: 1.05em;
+    color: #0d6efd; /* Bleu Bootstrap pour le nom */
+}
+
+/* ==========================================================================
+   NOUVELLE RÈGLE POUR CENTRER LES COLONNES DE POSITION
+   ========================================================================== */
+#feuille-temps-table tbody td:nth-child(2), /* Cible la 2ème colonne (Position Matin) */
+#feuille-temps-table tbody td:nth-child(3) { /* Cible la 3ème colonne (Position Après-midi) */
+    text-align: center;
+}

@@ -11,8 +11,9 @@ db.sqlite3
 *.env
 
 # Dossiers pour les fichiers uploadés par les utilisateurs et les fichiers statiques collectés
-/media/
-/static/
+#/media/
+#/static/
+/staticfiles/
 
 # Fichiers de logs
 *.log

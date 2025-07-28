@@ -1,0 +1,85 @@
+/* Fichier : static/css/tour_de_service.css */
+
+/* Styles pour la grille du planning */
+#planning-grid th, #planning-grid td { 
+    white-space: nowrap; 
+    text-align: center;
+    vertical-align: middle !important;
+    padding: 0.4rem; 
+}
+.day-col, .date-col {
+    min-width: 55px; 
+    font-size: 0.9rem; 
+}
+.agent-col { 
+    text-align: left !important;
+    font-weight: bold; 
+    padding-left: 0.75rem !important;
+}
+.weekend { 
+    background-color: #f0f0f0 !important; 
+    color: #6c757d;
+}
+
+/* Styles pour les cellules interactives */
+.planning-cell { 
+    position: relative; 
+    min-height: 50px; 
+    transition: background-color 0.3s ease-in-out;
+}
+.planning-cell.editable { 
+    cursor: pointer; 
+}
+.planning-cell.editable:hover { 
+    background-color: #e9ecef; 
+}
+.planning-cell .view-mode.has-comment { 
+    font-weight: bold; 
+    border-bottom: 2px dotted #0d6efd;
+}
+.view-mode .morning, .view-mode .afternoon {
+    display: block;
+    line-height: 1.2;
+}
+.detailed-view .afternoon { 
+    display: block !important; 
+}
+
+.edit-mode div {
+    margin-bottom: 2px;
+}
+.edit-mode select { 
+    width: 100%; 
+    font-size: 0.8rem; 
+    border: 1px solid #007bff; 
+}
+
+/* Style pour le loader */
+#planning-loader {
+    display: none; /* Caché par défaut */
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    font-size: 1.2rem;
+    color: #6c757d;
+}
+
+/* Classes utilitaires */
+body.hide-weekends .weekend { 
+    display: none; 
+}
+
+/* Styles d'impression */
+@media print {
+    body > .wrapper > nav#sidebar, .btn-group, .mb-2, .modal, .modal-backdrop, #logout-link, .user-info a[href*="admin"] {
+        display: none !important;
+    }
+    body > .wrapper, body > .wrapper > #content {
+        width: 100% !important; margin: 0 !important; padding: 0 !important; float: none !important;
+    }
+    .container-fluid { border: none !important; padding: 0 !important; }
+    body { font-size: 10pt; }
+    .table-bordered, .table-bordered th, .table-bordered td { border: 1px solid #dee2e6 !important; }
+    .weekend { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    a { text-decoration: none; color: black; }
+}

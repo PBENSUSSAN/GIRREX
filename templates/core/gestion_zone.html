@@ -1,4 +1,4 @@
-<!-- Fichier : templates/core/gestion_zone.html (VERSION FINALE AVEC COMPORTEMENT CORRIGÉ) -->
+<!-- Fichier : templates/core/gestion_zone.html (AVEC MODALE) -->
 {% extends "base.html" %}
 {% load static %}
 
@@ -9,17 +9,24 @@
 {% block title %}{{ titre }} - {{ centre.code_centre }}{% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4">
+<!-- On ajoute des data-attributes pour que le JavaScript puisse récupérer ces infos -->
+<div class="container-fluid mt-4" data-centre-id="{{ centre.id }}" data-csrf-token="{{ csrf_token }}">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3>{{ titre }} - [{{ centre.nom_centre }}]</h3>
-        <a href="{% url 'cahier-de-marche' centre.id today|date:'Y-m-d' %}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Retour au Cahier de Marche
-        </a>
+        <div>
+            <!-- Le nouveau bouton pour ouvrir la modale -->
+            <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#editZonesModal">
+                <i class="bi bi-pencil-square"></i> Éditer les Zones
+            </button>
+            <a href="{% url 'cahier-de-marche' centre.id today|date:'Y-m-d' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Retour au Cahier de Marche
+            </a>
+        </div>
     </div>
 
+    <!-- La structure de votre page reste identique -->
     <div class="row g-4">
-
-        <!-- COLONNE DE GAUCHE : PILOTAGE (reste ouverte et haute) -->
+        <!-- COLONNE DE GAUCHE : PILOTAGE -->
         <div class="col-md-6">
             <div class="card shadow-sm">
                 <a href="#collapsePilotage" data-bs-toggle="collapse" class="card-header collapsible-header d-flex justify-content-between align-items-center" aria-expanded="true">
@@ -68,14 +75,11 @@
 
         <!-- COLONNE DE DROITE : SUIVI -->
         <div class="col-md-6 d-flex flex-column gap-4">
-            
-            <!-- CARTE DU HAUT : HISTORIQUE (fermée par défaut) -->
             <div class="card shadow-sm">
                  <a href="#collapseHistoriqueJour" data-bs-toggle="collapse" class="card-header collapsible-header d-flex justify-content-between align-items-center" aria-expanded="false">
                     <h5 class="mb-0">Historique du Jour</h5>
                     <i class="bi bi-chevron-down"></i>
                 </a>
-                <!-- NOTE : On retire la classe "show" pour que la carte soit fermée -->
                 <div id="collapseHistoriqueJour" class="collapse">
                     <div class="scrollable-card-content">
                         <ul class="list-group list-group-flush">
@@ -98,14 +102,11 @@
                     </div>
                 </div>
             </div>
-
-            <!-- CARTE DU BAS : STATISTIQUES (fermée par défaut) -->
             <div class="card shadow-sm">
                 <a href="#collapseBilan" data-bs-toggle="collapse" class="card-header collapsible-header d-flex justify-content-between align-items-center" aria-expanded="false">
                     <h5 class="mb-0">Bilan de la Journée</h5>
                     <i class="bi bi-chevron-down"></i>
                 </a>
-                <!-- NOTE : On retire la classe "show" pour que la carte soit fermée -->
                 <div id="collapseBilan" class="collapse">
                     <div class="scrollable-card-content">
                         <table class="table table-sm table-striped mb-0">
@@ -136,4 +137,62 @@
         </div>
     </div>
 </div>
+
+<!-- ============================================================================== -->
+<!-- MODALE D'ÉDITION - DESIGN HARMONISÉ AVEC "CONFIGURATION DES POSITIONS"     -->
+<!-- ============================================================================== -->
+<div class="modal fade" id="editZonesModal" tabindex="-1" aria-labelledby="editZonesModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editZonesModalLabel">Configuration des Zones pour [{{ centre.code_centre }}]</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- La table pour lister les zones -->
+        <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+            <table class="table table-sm table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Nom</th>
+                        <th>Description</th>
+                        <th style="width: 100px;" class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="modal-zones-tbody">
+                    <!-- Les lignes seront insérées ici par le JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        
+        <hr>
+        
+        <h6 id="form-title">Ajouter une nouvelle zone</h6>
+        <!-- Le formulaire d'ajout/modification -->
+        <form id="add-zone-form" class="row g-2 align-items-end">
+            <input type="hidden" id="zone-id-input">
+            <div class="col-sm-5">
+                <label for="zone-nom-input" class="form-label visually-hidden">Nom</label>
+                <input type="text" class="form-control form-control-sm" id="zone-nom-input" placeholder="Nom de la zone" required>
+            </div>
+            <div class="col-sm-5">
+                <label for="zone-desc-input" class="form-label visually-hidden">Description</label>
+                <input type="text" class="form-control form-control-sm" id="zone-desc-input" placeholder="Description (optionnel)">
+            </div>
+            <div class="col-sm-2 d-flex">
+                <button type="submit" class="btn btn-primary btn-sm flex-grow-1" id="submit-form-btn">Ajouter</button>
+                <button type="button" class="btn btn-secondary btn-sm flex-grow-1 ms-1" id="cancel-edit-btn" style="display: none;">Annuler</button>
+            </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+    <!-- On charge le nouveau fichier JavaScript -->
+    <script src="{% static 'js/gestion_zone.js' %}"></script>
+{% endblock scripts %}

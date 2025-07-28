@@ -1,0 +1,33 @@
+/* Fichier : static/css/gestion_zone.css (CORRIGÉ) */
+
+/* Style pour les en-têtes de cartes cliquables (collapsible) */
+.collapsible-header {
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+}
+.collapsible-header:hover {
+    color: inherit;
+}
+.collapsible-header .bi-chevron-down {
+    transition: transform 0.2s ease-in-out;
+}
+.collapsible-header[aria-expanded="true"] .bi-chevron-down {
+    transform: rotate(180deg);
+}
+
+/*
+ * NOUVELLE RÈGLE pour forcer une carte à contenir son contenu
+ * et à ne pas déborder.
+ */
+.card-fixed-height {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Empêche le contenu de "déborder" visuellement */
+}
+
+/* Style pour le contenu des cartes qui doit avoir un ascenseur */
+.scrollable-card-content {
+     max-height: 400px;
+    overflow-y: auto;  /* Affiche l'ascenseur si le contenu dépasse */
+}

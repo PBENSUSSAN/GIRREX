@@ -1,0 +1,200 @@
+// Fichier : static/js/gestion_zone.js (VERSION INSPIRÉE DE tour_de_service.js)
+
+class GestionZoneApp {
+    constructor(container) {
+        this.container = container;
+        this.centreId = container.dataset.centreId;
+        this.csrfToken = container.dataset.csrfToken;
+
+        this.elements = {
+            modalEl: document.getElementById('editZonesModal'),
+            modalTbody: document.getElementById('modal-zones-tbody'),
+            addForm: document.getElementById('add-zone-form'),
+        };
+
+        this.state = {
+            zones: []
+        };
+    }
+
+    async init() {
+        this.attachEventListeners();
+    }
+
+    // Récupère les données des zones depuis l'API
+    async fetchZones() {
+        try {
+            const response = await fetch(`/api/zones/list/${this.centreId}/`);
+            if (!response.ok) throw new Error('Erreur réseau');
+            this.state.zones = await response.json();
+        } catch (error) {
+            console.error("Erreur de chargement des zones:", error);
+            this.elements.modalTbody.innerHTML = '<tr><td colspan="3" class="text-danger text-center">Erreur de chargement.</td></tr>';
+        }
+    }
+
+    // Affiche les zones dans le tableau de la modale
+    renderModalTable() {
+        this.elements.modalTbody.innerHTML = '';
+        if (this.state.zones.length === 0) {
+            this.elements.modalTbody.innerHTML = '<tr><td colspan="3" class="text-muted text-center">Aucune zone configurée.</td></tr>';
+            return;
+        }
+
+        this.state.zones.forEach(zone => {
+            const row = this.elements.modalTbody.insertRow();
+            row.dataset.zoneId = zone.id;
+            row.innerHTML = `
+                <td data-field="nom">${this.escapeHTML(zone.nom)}</td>
+                <td data-field="description">${this.escapeHTML(zone.description || '')}</td>
+                <td class="text-center">
+                    <button class="btn btn-primary btn-sm btn-edit-zone" title="Modifier"><i class="bi bi-pencil-fill"></i></button>
+                    <button class="btn btn-danger btn-sm btn-delete-zone" title="Supprimer"><i class="bi bi-trash-fill"></i></button>
+                </td>
+            `;
+        });
+    }
+
+    // Passe une ligne du tableau en mode édition
+    editZone(button) {
+        const row = button.closest('tr');
+        if (row.classList.contains('editing')) return;
+        
+        // S'il y a une autre ligne en édition, on l'annule
+        const currentlyEditing = this.elements.modalTbody.querySelector('.editing');
+        if (currentlyEditing) this.renderModalTable();
+
+        row.classList.add('editing');
+        const nomCell = row.querySelector('[data-field="nom"]');
+        const descCell = row.querySelector('[data-field="description"]');
+        
+        const nomValue = nomCell.textContent;
+        const descValue = descCell.textContent;
+
+        nomCell.innerHTML = `<input type="text" class="form-control form-control-sm" value="${nomValue}">`;
+        descCell.innerHTML = `<input type="text" class="form-control form-control-sm" value="${descValue}">`;
+        
+        button.innerHTML = '<i class="bi bi-check-lg"></i>';
+        button.classList.replace('btn-primary', 'btn-success');
+        button.title = "Enregistrer";
+    }
+
+    // Sauvegarde les modifications d'une zone
+    async saveZone(button) {
+        const row = button.closest('tr');
+        const zoneId = row.dataset.zoneId;
+        const nom = row.querySelector('[data-field="nom"] input').value.trim();
+        const description = row.querySelector('[data-field="description"] input').value.trim();
+
+        if (!nom) { alert('Le nom est obligatoire.'); return; }
+
+        try {
+            const response = await fetch(`/api/zones/update/${zoneId}/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.csrfToken },
+                body: JSON.stringify({ nom, description })
+            });
+            if (!response.ok) throw new Error('Échec de la sauvegarde');
+            window.location.reload();
+        } catch (error) {
+            console.error("Erreur de sauvegarde:", error);
+            alert("La sauvegarde a échoué.");
+        }
+    }
+
+    // Supprime une zone
+    async deleteZone(button) {
+        const row = button.closest('tr');
+        const zoneId = row.dataset.zoneId;
+        const nom = row.querySelector('[data-field="nom"]').textContent;
+
+        if (confirm(`Êtes-vous sûr de vouloir supprimer la zone "${nom}" ?`)) {
+            try {
+                const response = await fetch(`/api/zones/delete/${zoneId}/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': this.csrfToken }
+                });
+                if (!response.ok) throw new Error('Échec de la suppression');
+                window.location.reload();
+            } catch (error) {
+                console.error("Erreur de suppression:", error);
+                alert("La suppression a échoué.");
+            }
+        }
+    }
+
+    // Gère les écouteurs d'événements
+    attachEventListeners() {
+        // Chargement des données quand la modale s'ouvre
+        this.elements.modalEl.addEventListener('show.bs.modal', async () => {
+            this.elements.modalTbody.innerHTML = '<tr><td colspan="3" class="text-center"><div class="spinner-border spinner-border-sm"></div></td></tr>';
+            await this.fetchZones();
+            this.renderModalTable();
+        });
+
+        // Gestion du formulaire d'ajout
+        this.elements.addForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nomInput = document.getElementById('new-zone-nom');
+            const descInput = document.getElementById('new-zone-desc');
+            const nom = nomInput.value.trim();
+            const description = descInput.value.trim();
+
+            if (!nom) { alert('Le nom est obligatoire.'); return; }
+
+            try {
+                const response = await fetch(`/api/zones/add/${this.centreId}/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.csrfToken },
+                    body: JSON.stringify({ nom, description })
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Échec de l\'ajout');
+                }
+                window.location.reload();
+            } catch (error) {
+                console.error("Erreur d'ajout:", error);
+                alert(error.message);
+            }
+        });
+        
+        // Délégation des clics sur les boutons "Modifier/Enregistrer" et "Supprimer"
+        this.elements.modalTbody.addEventListener('click', (e) => {
+            const editButton = e.target.closest('.btn-edit-zone');
+            const deleteButton = e.target.closest('.btn-delete-zone');
+
+            if (editButton) {
+                if (editButton.classList.contains('btn-success')) {
+                    this.saveZone(editButton);
+                } else {
+                    this.editZone(editButton);
+                }
+            }
+            if (deleteButton) {
+                this.deleteZone(deleteButton);
+            }
+        });
+    }
+
+    escapeHTML(str) {
+    return str.replace(/[&<>"']/g, function(match) {
+        return {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[match];
+    });
+}
+}
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.querySelector('[data-centre-id]');
+    if (container) {
+        const app = new GestionZoneApp(container);
+        app.init();
+    }
+});

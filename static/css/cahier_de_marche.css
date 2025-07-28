@@ -1,0 +1,37 @@
+/* ============================================================================== */
+/* STYLES SPÉCIFIQUES À LA PAGE CAHIER DE MARCHE                                */
+/* ============================================================================== */
+
+/* Style pour le sélecteur de date */
+.date-selector-form {
+    display: inline-block;
+    width: auto;
+}
+
+#date-selector {
+    font-size: 1.1rem;
+    font-weight: bold;
+    max-width: 250px;
+}
+
+/* Style pour les en-têtes de cartes cliquables (collapsible) */
+.collapsible-header {
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+}
+.collapsible-header:hover {
+    color: inherit;
+}
+.collapsible-header .bi-chevron-down {
+    transition: transform 0.2s ease-in-out;
+}
+.collapsible-header[aria-expanded="true"] .bi-chevron-down {
+    transform: rotate(180deg);
+}
+
+/* Style pour le contenu des cartes qui doit avoir un ascenseur */
+.scrollable-card-content {
+    max-height: 220px; /* Hauteur maximale avant que l'ascenseur n'apparaisse */
+    overflow-y: auto;  /* Affiche l'ascenseur si le contenu dépasse */
+}
