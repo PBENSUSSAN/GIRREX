@@ -5,7 +5,7 @@
 
 from django.db import models
 from .rh import Agent, Centre, Formation  # Imports relatifs
-from .documentaire import Document      # Import depuis un autre module du paquet
+from documentation.models import Document
 
 # ==============================================================================
 # SECTION VI : QUALITE/SECURITE DES VOLS (QS/SMS)

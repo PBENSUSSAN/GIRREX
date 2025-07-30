@@ -9,8 +9,7 @@ from .models import (
     Client, Vol, ControleVol, AuditHeuresControle,
     # Section III: Paramétrage
     Parametre, ValeurParametre, Role, AgentRole, Delegation,
-    # Section IV: Documentaire
-    DocumentType, Document, DocumentVersion, SignatureCircuit,
+    
     # Section V: Changement & MRR
     CentreRole, ResponsableSMS, MRR, MRRSignataire, MRRProgression, Changement, Action, 
     Notification,
@@ -135,19 +134,6 @@ class DelegationAdmin(admin.ModelAdmin):
     search_fields = ('delegant__trigram', 'delegataire__trigram', 'motivee_par')
     autocomplete_fields = ('delegant', 'delegataire', 'creee_par')
 
-# ==============================================================================
-# SECTION IV : GESTION DOCUMENTAIRE
-# ==============================================================================
-
-@admin.register(Document)
-class DocumentAdmin(admin.ModelAdmin):
-    list_display = ('titre', 'reference', 'type_document', 'date_mise_a_jour', 'est_archive')
-    list_filter = ('type_document', 'est_archive', 'centres_visibles')
-    search_fields = ('titre', 'reference', 'description')
-
-admin.site.register(DocumentType)
-admin.site.register(DocumentVersion)
-admin.site.register(SignatureCircuit)
 
 # ==============================================================================
 # SECTION V : GESTION DU CHANGEMENT ET MRR

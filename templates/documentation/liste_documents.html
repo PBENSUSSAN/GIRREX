@@ -1,0 +1,67 @@
+<!-- Fichier : templates/documentation/liste_documents.html (avec filtres) -->
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ titre }} - GIRREX{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h3>{{ titre }}</h3>
+    <p>Consultez la liste des documents de référence applicables.</p>
+
+    <!-- Formulaire de Filtres -->
+    <div class="card card-body mb-4">
+        <form method="get">
+            <div class="row">
+                <div class="col-md-5">{{ filter.form.recherche_textuelle|as_crispy_field }}</div>
+                <div class="col-md-4">{{ filter.form.type_document|as_crispy_field }}</div>
+                <div class="col-md-3">{{ filter.form.scope|as_crispy_field }}</div>
+            </div>
+            <button type="submit" class="btn btn-primary mt-3">
+                <i class="bi bi-search"></i> Filtrer
+            </button>
+        </form>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-striped">
+            <thead class="thead-light">
+                <tr>
+                    <th>Référence</th>
+                    <th>Intitulé</th>
+                    <th>Type</th>
+                    <th>Responsable Suivi</th>
+                    <th>Prochaine Échéance</th>
+                    <th>Statut</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- IMPORTANT : On itère maintenant sur filter.qs -->
+                {% for doc in filter.qs %}
+                <tr>
+                    <td>
+                        <a href="{% url 'documentation:detail-document' doc.id %}"><strong>{{ doc.reference }}</strong></a>
+                    </td>
+                    <td>{{ doc.intitulé }}</td>
+                    <td>{{ doc.type_document.nom }}</td>
+                    <td>{{ doc.responsable_suivi }}</td>
+                    <td>{{ doc.date_echeance_suivi|date:"d/m/Y" }}</td>
+                    <td>
+                        <span class="badge 
+                            {% if doc.statut_suivi == 'A_JOUR' %}bg-success
+                            {% elif doc.statut_suivi == 'PERIME' %}bg-danger
+                            {% else %}bg-warning text-dark{% endif %}">
+                            {{ doc.get_statut_suivi_display }}
+                        </span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted">Aucun document ne correspond à vos critères de recherche.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

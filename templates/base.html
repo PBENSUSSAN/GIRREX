@@ -115,7 +115,15 @@
                             </ul>
                         </li>
                         {% endif %}
+
+                        {% if effective_perms.suivi.view_action %}
+                        <li><a href="{% url 'suivi:tableau-actions' %}"><i class="bi bi-clipboard2-data-fill"></i>Tableau de Suivi</a></li>
+                        {% endif %}
                         
+                        
+
+                        <li><a href="{% url 'documentation:liste-documents' %}"><i class="bi bi-collection-fill"></i>Bibliothèque Doc</a></li>
+                        <li><a href="#"><i class="bi bi-mortarboard-fill"></i>Modules de Formation</a></li>
                         <li><a href="#"><i class="bi bi-mortarboard-fill"></i>Modules de Formation</a></li>
                         <li><a href="#"><i class="bi bi-card-checklist"></i>Licences</a></li>
                         <hr>

@@ -33,14 +33,17 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     
-    # Notre application principale
+    # Nos applications
     'core',
+    'suivi',
+    'documentation',
     
     # APPLICATIONS TIERCES AJOUTÉES
     # 'crispy_forms' gère le rendu avancé des formulaires.
     'crispy_forms',
     # 'crispy_bootstrap5' est le pack de templates pour que crispy-forms génère du HTML compatible Bootstrap 5.
     'crispy_bootstrap5',
+    'django_filters',
 ]
 
 
@@ -158,3 +161,41 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 # Définit le pack de templates à utiliser par défaut dans tout le projet.
 # C'est cette ligne qui corrige l'erreur AttributeError.
 CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+
+# ==============================================================================
+# CONFIGURATION POUR CELERY
+# ==============================================================================
+
+# !! MODE DE DÉVELOPPEMENT SANS REDIS !!
+
+# On force l'exécution locale et synchrone des tâches
+CELERY_TASK_ALWAYS_EAGER = True
+
+# On spécifie un "broker" qui fonctionne en mémoire et ne nécessite aucune connexion réseau.
+# C'est la solution la plus fiable pour le développement local.
+CELERY_BROKER_URL = 'memory://'
+
+# On spécifie également un backend en mémoire, ou on le désactive.
+# Pour notre besoin (déclencher une action), nous n'avons pas besoin de stocker le résultat.
+CELERY_RESULT_BACKEND = None
+
+# Les lignes ci-dessous sont commentées pour éviter toute confusion.
+# CELERY_BROKER_URL = "redis://localhost:6379/0"
+# CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
+
+# Le reste de la configuration est standard et correct.
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
+# ==============================================================================
+# CONFIGURATION DES FICHIERS MÉDIA (UPLOADS UTILISATEUR)
+# ==============================================================================
+
+# L'URL de base pour accéder aux fichiers média dans le navigateur.
+MEDIA_URL = '/media/'
+
+# Le chemin absolu sur le disque dur où les fichiers uploadés seront stockés.
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

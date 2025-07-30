@@ -1,0 +1,59 @@
+<!-- Fichier : templates/suivi/tableau_actions.html -->
+{% extends "base.html" %}
+
+{% block title %}{{ titre }} - GIRREX{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h3>{{ titre }}</h3>
+    <p>Cette page centralise l'ensemble des actions de suivi de l'application.</p>
+
+    <div class="table-responsive mt-4">
+        <table class="table table-sm table-striped table-bordered">
+            <thead class="thead-light">
+                <tr>
+                    <th>N° Action</th>
+                    <th>Titre</th>
+                    <th>Responsable</th>
+                    <th>Échéance</th>
+                    <th>Statut</th>
+                    <th class="text-center">Avancement</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for action in actions %}
+                <tr>
+                    <td><strong>{{ action.numero_action }}</strong></td>
+                    <td>{{ action.titre }}</td>
+                    <td>{{ action.responsable }}</td>
+                    <td>{{ action.echeance|date:"d/m/Y" }}</td>
+                    <td>
+                        <span class="badge 
+                            {% if action.statut == 'A_FAIRE' %}bg-secondary
+                            {% elif action.statut == 'EN_COURS' %}bg-primary
+                            {% elif action.statut == 'A_VALIDER' %}bg-warning text-dark
+                            {% elif action.statut == 'VALIDEE' %}bg-success
+                            {% elif action.statut == 'REFUSEE' %}bg-danger
+                            {% endif %}">
+                            {{ action.get_statut_display }}
+                        </span>
+                    </td>
+                    <td class="text-center align-middle">
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar" role="progressbar" style="width: {{ action.avancement }}%;" 
+                                 aria-valuenow="{{ action.avancement }}" aria-valuemin="0" aria-valuemax="100">
+                                {{ action.avancement }}%
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted">Aucune action à afficher.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
