@@ -1,0 +1,67 @@
+<!-- Fichier : templates/suivi/create_action.html (Version corrigée) -->
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ titre }} - GIRREX{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'suivi:tableau-actions' %}">Tableau de Suivi</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Créer une action</li>
+                </ol>
+            </nav>
+            <div class="card shadow-sm mt-3">
+                <div class="card-header"><h4>{{ titre }}</h4></div>
+                <div class="card-body">
+                    <!-- On ajoute enctype pour permettre l'upload de fichiers -->
+                    <form method="post" enctype="multipart/form-data" novalidate>
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        <div class="d-flex justify-content-end mt-4">
+                            <a href="{% url 'suivi:tableau-actions' %}" class="btn btn-secondary me-2">Annuler</a>
+                            <button type="submit" class="btn btn-primary">Créer l'action</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const categorieSelect = document.getElementById('id_categorie');
+        const docIntituleField = document.getElementById('div_id_document_intitule');
+        const pieceJointeField = document.getElementById('div_id_piece_jointe');
+        const docIntituleInput = document.getElementById('id_document_intitule');
+        const pieceJointeInput = document.getElementById('id_piece_jointe');
+
+        function toggleDocFields() {
+            if (categorieSelect.value === 'DIFFUSION_DOC') {
+                docIntituleField.style.display = 'block';
+                pieceJointeField.style.display = 'block';
+                docIntituleInput.required = true;
+                pieceJointeInput.required = true;
+            } else {
+                docIntituleField.style.display = 'none';
+                pieceJointeField.style.display = 'none';
+                docIntituleInput.required = false;
+                pieceJointeInput.required = false;
+            }
+        }
+
+        // On s'assure que les champs existent avant d'ajouter des écouteurs
+        if (categorieSelect && docIntituleField && pieceJointeField) {
+            toggleDocFields();
+            categorieSelect.addEventListener('change', toggleDocFields);
+        }
+    });
+</script>
+{% endblock scripts %}

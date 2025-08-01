@@ -1,0 +1,156 @@
+<!-- Fichier : templates/suivi/detail_action.html (Version finale et complète) -->
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ titre }} - GIRREX{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'suivi:tableau-actions' %}">Tableau de Suivi</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ action.numero_action }}</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <!-- Colonne de gauche : Informations et Historique -->
+        <div class="col-md-7">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">{{ action.titre }}</h4>
+                    <span class="badge fs-6 
+                        {% if action.statut == 'A_FAIRE' %}bg-secondary
+                        {% elif action.statut == 'EN_COURS' %}bg-primary
+                        {% elif action.statut == 'A_VALIDER' %}bg-warning text-dark
+                        {% elif action.statut == 'VALIDEE' and action.avancement < 100 %}bg-info text-dark
+                        {% elif action.statut == 'VALIDEE' %}bg-success
+                        {% elif action.statut == 'REFUSEE' %}bg-danger
+                        {% endif %}">
+                        {{ action.get_statut_display }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <p><strong>Description :</strong> {{ action.description|default:"Aucune description."|linebreaksbr }}</p>
+                    <hr>
+                    <h5>Détails</h5>
+                    <ul>
+                        <li><strong>Catégorie :</strong> {{ action.get_categorie_display }}</li>
+                        {% if action.centre %}
+                        <li><strong>Périmètre :</strong> {{ action.centre }} (Local)</li>
+                        {% else %}
+                        <li><strong>Périmètre :</strong> National</li>
+                        {% endif %}
+                        <li><strong>Responsable :</strong> {{ action.responsable }}</li>
+                        <li><strong>Échéance :</strong> {{ action.echeance|date:"d/m/Y" }}</li>
+                        <li><strong>Priorité :</strong> {{ action.get_priorite_display }}</li>
+                        {% if action.objet_source and action.content_type.app_label == 'documentation' %}
+                            <li>
+                                <strong>Document lié :</strong> 
+                                <a href="{% url 'documentation:detail-document' action.objet_source.document.id %}">{{ action.objet_source.document }} - v{{ action.objet_source.numero_version }}</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+
+                    <div class="mt-4">
+                        {% if action.statut == 'A_FAIRE' and action.responsable == user.agent_profile %}
+        
+                            {% if action.categorie == 'DIFFUSION_DOC' %}
+                                <a href="{% url 'suivi:diffuser-agents' action.id %}" class="btn btn-lg btn-success">
+                                    <i class="bi bi-broadcast"></i> Diffuser aux Agents...
+                                </a>
+                            {% elif action.categorie == 'RECOMMANDATION_QS' %}
+                                <a href="{% url 'suivi:diffuser-qs' action.id %}" class="btn btn-lg btn-danger">
+                                    <i class="bi bi-diagram-3-fill"></i> Diffuser aux Animateurs QS...
+                                </a>
+                            {% elif action.categorie == 'PRISE_EN_COMPTE_DOC' %}
+                            <form method="post" action="{% url 'suivi:valider-prise-en-compte' action.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-lg btn-primary">
+                                <i class="bi bi-check2-circle"></i> Confirmer la prise en compte
+                                </button>
+                            </form>
+                            {% endif %}
+
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header"><h5>Historique de l'Action</h5></div>
+                <ul class="list-group list-group-flush">
+                    {% for event in historique %}
+                        <li class="list-group-item">
+                            <p class="mb-1">
+                                <strong>{{ event.get_type_evenement_display }}</strong> par <strong>{{ event.auteur.username }}</strong>
+                                le {{ event.timestamp|date:"d/m/Y à H:i" }}
+                            </p>
+                            {% if event.type_evenement == 'CHANGEMENT_AVANCEMENT' %}
+                                <small class="text-muted">
+                                    Statut: {{ event.details.ancien_statut }} -> {{ event.details.nouveau_statut }} | 
+                                    Avancement: {{ event.details.ancien_avancement }} -> {{ event.details.nouvel_avancement }}
+                                </small>
+                                {% if event.details.commentaire %}
+                                    <p class="mb-0 mt-1 fst-italic">"{{ event.details.commentaire }}"</p>
+                                {% endif %}
+                            {% elif event.details.ancien and event.details.nouveau %}
+                                <small class="text-muted">Passage de "{{ event.details.ancien }}" à "{{ event.details.nouveau }}"</small>
+                            {% elif event.details.commentaire %}
+                                <small class="text-muted fst-italic">"{{ event.details.commentaire }}"</small>
+                            {% endif %}
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item text-muted">Aucun événement enregistré pour cette action.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- Colonne de droite : Workflow et Pilotage -->
+        <div class="col-md-5">
+
+            <!-- BLOC DE VALIDATION (POUR RESPONSABLES & SMS) -->
+            {% if action.statut == 'A_VALIDER' and action.responsable == user.agent_profile %}
+                {% if is_responsable_sms %}
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-danger text-white"><h5>Clôture Finale (SMS)</h5></div>
+                        <div class="card-body">
+                            <p>En tant que Responsable SMS, vous pouvez clôturer définitivement cette action.</p>
+                            <form method="post" action="{% url 'suivi:cloture-sms' action.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger">Clôturer à 100%</button>
+                            </form>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header"><h5>Validation Requise</h5></div>
+                        <div class="card-body">
+                            <p>Toutes les sous-tâches sont terminées. Veuillez valider cette étape.</p>
+                            <form method="post" action="{% url 'suivi:valider-etape' action.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-primary">Valider cette étape (reste à 99%)</button>
+                            </form>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endif %}
+
+            <!-- BLOC DE PILOTAGE (pour toutes les actions non terminées) -->
+            {% if action.responsable == user.agent_profile and action.statut != 'VALIDEE' %}
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header"><h5>Piloter l'Action</h5></div>
+                    <div class="card-body">
+                        <form method="post">
+                            {% csrf_token %}
+                            {{ update_form|crispy }}
+                            <button type="submit" name="update_action" class="btn btn-primary mt-3">Mettre à jour l'action</button>
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
