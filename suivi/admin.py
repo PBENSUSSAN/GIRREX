@@ -21,18 +21,18 @@ class ActionAdmin(admin.ModelAdmin):
         'numero_action', 'titre', 'description', 
         'responsable__trigram', 'responsable__reference'
     )
-    date_hierarchy = 'echeance' # On utilise l'échéance comme hiérarchie principale
+    date_hierarchy = 'echeance'
     ordering = ('echeance', 'statut', 'priorite')
 
     autocomplete_fields = ['responsable', 'parent', 'centre']
     
-    # On ajoute des fieldsets pour une meilleure organisation
     fieldsets = (
         ('Identification', {
             'fields': ('numero_action', 'titre', 'description')
         }),
         ('Classification & Périmètre', {
-            'fields': ('categorie', 'centre', 'objet_source')
+            # On affiche le champ en lecture seule 'objet_source_display'
+            'fields': ('categorie', 'centre', 'objet_source_display') 
         }),
         ('Pilotage', {
             'fields': ('responsable', 'echeance', 'priorite', 'statut', 'avancement')
@@ -42,8 +42,21 @@ class ActionAdmin(admin.ModelAdmin):
         }),
     )
 
-    # On rend certains champs en lecture seule pour éviter les erreurs manuelles
     readonly_fields = ('numero_action', 'objet_source_display')
+
+    # ==============================================================================
+    # MODIFICATION : Ajout de l'action d'archivage
+    # ==============================================================================
+    actions = ['archiver_les_actions']
+
+    def archiver_les_actions(self, request, queryset):
+        # On ne peut archiver que les actions qui sont déjà terminées
+        actions_a_archiver = queryset.filter(statut=Action.StatutAction.VALIDEE)
+        rows_updated = actions_a_archiver.update(statut=Action.StatutAction.ARCHIVEE)
+        self.message_user(request, f"{rows_updated} action(s) ont été archivées avec succès.")
+    
+    archiver_les_actions.short_description = "Archiver les actions sélectionnées (si Validées)"
+    # ==============================================================================
 
     def objet_source_display(self, obj):
         if obj.objet_source:
@@ -62,7 +75,6 @@ class ActionAdmin(admin.ModelAdmin):
 class HistoriqueActionAdmin(admin.ModelAdmin):
     """
     Interface d'administration pour le modèle HistoriqueAction.
-    C'est un journal, donc il est en lecture seule.
     """
     list_display = ('timestamp', 'action', 'type_evenement', 'auteur', 'details_preview')
     list_filter = ('type_evenement', 'timestamp', 'action__statut')
@@ -72,48 +84,29 @@ class HistoriqueActionAdmin(admin.ModelAdmin):
 
     actions = ['delete_selected']
 
-    # Rendre tous les champs en lecture seule car c'est un journal
-    #readonly_fields = ('action', 'type_evenement', 'auteur', 'timestamp', 'details')
-
-    # Empêcher la création, modification, suppression manuelle
-    #def has_add_permission(self, request):
-     #   return False
-
-    #def has_change_permission(self, request, obj=None):
-     #   return False
-
-    #def has_delete_permission(self, request, obj=None):
-     #   return False
-    
-    # Affiche un aperçu des détails JSON
     def details_preview(self, obj):
         import json
-        return json.dumps(obj.details, indent=2)
+        try:
+            return json.dumps(obj.details, indent=2, ensure_ascii=False)
+        except TypeError:
+            return obj.details
     details_preview.short_description = "Détails"
 
 @admin.register(PriseEnCompte)
 class PriseEnCompteAdmin(admin.ModelAdmin):
     """
     Interface d'administration pour le modèle PriseEnCompte.
-    Permet de visualiser les preuves de validation des agents.
     """
     list_display = ('id', 'action_agent', 'agent', 'timestamp')
     list_filter = ('timestamp', 'agent__centre')
     search_fields = ('agent__trigram', 'action_agent__titre')
     date_hierarchy = 'timestamp'
     ordering = ('-timestamp',)
-
-    # On utilise l'autocomplétion pour faciliter la recherche
     autocomplete_fields = ['action_agent', 'agent']
-
-    # Ce modèle est une preuve, il est donc préférable de le mettre en lecture seule
-    # pour éviter les modifications manuelles accidentelles.
     readonly_fields = ('action_agent', 'agent', 'timestamp')
 
     def has_add_permission(self, request):
-        # Personne ne doit pouvoir créer une "preuve" manuellement
         return False
 
     def has_change_permission(self, request, obj=None):
-        # On peut autoriser la modification si besoin, mais la lecture seule est plus sûre
-        return False # Mettre sur True si vous voulez pouvoir modifier
+        return False

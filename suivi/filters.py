@@ -37,3 +37,23 @@ class ActionFilter(django_filters.FilterSet):
         return queryset.filter(
             Q(titre__icontains=value) | Q(description__icontains=value)
         )
+class ArchiveFilter(django_filters.FilterSet):
+    """ Un filtre simplifié spécifiquement pour la page des archives. """
+    recherche = django_filters.CharFilter(
+        method='filter_by_recherche',
+        label="Recherche (Titre, Desc.)"
+    )
+    ordering = django_filters.OrderingFilter(
+        fields=(('echeance', 'echeance'), ('responsable', 'responsable')),
+        field_labels={'echeance': 'Échéance', 'responsable': 'Responsable'},
+        label="Trier par"
+    )
+    class Meta:
+        model = Action
+        # On ne garde que les champs pertinents pour les archives
+        fields = ['recherche', 'categorie', 'centre']
+
+    def filter_by_recherche(self, queryset, name, value):
+        return queryset.filter(
+            Q(titre__icontains=value) | Q(description__icontains=value)
+        )

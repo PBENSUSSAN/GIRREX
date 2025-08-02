@@ -1,0 +1,130 @@
+<!-- Fichier : templates/suivi/archives_actions.html (Version corrigée et finale) -->
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ titre }} - GIRREX{% endblock %}
+
+{% block page_specific_styles %}
+<style>
+    .sub-task-row {
+        background-color: #f8f9fa;
+    }
+    .sub-task-row td:nth-child(2) {
+        padding-left: 2.5rem !important;
+    }
+    .toggle-subtasks {
+        cursor: pointer;
+        width: 25px;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>{{ titre }}</h3>
+        <a href="{% url 'suivi:tableau-actions' %}" class="btn btn-primary">
+            <i class="bi bi-arrow-left-circle-fill"></i> Retour au tableau de suivi
+        </a>
+    </div>
+
+    <div class="card card-body mb-4">
+        <form method="get" class="row g-3 align-items-end">
+            <!-- Formulaire de filtre adapté à ArchiveFilter -->
+            <div class="col-md-4">{{ filter.form.recherche|as_crispy_field }}</div>
+            <div class="col-md-3">{{ filter.form.categorie|as_crispy_field }}</div>
+            <div class="col-md-3">{{ filter.form.centre|as_crispy_field }}</div>
+            <div class="col-md-2">{{ filter.form.ordering|as_crispy_field }}</div>
+            <div class="col-12 text-end">
+                <button type="submit" class="btn btn-primary">Filtrer les archives</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-sm table-striped table-bordered table-hover">
+            <thead class="thead-light">
+                <tr>
+                    <th style="width: 3%;"></th>
+                    <th>N° Action</th>
+                    <th>Titre</th>
+                    <th>Catégorie</th>
+                    <th>Responsable</th>
+                    <th>Échéance</th>
+                    <th>Statut</th>
+                    <th class="text-center">Avancement</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for action in filter.qs %}
+                <tr class="action-row-main">
+                    <td class="text-center">
+                        {% if action.sous_taches.all %}
+                        <i class="bi bi-plus-square-fill text-primary toggle-subtasks" data-bs-toggle="collapse" data-bs-target=".subtasks-of-{{ action.id }}"></i>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% include "suivi/partials/action_colored_link.html" with action=action %}
+                    </td>
+                    <td>{{ action.titre }}</td>
+                    <td>{{ action.get_categorie_display }}</td>
+                    <td>{{ action.responsable }}</td>
+                    <td>{{ action.echeance|date:"d/m/Y" }}</td>
+                    <td>
+                        <span class="badge bg-secondary">{{ action.get_statut_display }}</span>
+                    </td>
+                    <td class="text-center align-middle">
+                        <div class="progress" style="height: 20px;"><div class="progress-bar bg-secondary" role="progressbar" style="width: {{ action.avancement }}%;" aria-valuenow="{{ action.avancement }}" aria-valuemin="0" aria-valuemax="100">{{ action.avancement }}%</div></div>
+                    </td>
+                </tr>
+                
+                {% for sub_task in action.sous_taches.all %}
+                    <tr class="collapse sub-task-row subtasks-of-{{ action.id }}">
+                        <td></td>
+                        <td>
+                            {% include "suivi/partials/action_colored_link.html" with action=sub_task %}
+                        </td>
+                        <td>{{ sub_task.titre }}</td>
+                        <td>{{ sub_task.get_categorie_display }}</td>
+                        <td>{{ sub_task.responsable }}</td>
+                        <td>{{ sub_task.echeance|date:"d/m/Y" }}</td>
+                        <td>
+                             <span class="badge bg-secondary">{{ sub_task.get_statut_display }}</span>
+                        </td>
+                        <td class="text-center align-middle">
+                            <div class="progress" style="height: 20px;"><div class="progress-bar bg-secondary" role="progressbar" style="width: {{ sub_task.avancement }}%;" aria-valuenow="{{ sub_task.avancement }}" aria-valuemin="0" aria-valuemax="100">{{ sub_task.avancement }}%</div></div>
+                        </td>
+                    </tr>
+                {% endfor %}
+
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted">Aucune action archivée ne correspond à vos critères.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const toggles = document.querySelectorAll('.toggle-subtasks');
+        toggles.forEach(function(toggle) {
+            toggle.addEventListener('click', function() {
+                if (this.classList.contains('bi-plus-square-fill')) {
+                    this.classList.remove('bi-plus-square-fill');
+                    this.classList.add('bi-dash-square-fill');
+                } else {
+                    this.classList.remove('bi-dash-square-fill');
+                    this.classList.add('bi-plus-square-fill');
+                }
+            });
+        });
+    });
+</script>
+{% endblock scripts %}

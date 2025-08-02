@@ -10,13 +10,18 @@ from .models import Action, HistoriqueAction, PriseEnCompte
 from .forms import CreateActionForm, UpdateActionForm, AddActionCommentForm, DiffusionCibleForm
 from .services import update_parent_progress, final_close_action_cascade
 from core.models import Agent, AgentRole, Centre
-from .filters import ActionFilter
-
+from .filters import ActionFilter, ArchiveFilter
 from documentation.models import Document, VersionDocument, DocumentType
 
 def user_has_role(user, role_name):
-    if not hasattr(user, 'agent_profile'): return False
-    return AgentRole.objects.filter(agent=user.agent_profile, role__nom=role_name, date_fin__isnull=True).exists()
+    """ Vérifie si un utilisateur a un rôle métier spécifique et actif. """
+    if not hasattr(user, 'agent_profile'):
+        return False
+    return AgentRole.objects.filter(
+        agent=user.agent_profile,
+        role__nom=role_name,
+        date_fin__isnull=True
+    ).exists()
 
 @login_required
 def tableau_actions_view(request):
@@ -24,23 +29,18 @@ def tableau_actions_view(request):
     Affiche le tableau de suivi de manière hiérarchique.
     Seules les actions mères sont affichées au premier niveau.
     """
-    # On récupère la base de toutes les actions visibles par l'utilisateur
     base_queryset = Action.objects.for_user(request.user).select_related(
         'responsable', 'centre', 'parent'
     ).prefetch_related(
-        'sous_taches__responsable' # Optimisation pour charger les sous-tâches
+        'sous_taches__responsable'
     )
     
-    # On applique les filtres sur l'ensemble des actions
     action_filter = ActionFilter(request.GET, queryset=base_queryset)
-    
-    # On ne garde que les actions "mères" pour l'affichage principal
-    # Les sous-tâches seront accessibles via la relation pré-chargée
     actions_meres = action_filter.qs.filter(parent__isnull=True)
     
     context = {
         'filter': action_filter,
-        'actions_meres': actions_meres, # On passe cette nouvelle variable au template
+        'actions_meres': actions_meres,
         'titre': "Tableau de Suivi des Actions"
     }
     return render(request, 'suivi/tableau_actions.html', context)
@@ -48,10 +48,8 @@ def tableau_actions_view(request):
 @login_required
 def create_action_view(request):
     if request.method == 'POST':
-        # On passe request.FILES pour gérer l'upload
         form = CreateActionForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
-            # Le code de sauvegarde ne s'exécute QUE si le formulaire est valide
             try:
                 with transaction.atomic():
                     action = form.save(commit=False)
@@ -70,8 +68,7 @@ def create_action_view(request):
                             document=document,
                             numero_version="1.0",
                             fichier_pdf=form.cleaned_data['piece_jointe'],
-                            enregistre_par=request.user,
-                            _creation_manuelle=True
+                            enregistre_par=request.user
                         )
                         action.objet_source = version
                     
@@ -80,9 +77,6 @@ def create_action_view(request):
                     return redirect('suivi:tableau-actions')
             except Exception as e:
                 messages.error(request, f"Une erreur est survenue : {e}")
-        # Si le formulaire n'est PAS valide, on ne fait rien ici.
-        # La vue continuera jusqu'en bas et ré-affichera le formulaire
-        # avec les erreurs.
     else:
         form = CreateActionForm(user=request.user)
 
@@ -137,21 +131,17 @@ def detail_action_view(request, action_id):
     }
     return render(request, 'suivi/detail_action.html', context)
 
-# --- VUES DE WORKFLOW ---
-
 @login_required
 def dispatch_action_view(request, action_id, target_role_name=None):
     action_parente = get_object_or_404(Action, pk=action_id)
     if action_parente.statut != Action.StatutAction.A_FAIRE:
         messages.warning(request, "Cette action a déjà été diffusée ou est en cours de traitement.")
         return redirect('suivi:detail-action', action_id=action_parente.id)
-
     if request.method == 'POST':
         form = DiffusionCibleForm(request.POST)
         if form.is_valid():
             centres_selectionnes = form.cleaned_data['centres']
             agents_cibles = []
-
             if target_role_name:
                 roles = AgentRole.objects.filter(centre__in=centres_selectionnes, role__nom=target_role_name, date_fin__isnull=True).select_related('agent')
                 agents_cibles = [role.agent for role in roles]
@@ -160,15 +150,16 @@ def dispatch_action_view(request, action_id, target_role_name=None):
             else:
                 agents_cibles = Agent.objects.filter(centre__in=centres_selectionnes, actif=True)
                 version_doc = action_parente.objet_source
-                titre_sous_tache = f"Prise en compte : {version_doc.document.reference} v{version_doc.numero_version}"
+                if version_doc:
+                    titre_sous_tache = f"Prise en compte : {version_doc.document.reference} v{version_doc.numero_version}"
+                else:
+                    titre_sous_tache = f"Prise en compte : {action_parente.titre}"
                 categorie_sous_tache = Action.CategorieAction.PRISE_EN_COMPTE_DOC
-
             try:
                 with transaction.atomic():
                     action_parente.statut = Action.StatutAction.EN_COURS
                     action_parente.avancement = 25
                     action_parente.save()
-
                     now_str = timezone.now().strftime('%d/%m/%Y à %H:%M')
                     nom_centres = ", ".join([c.code_centre for c in centres_selectionnes])
                     HistoriqueAction.objects.create(
@@ -177,8 +168,6 @@ def dispatch_action_view(request, action_id, target_role_name=None):
                         auteur=request.user,
                         details={'commentaire': f"Diffusion lancée le {now_str} vers le(s) centre(s) : {nom_centres}."}
                     )
-                    
-                    # LA CORRECTION D'INDENTATION EST ICI
                     for agent in agents_cibles:
                         if not Action.objects.filter(parent=action_parente, responsable=agent).exists():
                             Action.objects.create(
@@ -186,14 +175,12 @@ def dispatch_action_view(request, action_id, target_role_name=None):
                                 echeance=action_parente.echeance, objet_source=action_parente.objet_source,
                                 categorie=categorie_sous_tache
                             )
-                
                 messages.success(request, f"L'action a été diffusée à {len(agents_cibles)} destinataire(s).")
                 return redirect('suivi:detail-action', action_id=action_parente.id)
             except Exception as e:
                 messages.error(request, f"Une erreur est survenue : {e}")
     else:
         form = DiffusionCibleForm()
-
     context = {
         'form': form, 'action': action_parente,
         'titre': f"Diffuser l'action : {action_parente.titre}"
@@ -266,3 +253,25 @@ def cloture_finale_sms_view(request, action_id):
     except Exception as e:
         messages.error(request, f"Une erreur est survenue : {e}")
     return redirect('suivi:tableau-actions')
+
+@login_required
+def archiver_actions_view(request):
+    if request.method == 'POST':
+        action_ids_a_archiver = request.POST.getlist('actions_a_archiver')
+        actions_validees = Action.objects.for_user(request.user).filter(
+            pk__in=action_ids_a_archiver,
+            statut=Action.StatutAction.VALIDEE
+        )
+        count = actions_validees.update(statut=Action.StatutAction.ARCHIVEE)
+        messages.success(request, f"{count} action(s) ont été archivées.")
+    return redirect('suivi:tableau-actions')
+
+@login_required
+def archives_actions_view(request):
+    visible_archives = Action.archives.for_user(request.user).filter(statut=Action.StatutAction.ARCHIVEE)
+    archive_filter = ArchiveFilter(request.GET, queryset=visible_archives)
+    context = {
+        'filter': archive_filter,
+        'titre': "Archives des Actions"
+    }
+    return render(request, 'suivi/archives_actions.html', context)

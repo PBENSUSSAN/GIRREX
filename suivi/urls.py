@@ -31,4 +31,8 @@ urlpatterns = [
     
     # Action de clôture finale réservée au Responsable SMS
     path('action/<int:action_id>/cloture_sms/', views.cloture_finale_sms_view, name='cloture-sms'),
+
+    # Action d'archivage
+    path('actions/archiver/', views.archiver_actions_view, name='archiver-actions'),
+    path('archives/', views.archives_actions_view, name='archives-actions'),
 ]

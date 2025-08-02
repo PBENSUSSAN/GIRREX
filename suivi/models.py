@@ -7,6 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 from core.models import Agent, Centre
 
+# --- QuerySet Personnalisé (définit la logique de filtrage) ---
 class ActionQuerySet(models.QuerySet):
     def for_user(self, user):
         if not hasattr(user, 'agent_profile'):
@@ -18,12 +19,26 @@ class ActionQuerySet(models.QuerySet):
             models.Q(centre__isnull=True) | models.Q(centre=agent.centre)
         )
 
+# --- Managers Personnalisés (utilisent le QuerySet) ---
 class ActionManager(models.Manager):
     def get_queryset(self):
-        return ActionQuerySet(self.model, using=self._db)
+        # Utilise le QuerySet et exclut les archives
+        return ActionQuerySet(self.model, using=self._db).exclude(statut='ARCHIVEE')
+    
     def for_user(self, user):
+        # Raccourci pour appeler la méthode du QuerySet
         return self.get_queryset().for_user(user)
 
+class ArchiveManager(models.Manager):
+    def get_queryset(self):
+        # Utilise le QuerySet mais N'exclut PAS les archives
+        return ActionQuerySet(self.model, using=self._db)
+    
+    def for_user(self, user):
+        # Raccourci pour appeler la méthode du QuerySet
+        return self.get_queryset().for_user(user)
+
+# --- Modèle Principal : Action ---
 class Action(models.Model):
     class CategorieAction(models.TextChoices):
         FONCTIONNEMENT = 'FONCTIONNEMENT', 'Fonctionnement'
@@ -39,6 +54,7 @@ class Action(models.Model):
         A_VALIDER = 'A_VALIDER', 'À valider'
         VALIDEE = 'VALIDEE', 'Validée / Clôturée'
         REFUSEE = 'REFUSEE', 'Refusée'
+        ARCHIVEE = 'ARCHIVEE', 'Archivée'
     
     class Priorite(models.TextChoices):
         BASSE = 'BASSE', 'Basse'
@@ -60,17 +76,34 @@ class Action(models.Model):
     object_id = models.PositiveIntegerField(null=True, blank=True)
     objet_source = GenericForeignKey('content_type', 'object_id')
     echeance_proposee = models.DateField(null=True, blank=True)
+    
     objects = ActionManager()
+    archives = ArchiveManager()
 
     def save(self, *args, **kwargs):
         if not self.pk and not self.numero_action:
+            portee_code = "LOC" if self.centre else "NAT"
+            categorie_prefix_map = {
+                'FONCTIONNEMENT': 'FCT',
+                'DIFFUSION_DOC': 'DOC',
+                'RECOMMANDATION_QS': 'QS',
+                'PRISE_EN_COMPTE_DOC': 'PEC',
+                'AUDIT': 'AUD',
+                'ETUDE_SECURITE': 'ES',
+            }
+            type_code = categorie_prefix_map.get(self.categorie, 'ACT')
             current_year = timezone.now().year
-            last_action = Action.objects.filter(numero_action__startswith=f'ACT-{current_year}-').order_by('numero_action').last()
+            prefix = f"{portee_code}-{type_code}-{current_year}-"
+            
+            last_action = Action.archives.filter(numero_action__startswith=prefix).order_by('numero_action').last()
+            
             new_sequence = 1
             if last_action:
                 last_sequence = int(last_action.numero_action.split('-')[-1])
                 new_sequence = last_sequence + 1
-            self.numero_action = f'ACT-{current_year}-{new_sequence:04d}'
+            
+            self.numero_action = f"{prefix}{new_sequence:04d}"
+        
         super().save(*args, **kwargs)
     
     class Meta:
@@ -79,10 +112,9 @@ class Action(models.Model):
     def __str__(self):
         return self.numero_action or str(self.id)
 
+# --- Modèles de Support ---
+
 class HistoriqueAction(models.Model):
-    """
-    Modèle d'audit qui trace chaque événement significatif dans la vie d'une Action.
-    """
     class TypeEvenement(models.TextChoices):
         CREATION = 'CREATION', 'Création'
         CHANGEMENT_STATUT = 'CHANGEMENT_STATUT', 'Changement de statut'
@@ -109,10 +141,6 @@ class HistoriqueAction(models.Model):
 
 
 class PriseEnCompte(models.Model):
-    """
-    Enregistre l'acte de "signature" d'un agent pour une action spécifique.
-    C'est la preuve auditable de la prise en compte.
-    """
     action_agent = models.OneToOneField(Action, on_delete=models.CASCADE, related_name='prise_en_compte')
     agent = models.ForeignKey('core.Agent', on_delete=models.PROTECT)
     timestamp = models.DateTimeField(auto_now_add=True)

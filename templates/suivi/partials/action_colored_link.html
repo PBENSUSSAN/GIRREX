@@ -1,0 +1,14 @@
+<!-- Fichier : templates/suivi/partials/action_colored_link.html -->
+{% comment %}
+    Ce petit template réutilisable génère un lien coloré pour une action.
+    Il attend qu'une variable "action" lui soit passée.
+{% endcomment %}
+<a href="{% url 'suivi:detail-action' action.id %}" class="
+    {% if action.categorie == 'DIFFUSION_DOC' %}text-success fw-bold
+    {% elif action.categorie == 'RECOMMANDATION_QS' %}text-danger fw-bold
+    {% elif action.categorie == 'PRISE_EN_COMPTE_DOC' %}text-secondary
+    {% elif action.categorie == 'AUDIT' %}text-warning fw-bold
+    {% elif action.categorie == 'FONCTIONNEMENT' %}text-info
+    {% else %}text-primary{% endif %}">
+    <strong>{{ action.numero_action }}</strong>
+</a>

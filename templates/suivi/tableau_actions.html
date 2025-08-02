@@ -1,4 +1,4 @@
-<!-- Fichier : templates/suivi/tableau_actions.html (Version hiérarchique) -->
+<!-- Fichier : templates/suivi/tableau_actions.html (Version avec archivage) -->
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
 
@@ -7,10 +7,10 @@
 {% block page_specific_styles %}
 <style>
     .sub-task-row {
-        background-color: #f8f9fa; /* Couleur de fond légère pour les sous-tâches */
+        background-color: #f8f9fa;
     }
-    .sub-task-row td:first-child {
-        padding-left: 2.5rem !important; /* Décalage pour montrer la hiérarchie */
+    .sub-task-row td:nth-child(3) { /* On cible la 3ème cellule (N° Action) pour le décalage */
+        padding-left: 2.5rem !important;
     }
     .toggle-subtasks {
         cursor: pointer;
@@ -25,13 +25,15 @@
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h3>{{ titre }}</h3>
-        <a href="{% url 'suivi:create-action' %}" class="btn btn-primary">
-            <i class="bi bi-plus-circle-fill"></i> Créer une action
-        </a>
+        <div>
+            <a href="{% url 'suivi:archives-actions' %}" class="btn btn-outline-secondary btn-sm">Consulter les archives</a>
+            <a href="{% url 'suivi:create-action' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle-fill"></i> Créer une action
+            </a>
+        </div>
     </div>
 
     <div class="card card-body mb-4">
-        <!-- ... (le formulaire de filtre ne change pas) ... -->
         <form method="get" class="row g-3 align-items-end">
             <div class="col-md-3">{{ filter.form.recherche|as_crispy_field }}</div>
             <div class="col-md-2">{{ filter.form.categorie|as_crispy_field }}</div>
@@ -44,67 +46,91 @@
         </form>
     </div>
 
-    <div class="table-responsive">
-        <table class="table table-sm table-striped table-bordered table-hover">
-            <thead class="thead-light">
-                <tr>
-                    <th style="width: 3%;"></th> <!-- Colonne pour le bouton déplier -->
-                    <th>N° Action</th>
-                    <th>Titre</th>
-                    <th>Catégorie</th>
-                    <th>Responsable</th>
-                    <th>Échéance</th>
-                    <th>Statut</th>
-                    <th class="text-center">Avancement</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for action in actions_meres %}
-                <tr class="action-row-main">
-                    <td class="text-center">
-                        {% if action.sous_taches.all %}
-                        <i class="bi bi-plus-square-fill text-primary toggle-subtasks" data-bs-toggle="collapse" data-bs-target=".subtasks-of-{{ action.id }}"></i>
-                        {% endif %}
-                    </td>
-                    <td><a href="{% url 'suivi:detail-action' action.id %}"><strong>{{ action.numero_action }}</strong></a></td>
-                    <td>{{ action.titre }}</td>
-                    <td>{{ action.get_categorie_display }}</td>
-                    <td>{{ action.responsable }}</td>
-                    <td>{{ action.echeance|date:"d/m/Y" }}</td>
-                    <td>
-                        <!-- ... (la logique du badge ne change pas) ... -->
-                    </td>
-                    <td class="text-center align-middle">
-                        <!-- ... (la barre de progression ne change pas) ... -->
-                    </td>
-                </tr>
-                
-                <!-- Boucle imbriquée pour les sous-tâches -->
-                {% for sub_task in action.sous_taches.all %}
-                    <tr class="collapse sub-task-row subtasks-of-{{ action.id }}">
-                        <td></td> <!-- Cellule vide pour l'alignement -->
-                        <td><a href="{% url 'suivi:detail-action' sub_task.id %}"><strong>{{ sub_task.numero_action }}</strong></a></td>
-                        <td>{{ sub_task.titre }}</td>
-                        <td>{{ sub_task.get_categorie_display }}</td>
-                        <td>{{ sub_task.responsable }}</td>
-                        <td>{{ sub_task.echeance|date:"d/m/Y" }}</td>
-                        <td>
-                            <!-- ... (la logique du badge pour la sous-tâche) ... -->
+    <!-- Le formulaire d'archivage enveloppe maintenant le tableau -->
+    <form method="post" action="{% url 'suivi:archiver-actions' %}">
+        {% csrf_token %}
+        <div class="d-flex justify-content-end mb-2">
+            <button type="submit" class="btn btn-secondary btn-sm">
+                <i class="bi bi-archive-fill"></i> Archiver la sélection (Actions Validées)
+            </button>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-sm table-striped table-bordered table-hover">
+                <thead class="thead-light">
+                    <tr>
+                        <th style="width: 3%;"></th> <!-- Colonne pour la case à cocher -->
+                        <th style="width: 3%;"></th> <!-- Colonne pour le bouton déplier -->
+                        <th>N° Action</th>
+                        <th>Titre</th>
+                        <th>Catégorie</th>
+                        <th>Responsable</th>
+                        <th>Échéance</th>
+                        <th>Statut</th>
+                        <th class="text-center">Avancement</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for action in actions_meres %}
+                    <tr class="action-row-main">
+                        <td class="text-center align-middle">
+                            {% if action.statut == 'VALIDEE' %}
+                            <input type="checkbox" class="form-check-input" name="actions_a_archiver" value="{{ action.id }}">
+                            {% endif %}
                         </td>
                         <td class="text-center align-middle">
-                            <!-- ... (la barre de progression pour la sous-tâche) ... -->
+                            {% if action.sous_taches.all %}
+                            <i class="bi bi-plus-square-fill text-primary toggle-subtasks" data-bs-toggle="collapse" data-bs-target=".subtasks-of-{{ action.id }}"></i>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% include "suivi/partials/action_colored_link.html" with action=action %}
+                        </td>
+                        <td>{{ action.titre }}</td>
+                        <td>{{ action.get_categorie_display }}</td>
+                        <td>{{ action.responsable }}</td>
+                        <td>{{ action.echeance|date:"d/m/Y" }}</td>
+                        <td>
+                            <span class="badge {% if action.statut == 'VALIDEE' %}bg-success{% else %}bg-primary{% endif %}">{{ action.get_statut_display }}</span>
+                        </td>
+                        <td class="text-center align-middle">
+                            <div class="progress" style="height: 20px;"><div class="progress-bar" role="progressbar" style="width: {{ action.avancement }}%;" aria-valuenow="{{ action.avancement }}" aria-valuemin="0" aria-valuemax="100">{{ action.avancement }}%</div></div>
                         </td>
                     </tr>
-                {% endfor %}
+                    
+                    {% for sub_task in action.sous_taches.all %}
+                        <tr class="collapse sub-task-row subtasks-of-{{ action.id }}">
+                            <td class="text-center align-middle">
+                                {% if sub_task.statut == 'VALIDEE' %}
+                                <input type="checkbox" class="form-check-input" name="actions_a_archiver" value="{{ sub_task.id }}">
+                                {% endif %}
+                            </td>
+                            <td></td>
+                            <td>
+                                {% include "suivi/partials/action_colored_link.html" with action=sub_task %}
+                            </td>
+                            <td>{{ sub_task.titre }}</td>
+                            <td>{{ sub_task.get_categorie_display }}</td>
+                            <td>{{ sub_task.responsable }}</td>
+                            <td>{{ sub_task.echeance|date:"d/m/Y" }}</td>
+                            <td>
+                                 <span class="badge {% if sub_task.statut == 'VALIDEE' %}bg-success{% else %}bg-primary{% endif %}">{{ sub_task.get_statut_display }}</span>
+                            </td>
+                            <td class="text-center align-middle">
+                                <div class="progress" style="height: 20px;"><div class="progress-bar" role="progressbar" style="width: {{ sub_task.avancement }}%;" aria-valuenow="{{ sub_task.avancement }}" aria-valuemin="0" aria-valuemax="100">{{ sub_task.avancement }}%</div></div>
+                            </td>
+                        </tr>
+                    {% endfor %}
 
-                {% empty %}
-                <tr>
-                    <td colspan="8" class="text-center text-muted">Aucune action ne correspond à vos critères.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center text-muted">Aucune action ne correspond à vos critères.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </form>
 </div>
 {% endblock %}
 
@@ -112,12 +138,9 @@
 {{ block.super }}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // On sélectionne tous les boutons qui permettent de déplier
         const toggles = document.querySelectorAll('.toggle-subtasks');
-        
         toggles.forEach(function(toggle) {
             toggle.addEventListener('click', function() {
-                // On change l'icône entre "plus" et "moins"
                 if (this.classList.contains('bi-plus-square-fill')) {
                     this.classList.remove('bi-plus-square-fill');
                     this.classList.add('bi-dash-square-fill');
