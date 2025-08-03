@@ -1,4 +1,4 @@
-# Fichier : suivi/views.py
+# Fichier : suivi/views.py (Version corrigée et fiabilisée)
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
@@ -9,7 +9,7 @@ from django.db import transaction, models
 from .models import Action, HistoriqueAction, PriseEnCompte
 from .forms import CreateActionForm, UpdateActionForm, AddActionCommentForm, DiffusionCibleForm
 from .services import update_parent_progress, final_close_action_cascade
-from core.models import Agent, AgentRole, Centre
+from core.models import Agent, AgentRole, Centre, Role  # MODIFIÉ : Ajout de l'import de Role
 from .filters import ActionFilter, ArchiveFilter
 from documentation.models import Document, VersionDocument, DocumentType
 
@@ -127,7 +127,8 @@ def detail_action_view(request, action_id):
         'action': action, 'historique': historique,
         'update_form': update_form, 'comment_form': comment_form,
         'titre': f"Action : {action.numero_action}",
-        'is_responsable_sms': user_has_role(request.user, "Responsable SMS")
+        # MODIFIÉ : Utilisation de la constante de rôle
+        'is_responsable_sms': user_has_role(request.user, Role.RoleName.RESPONSABLE_SMS)
     }
     return render(request, 'suivi/detail_action.html', context)
 
@@ -189,7 +190,8 @@ def dispatch_action_view(request, action_id, target_role_name=None):
 
 @login_required
 def diffuser_aux_animateurs_qs_view(request, action_id):
-    return dispatch_action_view(request, action_id, target_role_name="Animateur QS")
+    # MODIFIÉ : Utilisation de la constante de rôle
+    return dispatch_action_view(request, action_id, target_role_name=Role.RoleName.QS_LOCAL)
 
 @login_required
 def lancer_diffusion_agents_view(request, action_id):
@@ -244,7 +246,8 @@ def valider_etape_responsable_view(request, action_id):
 @login_required
 def cloture_finale_sms_view(request, action_id):
     action = get_object_or_404(Action, pk=action_id)
-    if not user_has_role(request.user, "Responsable SMS"):
+    # MODIFIÉ : Utilisation de la constante de rôle
+    if not user_has_role(request.user, Role.RoleName.RESPONSABLE_SMS):
         messages.error(request, "Seul un Responsable SMS peut effectuer la clôture finale.")
         return redirect('suivi:detail-action', action_id=action.id)
     try:

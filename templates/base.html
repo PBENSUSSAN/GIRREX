@@ -1,4 +1,4 @@
-<!-- Fichier : templates/base.html -->
+<!-- Fichier : templates/base.html (Version MISE À JOUR - TOUT INCLUS) -->
 {% load static %}
 <!DOCTYPE html>
 <html lang="fr">
@@ -25,9 +25,23 @@
                         </a>
                     </div>
                     <ul class="list-unstyled components">
-                        {% if effective_perms.core.view_agent %}
-                            <li><a href="{% url 'liste-agents' %}"><i class="bi bi-people-fill"></i>Agents</a></li>
+                        
+                        <!-- ============================================================================== -->
+                        <!--             NOUVEAU MENU "CENTRE" AVEC LOGIQUE DE RÔLES                      -->
+                        <!-- ============================================================================== -->
+                        {% if user_roles.CHEF_DE_CENTRE or user_roles.ADJOINT_CHEF_DE_CENTRE or user_roles.CHEF_DE_DIVISION or user_roles.ADJOINT_CHEF_DE_DIVISION %}
+                        <li class="nav-item">
+                            <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#collapseCentre" data-bs-toggle="collapse" aria-expanded="false">
+                                <div><i class="bi bi-buildings-fill"></i><span>Centre</span></div>
+                                <i class="bi bi-chevron-right sidebar-chevron"></i>
+                            </a>
+                            <ul class="collapse list-unstyled" id="collapseCentre">
+                                <li><a href="{% url 'liste-agents' %}" class="ps-4">Agents</a></li>
+                            </ul>
+                        </li>
                         {% endif %}
+                        <!-- ============================================================================== -->
+
                         {% if effective_perms.core.view_tourdeservice %}
                             <li><a href="{% url 'selecteur-centre' %}"><i class="bi bi-calendar-week"></i>Tour de Service</a></li>
                         {% endif %}
@@ -52,7 +66,6 @@
                                         {% endif %}
                                     {% elif service_du_jour.statut == 'OUVERTE' %}
                                         {% if verrou_operationnel and verrou_operationnel.chef_de_quart == request.user.agent_profile %}
-                                            {# C'est bien l'utilisateur actuel qui a le contrôle, on affiche "Fermer" #}
                                             {% if effective_perms.core.open_close_service %}
                                                 <li>
                                                     <form action="{% url 'gerer-service' centre_agent.id 'cloturer' %}" method="post" class="ps-4">
@@ -70,7 +83,6 @@
                                                     </form>
                                                 </li>
                                             {% else %}
-                                                {# Si l'utilisateur n'a même pas la permission de forcer #}
                                                 <li><span class="ps-4 disabled" title="Le service est actuellement pris par {{ verrou_operationnel.chef_de_quart }}.">Service Pris</span></li>
                                             {% endif %}
                                         {% endif %}
@@ -95,18 +107,12 @@
                                     <li><a href="{% url 'feuille-temps-specific-jour' centre_agent.id today|date:'Y-m-d' %}" class="ps-4">Feuille d'heure</a></li>
                                     <li><a href="{% url 'ajouter-panne' centre_agent.id %}" class="ps-4">Signaler une Panne</a></li>
                                     <li><a href="{% url 'ajouter-evenement' centre_agent.id %}" class="ps-4">Consigner un Événement</a></li>
-                                    <!-- ===================================== -->
-                                    <!--   NOUVEAU LIEN ACTIF AJOUTÉ ICI     -->
-                                    <!-- ===================================== -->
                                     <li><a href="{% url 'gestion-zone' centre_agent.id %}" class="ps-4">Gestion Zone</a></li>
 
                                 {% else %}
                                     <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle pour accéder à cette fonction.">Feuille d'heure</span></li>
                                     <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle pour accéder à cette fonction.">Signaler une Panne</span></li>
                                     <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle pour accéder à cette fonction.">Consigner un Événement</span></li>
-                                    <!-- ===================================== -->
-                                    <!-- NOUVEAU LIEN DÉSACTIVÉ AJOUTÉ ICI   -->
-                                    <!-- ===================================== -->
                                     <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle pour accéder à cette fonction.">Gestion Zone</span></li>
                                 {% endif %}
                                 
@@ -120,12 +126,15 @@
                         <li><a href="{% url 'suivi:tableau-actions' %}"><i class="bi bi-clipboard2-data-fill"></i>Tableau de Suivi</a></li>
                         {% endif %}
                         
-                        
+                        <!-- ============================================================================== -->
+                        <!--             MISE À JOUR DES MENUS MÉTIER                                     -->
+                        <!-- ============================================================================== -->
+                        <li><a href="{% url 'documentation:liste-documents' %}"><i class="bi bi-collection-fill"></i>Documentation</a></li>
+                        <li><a href="#"><i class="bi bi-mortarboard-fill"></i>Formation</a></li>
+                        <li><a href="#"><i class="bi bi-tools"></i>Technique</a></li>
+                        <li><a href="#"><i class="bi bi-shield-check"></i>Sécurité aérienne</a></li>
+                        <!-- ============================================================================== -->
 
-                        <li><a href="{% url 'documentation:liste-documents' %}"><i class="bi bi-collection-fill"></i>Bibliothèque Doc</a></li>
-                        <li><a href="#"><i class="bi bi-mortarboard-fill"></i>Modules de Formation</a></li>
-                        <li><a href="#"><i class="bi bi-mortarboard-fill"></i>Modules de Formation</a></li>
-                        <li><a href="#"><i class="bi bi-card-checklist"></i>Licences</a></li>
                         <hr>
                         
                         {% if effective_perms.auth.view_user or effective_perms.core.view_role %}
@@ -140,7 +149,27 @@
                     </ul>
                 </div>
                 <div class="user-info list-unstyled">
-                    <a href="#"><i class="bi bi-person-circle"></i>{{ user.agent_profile.trigram|default:user.username }}</a>
+                    <a href="#" 
+                       data-bs-toggle="tooltip" 
+                       data-bs-placement="top"
+                       data-bs-html="true"
+                       title="
+                        <strong>Rôles Métier :</strong><br>
+                        {% for role in user_active_roles %}
+                            - {{ role.get_nom_display }}<br>
+                        {% empty %}
+                            Aucun rôle actif<br>
+                        {% endfor %}
+                        <hr class='my-1'>
+                        <strong>Groupes de Permissions :</strong><br>
+                        {% for group in user_permission_groups %}
+                            - {{ group.name }}<br>
+                        {% empty %}
+                            Aucun groupe de permissions
+                        {% endfor %}
+                       ">
+                        <i class="bi bi-person-circle"></i>{{ user.agent_profile.trigram|default:user.username }}
+                    </a>
                     {% if user.is_superuser %}<a href="{% url 'admin:index' %}" ><i class="bi bi-tools"></i>Admin Technique</a>{% endif %}
                     <a href="#" id="logout-link"><i class="bi bi-box-arrow-left"></i>Se déconnecter</a>
                 </div>
@@ -156,6 +185,12 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 {% block scripts %}<script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Activer les tooltips Bootstrap
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+
     const logoutLink = document.getElementById('logout-link');
     if (logoutLink) {
         logoutLink.addEventListener('click', function(event) {

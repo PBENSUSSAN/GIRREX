@@ -53,27 +53,39 @@
                     </ul>
 
                     <div class="mt-4">
-                        {% if action.statut == 'A_FAIRE' and action.responsable == user.agent_profile %}
+    {% if action.statut == 'A_FAIRE' and action.responsable == user.agent_profile %}
         
-                            {% if action.categorie == 'DIFFUSION_DOC' %}
-                                <a href="{% url 'suivi:diffuser-agents' action.id %}" class="btn btn-lg btn-success">
-                                    <i class="bi bi-broadcast"></i> Diffuser aux Agents...
-                                </a>
-                            {% elif action.categorie == 'RECOMMANDATION_QS' %}
-                                <a href="{% url 'suivi:diffuser-qs' action.id %}" class="btn btn-lg btn-danger">
-                                    <i class="bi bi-diagram-3-fill"></i> Diffuser aux Animateurs QS...
-                                </a>
-                            {% elif action.categorie == 'PRISE_EN_COMPTE_DOC' %}
-                            <form method="post" action="{% url 'suivi:valider-prise-en-compte' action.id %}">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-lg btn-primary">
-                                <i class="bi bi-check2-circle"></i> Confirmer la prise en compte
-                                </button>
-                            </form>
-                            {% endif %}
+        {% comment %}
+            Scénario 1 : Tâche Mère de Diffusion (pour l'initiateur Central)
+        {% endcomment %}
+        {% if action.categorie == 'DIFFUSION_DOC' and not action.parent %}
+            <a href="{% url 'suivi:diffuser-animateurs' action.id %}" class="btn btn-lg btn-danger">
+                <i class="bi bi-diagram-3-fill"></i> Diffuser aux Animateurs
+            </a>
 
-                        {% endif %}
-                    </div>
+        {% comment %}
+            Scénario 2 : Tâche Intermédiaire de Diffusion (pour l'Animateur Local)
+        {% endcomment %}
+        {% elif action.categorie == 'DIFFUSION_DOC' and action.parent %}
+            <a href="{% url 'suivi:lancer-diffusion' action.id %}" class="btn btn-lg btn-success">
+                <i class="bi bi-broadcast"></i> Lancer la Diffusion aux Agents
+            </a>
+
+        {% comment %}
+            Scénario 3 : Tâche Finale de Prise en Compte (pour l'Agent)
+            LA CORRECTION EST ICI : On vérifie la bonne catégorie.
+        {% endcomment %}
+        {% elif action.categorie == 'PRISE_EN_COMPTE_DOC' %}
+             <form method="post" action="{% url 'suivi:valider-prise-en-compte' action.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-lg btn-primary">
+                    <i class="bi bi-check2-circle"></i> Confirmer la lecture et la prise en compte
+                </button>
+            </form>
+        {% endif %}
+
+    {% endif %}
+</div>
                 </div>
             </div>
 

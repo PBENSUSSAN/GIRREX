@@ -1,4 +1,4 @@
-<!-- Fichier : templates/suivi/tableau_actions.html (Version avec archivage) -->
+<!-- Fichier : templates/suivi/tableau_actions.html (Version Corrigée) -->
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
 
@@ -27,9 +27,16 @@
         <h3>{{ titre }}</h3>
         <div>
             <a href="{% url 'suivi:archives-actions' %}" class="btn btn-outline-secondary btn-sm">Consulter les archives</a>
-            <a href="{% url 'suivi:create-action' %}" class="btn btn-primary">
-                <i class="bi bi-plus-circle-fill"></i> Créer une action
-            </a>
+            
+            {% comment %}
+                Ce bouton n'est visible que par les rôles de pilotage transverse
+                qui ont besoin de créer des actions "manuelles" non liées à un domaine.
+            {% endcomment %}
+            {% if user_roles.RESPONSABLE_SMS or user_roles.CHEF_DE_DIVISION or user_roles.ADJOINT_CHEF_DE_DIVISION or user_roles.CHEF_DE_CENTRE or user_roles.ADJOINT_CHEF_DE_CENTRE %}
+                <a href="{% url 'suivi:create-action' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle-fill"></i> Créer une action
+                </a>
+            {% endif %}
         </div>
     </div>
 

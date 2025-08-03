@@ -1,11 +1,10 @@
 /* Fichier : static/css/style.css (GLOBAL) */
 
 /* Définition des polices et couleurs de base */
-body { font-family: sans-serif; background-color: #f0f2f5; }
-.wrapper { display: flex; align-items: stretch; }
-#sidebar { min-width: 250px; max-width: 250px; background: #002346; color: #fff; min-height: 100vh; }
-#sidebar a { color: rgba(255, 255, 255, 0.8); text-decoration: none; }
-#content { width: 100%; padding: 20px; }
+body { 
+    font-family: sans-serif; 
+    background-color: #f0f2f5; 
+}
 
 .wrapper {
     display: flex;
@@ -132,4 +131,34 @@ a.nav-link:not(.collapsed) .sidebar-chevron {
     color: #888;
     font-weight: 600;
     text-transform: uppercase;
+}
+
+/* ============================================================================== */
+/*          STYLE PERSONNALISÉ POUR LES INFOS-BULLES (TOOLTIPS)                 */
+/* ============================================================================== */
+
+/* On cible la "boîte" intérieure du tooltip */
+.tooltip-inner {
+    background-color: #f8f9fa !important; /* Un fond gris très clair */
+    color: #212529 !important;             /* Un texte noir pour le contraste */
+    border: 1px solid #dee2e6;             /* Une bordure subtile */
+    padding: 8px 12px;                     /* Un peu plus d'espace */
+    border-radius: .375rem;                /* Bords arrondis comme les cartes */
+}
+
+/* On cible la petite flèche et on s'assure qu'elle correspond au nouveau fond */
+.bs-tooltip-top .tooltip-arrow::before {
+    border-top-color: #f8f9fa !important;
+}
+
+.bs-tooltip-end .tooltip-arrow::before {
+    border-right-color: #f8f9fa !important;
+}
+
+.bs-tooltip-bottom .tooltip-arrow::before {
+    border-bottom-color: #f8f9fa !important;
+}
+
+.bs-tooltip-start .tooltip-arrow::before {
+    border-left-color: #f8f9fa !important;
 }
