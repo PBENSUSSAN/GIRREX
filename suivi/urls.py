@@ -1,4 +1,4 @@
-# Fichier : suivi/urls.py
+# Fichier : suivi/urls.py (Version Finale avec la Nouvelle Vue de Diffusion)
 
 from django.urls import path
 from . import views
@@ -11,28 +11,16 @@ urlpatterns = [
     path('actions/creer/', views.create_action_view, name='create-action'),
     path('action/<int:action_id>/', views.detail_action_view, name='detail-action'),
     
-    # URLs de Workflow
-    
-    # Aiguillage vers la page de dispatch pour une diffusion documentaire (vers tous les agents)
-    path('action/<int:action_id>/diffuser_agents/', views.lancer_diffusion_agents_view, name='diffuser-agents'),
-    
-    # Aiguillage vers la page de dispatch pour une diffusion QS (vers les animateurs QS)
-    path('action/<int:action_id>/diffuser_qs/', views.diffuser_aux_animateurs_qs_view, name='diffuser-qs'),
+    # Nouveau workflow de diffusion
+    path('diffuser/<int:content_type_id>/<int:object_id>/', views.lancer_diffusion_view, name='lancer-diffusion'),
 
-    # La page de dispatch générique (utilisée par les deux vues ci-dessus)
-    # Note : Cette URL n'est pas appelée directement, mais via les vues d'aiguillage.
-    # On pourrait la nommer si on voulait y accéder directement un jour.
-    
-    # Action de validation pour l'agent final
+    # Workflow de validation et clôture
     path('action/<int:action_id>/valider_prise_en_compte/', views.valider_prise_en_compte_view, name='valider-prise-en-compte'),
-    
-    # Action de validation pour un responsable (étape à 99%)
     path('action/<int:action_id>/valider_etape/', views.valider_etape_responsable_view, name='valider-etape'),
-    
-    # Action de clôture finale réservée au Responsable SMS
+    path('action/<int:action_id>/cloture_initiateur/', views.cloture_initiateur_view, name='cloture-initiateur'),
     path('action/<int:action_id>/cloture_sms/', views.cloture_finale_sms_view, name='cloture-sms'),
 
-    # Action d'archivage
+    # Gestion des archives
     path('actions/archiver/', views.archiver_actions_view, name='archiver-actions'),
     path('archives/', views.archives_actions_view, name='archives-actions'),
 ]

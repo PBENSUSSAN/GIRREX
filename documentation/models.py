@@ -1,4 +1,4 @@
-# Fichier : documentation/models.py (Version finale intégrant le suivi du renouvellement)
+# Fichier : documentation/models.py (Version MISE À JOUR pour diffusion explicite)
 
 from django.db import models
 from django.conf import settings
@@ -22,7 +22,7 @@ class DocumentType(models.Model):
         return self.nom
 
 # ==============================================================================
-# Modèle Document : Le chef d'orchestre du cycle de vie
+# Modèle Document : Inchangé
 # ==============================================================================
 class Document(models.Model):
     class StatutSuivi(models.TextChoices):
@@ -54,46 +54,39 @@ class Document(models.Model):
         return f"{self.reference} - {self.intitule}"
 
 # ==============================================================================
-# Modèle VersionDocument : Le conteneur du fichier PDF
+# Modèle VersionDocument : MODIFIÉ
 # ==============================================================================
 class VersionDocument(models.Model):
     class StatutVersion(models.TextChoices):
         EN_VIGUEUR = 'EN_VIGUEUR', 'En vigueur'
         REMPLACEE = 'REMPLACEE', 'Remplacée'
         ARCHIVEE = 'ARCHIVEE', 'Archivée'
+        
+    class StatutDiffusion(models.TextChoices):
+        A_DIFFUSER = 'A_DIFFUSER', 'Prêt pour diffusion'
+        DIFFUSION_LANCEE = 'DIFFUSION_LANCEE', 'Diffusion lancée'
+        ACTION_CLOTUREE = 'ACTION_CLOTUREE', 'Action clôturée'
 
     document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='versions')
     numero_version = models.CharField(max_length=20)
     fichier_pdf = models.FileField(upload_to='documentation/%Y/%m/', help_text="Le fichier PDF finalisé")
     date_mise_en_vigueur = models.DateField(default=timezone.now)
     statut = models.CharField(max_length=20, choices=StatutVersion.choices, default=StatutVersion.EN_VIGUEUR)
+    
+    # NOUVEAU CHAMP pour suivre le cycle de vie de la diffusion.
+    statut_diffusion = models.CharField(
+        max_length=20, 
+        choices=StatutDiffusion.choices, 
+        default=StatutDiffusion.A_DIFFUSER
+    )
+    
     commentaire_version = models.TextField(blank=True, help_text="Résumé des modifications")
     
     enregistre_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     enregistre_le = models.DateTimeField(auto_now_add=True)
 
-    def __init__(self, *args, **kwargs):
-        # On intercepte notre signal avant l'initialisation
-        self._creation_manuelle = kwargs.pop('_creation_manuelle', False)
-        super().__init__(*args, **kwargs)
-
-    def save(self, *args, **kwargs):
-        est_une_creation = self._state.adding
-        super().save(*args, **kwargs)
-
-        # L'action automatique ne se déclenche que si c'est une création
-        # ET si elle ne vient pas du processus manuel.
-        if est_une_creation and not self._creation_manuelle:
-            responsable = self.document.responsable_suivi
-            if responsable:
-                Action.objects.create(
-                    titre=f"Diffuser la v{self.numero_version} du document '{self.document.reference}'",
-                    responsable=responsable,
-                    echeance=timezone.now().date() + timedelta(days=14),
-                    objet_source=self,
-                    description="Veuillez lancer la diffusion de cette nouvelle version documentaire.",
-                    categorie=Action.CategorieAction.DIFFUSION_DOC
-                )
+    # L'ancienne logique de création automatique de l'action a été supprimée.
+    # La méthode save() et __init__() ne sont plus nécessaires.
 
     class Meta:
         verbose_name = "Version de Document"
@@ -105,7 +98,7 @@ class VersionDocument(models.Model):
         return f"Version {self.numero_version} de {self.document.reference}"
 
 # ==============================================================================
-# Modèle Relecture : Reste pertinent pour tracer les relectures
+# Modèle Relecture : Inchangé
 # ==============================================================================
 class Relecture(models.Model):
     document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='historique_relectures')

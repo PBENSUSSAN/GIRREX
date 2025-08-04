@@ -1,0 +1,49 @@
+<!-- Fichier : templates/suivi/lancer_diffusion.html (Version Finale) -->
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ titre }} - GIRREX{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            
+            <div class="card shadow-sm">
+                <div class="card-header"><h4>{{ titre }}</h4></div>
+                <div class="card-body">
+                    
+                    <div class="alert alert-light" role="alert">
+                        <p class="mb-1"><strong>Vous êtes sur le point de diffuser l'élément suivant :</strong></p>
+                        <p class="mb-0"><strong>{{ objet_source }}</strong></p>
+                    </div>
+                    
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <fieldset class="border p-3 mb-3">
+                            <legend class="float-none w-auto px-2 fs-6">Scénario de Diffusion</legend>
+                            {{ form.centres_cibles|as_crispy_field }}
+                            {{ form.diffusion_directe_agents|as_crispy_field }}
+                            <hr>
+                            {{ form.agents_cibles|as_crispy_field }}
+                        </fieldset>
+
+                        <fieldset class="border p-3">
+                            <legend class="float-none w-auto px-2 fs-6">Type d'Action</legend>
+                            {{ form.type_diffusion|as_crispy_field }}
+                        </fieldset>
+
+                        <div class="d-flex justify-content-end mt-4">
+                            <a href="{{ request.META.HTTP_REFERER|escape }}" class="btn btn-secondary me-2">Annuler</a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-broadcast"></i> Lancer la diffusion
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

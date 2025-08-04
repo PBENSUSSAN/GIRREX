@@ -14,4 +14,7 @@ urlpatterns = [
     path('view/<int:version_id>/', views.view_pdf_view, name='view-pdf'),
     path('download/<int:version_id>/', views.download_pdf_view, name='download-pdf'),
     path('document/<int:document_id>/add_version/', views.add_version_view, name='add-version'),
+
+    path('creer/', views.create_document_view, name='create-document'),
+    path('liste/', views.liste_documents_view, name='liste-documents'),
 ]

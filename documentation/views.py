@@ -1,4 +1,4 @@
-# Fichier : documentation/views.py (Version complète avec la fonctionnalité d'ajout de version)
+# Fichier : documentation/views.py (Version MISE À JOUR pour diffusion explicite)
 
 # --- Imports Django natifs ---
 from django.shortcuts import render, get_object_or_404, redirect
@@ -12,9 +12,9 @@ from datetime import timedelta
 
 # --- Imports depuis nos applications ---
 from .models import Document, VersionDocument
-from .forms import AddVersionForm
-from core.models import AgentRole  # Important pour trouver le responsable local
-from suivi.models import Action     # Important pour créer la tâche de diffusion
+from .forms import AddVersionForm, DocumentForm
+from core.models import AgentRole, Role # MODIFIÉ : Ajout de l'import de Role
+from suivi.models import Action
 from .filters import DocumentFilter
 
 # ==============================================================================
@@ -25,16 +25,16 @@ from .filters import DocumentFilter
 def liste_documents_view(request):
     """
     Affiche la liste des documents actifs, en appliquant les filtres
-    fournis par l'utilisateur via django-filter.
+    et en pré-chargeant les versions pour un affichage optimisé.
     """
-    # On prend la même base de documents qu'avant
-    base_queryset = Document.objects.filter(statut_suivi__in=['A_JOUR', 'EN_REDACTION', 'RENOUVELLEMENT_PLANIFIE', 'PERIME'])
-    
-    # On instancie notre classe de filtre avec les données GET de la requête et le queryset de base
+    # On garde la même base de documents
+    base_queryset = Document.objects.filter(
+        statut_suivi__in=['A_JOUR', 'EN_REDACTION', 'RENOUVELLEMENT_PLANIFIE', 'PERIME']
+    ).prefetch_related('versions') # MODIFIÉ : Optimisation pour charger les versions efficacement
+
     document_filter = DocumentFilter(request.GET, queryset=base_queryset)
     
     context = {
-        # On passe l'objet filtre complet au template
         'filter': document_filter,
         'titre': "Bibliothèque Documentaire"
     }
@@ -71,63 +71,49 @@ def download_pdf_view(request, version_id):
         raise Http404("Le fichier PDF n'a pas été trouvé sur le serveur.")
 
 # ==============================================================================
-# Vue pour l'ajout d'une nouvelle version (NOUVEAUTÉ)
+# Vue pour l'ajout d'une nouvelle version (MODIFIÉE)
 # ==============================================================================
 
 @login_required
-# @permission_required('documentation.add_versiondocument', raise_exception=True) # On activera la permission plus tard
+# @permission_required('documentation.add_versiondocument', raise_exception=True)
 def add_version_view(request, document_id):
     """ Gère le formulaire et la logique pour ajouter une nouvelle version à un document. """
     document = get_object_or_404(Document, pk=document_id)
     
     if request.method == 'POST':
-        # On passe request.FILES pour gérer l'upload du fichier
         form = AddVersionForm(request.POST, request.FILES)
         if form.is_valid():
             try:
-                # Une transaction atomique garantit que toutes les opérations
-                # réussissent, ou qu'aucune n'est appliquée en cas d'erreur.
                 with transaction.atomic():
-                    # 1. On prépare la nouvelle version sans la sauvegarder en base
+                    # 1. Préparation de la nouvelle version
                     new_version = form.save(commit=False)
                     new_version.document = document
                     new_version.enregistre_par = request.user
                     new_version.statut = VersionDocument.StatutVersion.EN_VIGUEUR
+                    # Le statut_diffusion sera 'A_DIFFUSER' par défaut (défini dans le modèle)
 
-                    # 2. On trouve l'ancienne version "En Vigueur" et on la déclasse
+                    # 2. Déclassement de l'ancienne version
                     ancienne_version = document.versions.filter(statut=VersionDocument.StatutVersion.EN_VIGUEUR).first()
                     if ancienne_version:
                         ancienne_version.statut = VersionDocument.StatutVersion.REMPLACEE
                         ancienne_version.save()
                     
-                    # 3. On sauvegarde la nouvelle version en base de données
+                    # 3. Sauvegarde de la nouvelle version
                     new_version.save()
 
-                    # 4. On met à jour la fiche du document parent
+                    # 4. Mise à jour de la fiche du document parent
                     document.date_echeance_suivi = new_version.date_mise_en_vigueur + timedelta(days=365)
                     document.statut_suivi = Document.StatutSuivi.A_JOUR
                     document.save()
 
-                    # 5. On crée les actions de diffusion pour les responsables locaux
-                    centres = document.centres_applicables.all()
-                    for centre in centres:
-                        # On cherche le responsable documentaire du centre
-                        responsable_local_role = AgentRole.objects.filter(
-                            centre=centre, 
-                            role__nom="Responsable Documentaire Local",
-                            date_fin__isnull=True  # On s'assure que l'attribution est active
-                        ).first()
+                    # 5. SUPPRESSION DE LA CRÉATION AUTOMATIQUE D'ACTIONS
+                    # La logique qui créait les actions de diffusion ici a été retirée.
+                    # Le processus sera maintenant initié manuellement par l'utilisateur
+                    # depuis la liste des documents.
 
-                        if responsable_local_role:
-                            Action.objects.create(
-                                titre=f"Diffuser la v{new_version.numero_version} du document '{document.reference}'",
-                                responsable=responsable_local_role.agent,
-                                echeance=timezone.now().date() + timedelta(days=14),
-                                objet_source=new_version # Lien générique vers la nouvelle version
-                            )
-
-                messages.success(request, f"La version {new_version.numero_version} a été enregistrée avec succès. Les actions de diffusion ont été créées.")
-                return redirect('documentation:detail-document', document_id=document.id)
+                messages.success(request, f"La version {new_version.numero_version} a été enregistrée. Elle est maintenant prête pour la diffusion.")
+                # On redirige vers la liste pour qu'il puisse voir le bouton "Diffuser"
+                return redirect('documentation:liste-documents')
 
             except Exception as e:
                 messages.error(request, f"Une erreur inattendue est survenue : {e}")
@@ -140,3 +126,25 @@ def add_version_view(request, document_id):
         'titre': f"Ajouter une version à {document.reference}"
     }
     return render(request, 'documentation/add_version.html', context)
+
+@login_required
+# @permission_required('documentation.add_document', raise_exception=True)
+def create_document_view(request):
+    """
+    Gère le formulaire et la logique pour créer une nouvelle fiche document.
+    """
+    if request.method == 'POST':
+        form = DocumentForm(request.POST)
+        if form.is_valid():
+            document = form.save()
+            messages.success(request, f"La fiche document '{document.reference}' a été créée avec succès. Vous pouvez maintenant y ajouter sa première version.")
+            # On redirige l'utilisateur directement vers la page de détail pour l'étape suivante
+            return redirect('documentation:detail-document', document_id=document.id)
+    else:
+        form = DocumentForm()
+
+    context = {
+        'form': form,
+        'titre': "Créer une nouvelle fiche document"
+    }
+    return render(request, 'documentation/create_document.html', context)

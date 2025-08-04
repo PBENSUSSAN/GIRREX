@@ -1,4 +1,4 @@
-# Fichier : suivi/models.py
+# Fichier : suivi/models.py (Version avec Correction de l'Avancement à 100%)
 
 from django.db import models
 from django.conf import settings
@@ -7,38 +7,42 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 from core.models import Agent, Centre
 
-# --- QuerySet Personnalisé (définit la logique de filtrage) ---
+# ==============================================================================
+# QUERYSET ET MANAGERS
+# ==============================================================================
 class ActionQuerySet(models.QuerySet):
     def for_user(self, user):
         if not hasattr(user, 'agent_profile'):
             return self.none()
         agent = user.agent_profile
-        if not agent.centre or user.is_superuser:
+        if user.is_superuser:
             return self.all()
-        return self.filter(
-            models.Q(centre__isnull=True) | models.Q(centre=agent.centre)
-        )
+        
+        q_responsable = models.Q(responsable=agent)
+        q_responsable_parent = models.Q(parent__responsable=agent)
+        q_a_une_sous_tache_assignee = models.Q(sous_taches__responsable=agent)
+        
+        final_query = q_responsable | q_responsable_parent | q_a_une_sous_tache_assignee
+        
+        return self.filter(final_query).distinct()
 
-# --- Managers Personnalisés (utilisent le QuerySet) ---
 class ActionManager(models.Manager):
     def get_queryset(self):
-        # Utilise le QuerySet et exclut les archives
         return ActionQuerySet(self.model, using=self._db).exclude(statut='ARCHIVEE')
     
     def for_user(self, user):
-        # Raccourci pour appeler la méthode du QuerySet
         return self.get_queryset().for_user(user)
 
 class ArchiveManager(models.Manager):
     def get_queryset(self):
-        # Utilise le QuerySet mais N'exclut PAS les archives
         return ActionQuerySet(self.model, using=self._db)
     
     def for_user(self, user):
-        # Raccourci pour appeler la méthode du QuerySet
         return self.get_queryset().for_user(user)
 
-# --- Modèle Principal : Action ---
+# ==============================================================================
+# MODÈLE PRINCIPAL : ACTION
+# ==============================================================================
 class Action(models.Model):
     class CategorieAction(models.TextChoices):
         FONCTIONNEMENT = 'FONCTIONNEMENT', 'Fonctionnement'
@@ -61,11 +65,11 @@ class Action(models.Model):
         MOYENNE = 'MOYENNE', 'Moyenne'
         HAUTE = 'HAUTE', 'Haute'
 
-    numero_action = models.CharField(max_length=50, unique=True, blank=True)
+    numero_action = models.CharField(max_length=50, unique=True, null=True, blank=True)
     titre = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     categorie = models.CharField(max_length=30, choices=CategorieAction.choices, default=CategorieAction.FONCTIONNEMENT)
-    centre = models.ForeignKey(Centre, on_delete=models.PROTECT, null=True, blank=True, related_name='actions_locales')
+    centres = models.ManyToManyField(Centre, blank=True, related_name='actions', verbose_name="Centres Concernés")
     responsable = models.ForeignKey(Agent, on_delete=models.PROTECT, related_name='actions_a_realiser')
     echeance = models.DateField()
     priorite = models.CharField(max_length=20, choices=Priorite.choices, default=Priorite.MOYENNE)
@@ -79,41 +83,25 @@ class Action(models.Model):
     
     objects = ActionManager()
     archives = ArchiveManager()
-
-    def save(self, *args, **kwargs):
-        if not self.pk and not self.numero_action:
-            portee_code = "LOC" if self.centre else "NAT"
-            categorie_prefix_map = {
-                'FONCTIONNEMENT': 'FCT',
-                'DIFFUSION_DOC': 'DOC',
-                'RECOMMANDATION_QS': 'QS',
-                'PRISE_EN_COMPTE_DOC': 'PEC',
-                'AUDIT': 'AUD',
-                'ETUDE_SECURITE': 'ES',
-            }
-            type_code = categorie_prefix_map.get(self.categorie, 'ACT')
-            current_year = timezone.now().year
-            prefix = f"{portee_code}-{type_code}-{current_year}-"
-            
-            last_action = Action.archives.filter(numero_action__startswith=prefix).order_by('numero_action').last()
-            
-            new_sequence = 1
-            if last_action:
-                last_sequence = int(last_action.numero_action.split('-')[-1])
-                new_sequence = last_sequence + 1
-            
-            self.numero_action = f"{prefix}{new_sequence:04d}"
-        
-        super().save(*args, **kwargs)
     
+    # ==============================================================================
+    # NOUVELLE MÉTHODE SAVE POUR APPLIQUER LA RÈGLE MÉTIER
+    # ==============================================================================
+    def save(self, *args, **kwargs):
+        # Si le statut est "Validée", on force l'avancement à 100%.
+        if self.statut == self.StatutAction.VALIDEE:
+            self.avancement = 100
+        super().save(*args, **kwargs) # On appelle ensuite la logique de sauvegarde normale
+
     class Meta:
         ordering = ['echeance', 'priorite']
 
     def __str__(self):
-        return self.numero_action or str(self.id)
+        return self.numero_action or self.titre or str(self.id)
 
-# --- Modèles de Support ---
-
+# ==============================================================================
+# MODÈLES DE SUPPORT
+# ==============================================================================
 class HistoriqueAction(models.Model):
     class TypeEvenement(models.TextChoices):
         CREATION = 'CREATION', 'Création'

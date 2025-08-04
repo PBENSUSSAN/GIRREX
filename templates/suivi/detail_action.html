@@ -1,4 +1,4 @@
-<!-- Fichier : templates/suivi/detail_action.html (Version finale et complète) -->
+<!-- Fichier : templates/suivi/detail_action.html (Version Finale Corrigée) -->
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
 
@@ -9,7 +9,7 @@
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{% url 'suivi:tableau-actions' %}">Tableau de Suivi</a></li>
-            <li class="breadcrumb-item active" aria-current="page">{{ action.numero_action }}</li>
+            <li class="breadcrumb-item active" aria-current="page">{{ action.numero_action|default:action.titre }}</li>
         </ol>
     </nav>
 
@@ -36,56 +36,62 @@
                     <h5>Détails</h5>
                     <ul>
                         <li><strong>Catégorie :</strong> {{ action.get_categorie_display }}</li>
-                        {% if action.centre %}
-                        <li><strong>Périmètre :</strong> {{ action.centre }} (Local)</li>
+                        {% if action.centres.all %}
+                            <li><strong>Périmètre :</strong> 
+                                {% for centre in action.centres.all %}
+                                    {{ centre.code_centre }}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            </li>
                         {% else %}
-                        <li><strong>Périmètre :</strong> National</li>
+                            <li><strong>Périmètre :</strong> National</li>
                         {% endif %}
                         <li><strong>Responsable :</strong> {{ action.responsable }}</li>
                         <li><strong>Échéance :</strong> {{ action.echeance|date:"d/m/Y" }}</li>
                         <li><strong>Priorité :</strong> {{ action.get_priorite_display }}</li>
-                        {% if action.objet_source and action.content_type.app_label == 'documentation' %}
-                            <li>
-                                <strong>Document lié :</strong> 
-                                <a href="{% url 'documentation:detail-document' action.objet_source.document.id %}">{{ action.objet_source.document }} - v{{ action.objet_source.numero_version }}</a>
-                            </li>
-                        {% endif %}
                     </ul>
+                    
+                    {% if action.objet_source and action.content_type.model == 'versiondocument' %}
+                        <div class="mt-3 p-3 bg-light border rounded">
+                            <h6 class="mb-2">Document à consulter :</h6>
+                            <p class="mb-2">
+                                <strong>{{ action.objet_source.document.reference }} - v{{ action.objet_source.numero_version }}</strong><br>
+                                <small class="text-muted">{{ action.objet_source.document.intitule }}</small>
+                            </p>
+                            <a href="{% url 'documentation:view-pdf' action.objet_source.id %}" target="_blank" class="btn btn-sm btn-primary">
+                                <i class="bi bi-eye-fill"></i> Visualiser le PDF
+                            </a>
+                            <a href="{% url 'documentation:download-pdf' action.objet_source.id %}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-download"></i> Télécharger
+                            </a>
+                        </div>
+                    {% endif %}
 
                     <div class="mt-4">
-    {% if action.statut == 'A_FAIRE' and action.responsable == user.agent_profile %}
-        
-        {% comment %}
-            Scénario 1 : Tâche Mère de Diffusion (pour l'initiateur Central)
-        {% endcomment %}
-        {% if action.categorie == 'DIFFUSION_DOC' and not action.parent %}
-            <a href="{% url 'suivi:diffuser-animateurs' action.id %}" class="btn btn-lg btn-danger">
-                <i class="bi bi-diagram-3-fill"></i> Diffuser aux Animateurs
-            </a>
-
-        {% comment %}
-            Scénario 2 : Tâche Intermédiaire de Diffusion (pour l'Animateur Local)
-        {% endcomment %}
-        {% elif action.categorie == 'DIFFUSION_DOC' and action.parent %}
-            <a href="{% url 'suivi:lancer-diffusion' action.id %}" class="btn btn-lg btn-success">
-                <i class="bi bi-broadcast"></i> Lancer la Diffusion aux Agents
-            </a>
-
-        {% comment %}
-            Scénario 3 : Tâche Finale de Prise en Compte (pour l'Agent)
-            LA CORRECTION EST ICI : On vérifie la bonne catégorie.
-        {% endcomment %}
-        {% elif action.categorie == 'PRISE_EN_COMPTE_DOC' %}
-             <form method="post" action="{% url 'suivi:valider-prise-en-compte' action.id %}">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-lg btn-primary">
-                    <i class="bi bi-check2-circle"></i> Confirmer la lecture et la prise en compte
-                </button>
-            </form>
-        {% endif %}
-
-    {% endif %}
-</div>
+                        {% if action.statut == 'A_FAIRE' and action.responsable == user.agent_profile %}
+                            {% comment %}
+                                Scénario 1 : Tâche de dispatch pour un responsable local
+                            {% endcomment %}
+                            {% if action.titre|slice:":11" == 'Dispatcher' %}
+                                <!-- ========================================================== -->
+                                <!--             CORRECTION DU LIEN DE DISPATCH                 -->
+                                <!-- ========================================================== -->
+                                <a href="#" class="btn btn-lg btn-success">
+                                    <i class="bi bi-diagram-3-fill"></i> Dispatcher aux Agents du Centre
+                                </a>
+                            
+                            {% comment %}
+                                Scénario 2 : Tâche finale de Prise en Compte pour l'agent
+                            {% endcomment %}
+                            {% elif action.categorie == 'PRISE_EN_COMPTE_DOC' %}
+                                 <form method="post" action="{% url 'suivi:valider-prise-en-compte' action.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-lg btn-primary">
+                                        <i class="bi bi-check2-circle"></i> Confirmer la lecture et la prise en compte
+                                    </button>
+                                </form>
+                            {% endif %}
+                        {% endif %}
+                    </div>
                 </div>
             </div>
 
@@ -122,20 +128,21 @@
         <!-- Colonne de droite : Workflow et Pilotage -->
         <div class="col-md-5">
 
-            <!-- BLOC DE VALIDATION (POUR RESPONSABLES & SMS) -->
-            {% if action.statut == 'A_VALIDER' and action.responsable == user.agent_profile %}
-                {% if is_responsable_sms %}
+            <!-- BLOC DE VALIDATION (MODIFIÉ POUR L'INITIATEUR) -->
+            {% if action.statut == 'A_VALIDER' %}
+                {% if is_initiateur_action_mere %}
                     <div class="card shadow-sm mb-4">
-                        <div class="card-header bg-danger text-white"><h5>Clôture Finale (SMS)</h5></div>
+                        <div class="card-header bg-success text-white"><h5>Clôture Finale Requise</h5></div>
                         <div class="card-body">
-                            <p>En tant que Responsable SMS, vous pouvez clôturer définitivement cette action.</p>
-                            <form method="post" action="{% url 'suivi:cloture-sms' action.id %}">
+                            <p>Toutes les sous-tâches sont terminées. En tant qu'initiateur, vous pouvez clôturer définitivement cette action.</p>
+                            <form method="post" action="{% url 'suivi:cloture-initiateur' action.id %}">
                                 {% csrf_token %}
-                                <button type="submit" class="btn btn-danger">Clôturer à 100%</button>
+                                <button type="submit" class="btn btn-success">Clôturer l'action à 100%</button>
                             </form>
                         </div>
                     </div>
-                {% else %}
+                
+                {% elif action.responsable == user.agent_profile %}
                     <div class="card shadow-sm mb-4">
                         <div class="card-header"><h5>Validation Requise</h5></div>
                         <div class="card-body">

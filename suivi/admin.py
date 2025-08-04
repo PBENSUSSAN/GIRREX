@@ -1,4 +1,4 @@
-# Fichier : suivi/admin.py
+# Fichier : suivi/admin.py (Corrigé pour le champ 'centres')
 
 from django.contrib import admin
 from django.urls import reverse
@@ -11,28 +11,30 @@ class ActionAdmin(admin.ModelAdmin):
     Interface d'administration pour le modèle Action.
     """
     list_display = (
-        'numero_action', 'titre', 'categorie', 'centre', 
+        'numero_action', 'titre', 'categorie', 
         'responsable', 'echeance', 'statut', 'avancement', 'parent'
+        # 'centres' est un champ ManyToMany, on ne peut pas l'afficher directement ici
+        # On pourrait créer une méthode personnalisée si nécessaire
     )
     list_filter = (
-        'statut', 'categorie', 'priorite', 'centre', 'responsable'
+        'statut', 'categorie', 'priorite', 'centres', 'responsable' # MODIFIÉ
     )
     search_fields = (
         'numero_action', 'titre', 'description', 
-        'responsable__trigram', 'responsable__reference'
+        'responsable__trigram', 'responsable__reference',
+        'centres__nom_centre', 'centres__code_centre' # MODIFIÉ
     )
     date_hierarchy = 'echeance'
     ordering = ('echeance', 'statut', 'priorite')
 
-    autocomplete_fields = ['responsable', 'parent', 'centre']
+    autocomplete_fields = ['responsable', 'parent', 'centres'] # MODIFIÉ
     
     fieldsets = (
         ('Identification', {
             'fields': ('numero_action', 'titre', 'description')
         }),
         ('Classification & Périmètre', {
-            # On affiche le champ en lecture seule 'objet_source_display'
-            'fields': ('categorie', 'centre', 'objet_source_display') 
+            'fields': ('categorie', 'centres', 'objet_source_display') # MODIFIÉ
         }),
         ('Pilotage', {
             'fields': ('responsable', 'echeance', 'priorite', 'statut', 'avancement')
@@ -44,20 +46,14 @@ class ActionAdmin(admin.ModelAdmin):
 
     readonly_fields = ('numero_action', 'objet_source_display')
 
-    # ==============================================================================
-    # MODIFICATION : Ajout de l'action d'archivage
-    # ==============================================================================
     actions = ['archiver_les_actions']
 
     def archiver_les_actions(self, request, queryset):
-        # On ne peut archiver que les actions qui sont déjà terminées
         actions_a_archiver = queryset.filter(statut=Action.StatutAction.VALIDEE)
         rows_updated = actions_a_archiver.update(statut=Action.StatutAction.ARCHIVEE)
         self.message_user(request, f"{rows_updated} action(s) ont été archivées avec succès.")
     
     archiver_les_actions.short_description = "Archiver les actions sélectionnées (si Validées)"
-    # ==============================================================================
-
     def objet_source_display(self, obj):
         if obj.objet_source:
             app_label = obj.content_type.app_label

@@ -1,15 +1,17 @@
-# Fichier : suivi/views.py (Version corrigée et fiabilisée)
+# Fichier : suivi/views.py (Version Finale avec Nouvelle Logique de Diffusion)
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from django.db import transaction, models
+from django.contrib.contenttypes.models import ContentType
+from django.http import Http404
 
 from .models import Action, HistoriqueAction, PriseEnCompte
-from .forms import CreateActionForm, UpdateActionForm, AddActionCommentForm, DiffusionCibleForm
-from .services import update_parent_progress, final_close_action_cascade
-from core.models import Agent, AgentRole, Centre, Role  # MODIFIÉ : Ajout de l'import de Role
+from .forms import CreateActionForm, UpdateActionForm, AddActionCommentForm, DiffusionForm
+from .services import update_parent_progress, final_close_action_cascade, creer_diffusion
+from core.models import Agent, AgentRole, Centre, Role
 from .filters import ActionFilter, ArchiveFilter
 from documentation.models import Document, VersionDocument, DocumentType
 
@@ -27,12 +29,13 @@ def user_has_role(user, role_name):
 def tableau_actions_view(request):
     """
     Affiche le tableau de suivi de manière hiérarchique.
-    Seules les actions mères sont affichées au premier niveau.
     """
     base_queryset = Action.objects.for_user(request.user).select_related(
-        'responsable', 'centre', 'parent'
+        'responsable', 'parent'
     ).prefetch_related(
-        'sous_taches__responsable'
+        'sous_taches__responsable',
+        'sous_taches__prise_en_compte',
+        'centres'
     )
     
     action_filter = ActionFilter(request.GET, queryset=base_queryset)
@@ -53,26 +56,16 @@ def create_action_view(request):
             try:
                 with transaction.atomic():
                     action = form.save(commit=False)
-                    if request.user.agent_profile and request.user.agent_profile.centre:
-                        action.centre = request.user.agent_profile.centre
-                    
+                    action.save()
+                    form.save_m2m()
+
                     if action.categorie == Action.CategorieAction.DIFFUSION_DOC:
                         doc_type, _ = DocumentType.objects.get_or_create(nom="Document Externe")
-                        document = Document.objects.create(
-                            intitule=form.cleaned_data['document_intitule'],
-                            reference=f"MANUEL-{timezone.now().strftime('%Y%m%d-%H%M%S')}",
-                            type_document=doc_type,
-                            responsable_suivi=action.responsable
-                        )
-                        version = VersionDocument.objects.create(
-                            document=document,
-                            numero_version="1.0",
-                            fichier_pdf=form.cleaned_data['piece_jointe'],
-                            enregistre_par=request.user
-                        )
+                        document = Document.objects.create(intitule=form.cleaned_data['document_intitule'], reference=f"MANUEL-{timezone.now().strftime('%Y%m%d-%H%M%S')}", type_document=doc_type, responsable_suivi=action.responsable)
+                        version = VersionDocument.objects.create(document=document, numero_version="1.0", fichier_pdf=form.cleaned_data['piece_jointe'], enregistre_par=request.user)
                         action.objet_source = version
+                        action.save()
                     
-                    action.save()
                     messages.success(request, f"L'action '{action.numero_action}' a été créée.")
                     return redirect('suivi:tableau-actions')
             except Exception as e:
@@ -80,10 +73,7 @@ def create_action_view(request):
     else:
         form = CreateActionForm(user=request.user)
 
-    context = {
-        'form': form,
-        'titre': "Créer une nouvelle action"
-    }
+    context = { 'form': form, 'titre': "Créer une nouvelle action" }
     return render(request, 'suivi/create_action.html', context)
 
 @login_required
@@ -100,15 +90,11 @@ def detail_action_view(request, action_id):
                 ancien_statut = action.get_statut_display()
                 ancien_avancement = action.avancement
                 updated_action = update_form.save()
+                if updated_action.parent:
+                    update_parent_progress(updated_action)
                 HistoriqueAction.objects.create(
-                    action=updated_action,
-                    type_evenement=HistoriqueAction.TypeEvenement.CHANGEMENT_AVANCEMENT,
-                    auteur=request.user,
-                    details={
-                        'ancien_statut': ancien_statut, 'nouveau_statut': updated_action.get_statut_display(),
-                        'ancien_avancement': f"{ancien_avancement}%", 'nouvel_avancement': f"{updated_action.avancement}%",
-                        'commentaire': update_form.cleaned_data.get('update_comment')
-                    }
+                    action=updated_action, type_evenement=HistoriqueAction.TypeEvenement.CHANGEMENT_AVANCEMENT, auteur=request.user,
+                    details={ 'ancien_statut': ancien_statut, 'nouveau_statut': updated_action.get_statut_display(), 'ancien_avancement': f"{ancien_avancement}%", 'nouvel_avancement': f"{updated_action.avancement}%", 'commentaire': update_form.cleaned_data.get('update_comment') }
                 )
                 messages.success(request, "L'action a été mise à jour.")
                 return redirect('suivi:detail-action', action_id=action.id)
@@ -116,87 +102,71 @@ def detail_action_view(request, action_id):
             comment_form = AddActionCommentForm(request.POST)
             if comment_form.is_valid():
                 commentaire_texte = comment_form.cleaned_data['commentaire']
-                HistoriqueAction.objects.create(
-                    action=action, type_evenement=HistoriqueAction.TypeEvenement.COMMENTAIRE,
-                    auteur=request.user, details={'commentaire': commentaire_texte}
-                )
+                HistoriqueAction.objects.create(action=action, type_evenement=HistoriqueAction.TypeEvenement.COMMENTAIRE, auteur=request.user, details={'commentaire': commentaire_texte})
                 messages.success(request, "Votre commentaire a été ajouté.")
                 return redirect('suivi:detail-action', action_id=action.id)
     
+    is_initiateur_action_mere = False
+    if action.parent and request.user.agent_profile == action.parent.responsable:
+        is_initiateur_action_mere = True
+    elif not action.parent and request.user.agent_profile == action.responsable:
+        is_initiateur_action_mere = True
+
     context = {
-        'action': action, 'historique': historique,
-        'update_form': update_form, 'comment_form': comment_form,
-        'titre': f"Action : {action.numero_action}",
-        # MODIFIÉ : Utilisation de la constante de rôle
-        'is_responsable_sms': user_has_role(request.user, Role.RoleName.RESPONSABLE_SMS)
+        'action': action, 'historique': historique, 'update_form': update_form, 'comment_form': comment_form,
+        'titre': f"Action : {action.numero_action or action.titre}",
+        'is_responsable_sms': user_has_role(request.user, Role.RoleName.RESPONSABLE_SMS),
+        'is_initiateur_action_mere': is_initiateur_action_mere
     }
     return render(request, 'suivi/detail_action.html', context)
 
+
+# ==============================================================================
+# VUE DE DIFFUSION GÉNÉRIQUE (REMPLACÉE)
+# ==============================================================================
 @login_required
-def dispatch_action_view(request, action_id, target_role_name=None):
-    action_parente = get_object_or_404(Action, pk=action_id)
-    if action_parente.statut != Action.StatutAction.A_FAIRE:
-        messages.warning(request, "Cette action a déjà été diffusée ou est en cours de traitement.")
-        return redirect('suivi:detail-action', action_id=action_parente.id)
+def lancer_diffusion_view(request, content_type_id, object_id):
+    """
+    Affiche le formulaire de paramétrage de la diffusion et appelle le service
+    métier pour exécuter le scénario choisi par l'utilisateur.
+    """
+    try:
+        content_type = get_object_or_404(ContentType, pk=content_type_id)
+        objet_source = content_type.get_object_for_this_type(pk=object_id)
+    except Http404:
+        messages.error(request, "L'objet que vous essayez de diffuser n'existe pas ou est inaccessible.")
+        return redirect('home')
+
     if request.method == 'POST':
-        form = DiffusionCibleForm(request.POST)
+        form = DiffusionForm(request.POST)
         if form.is_valid():
-            centres_selectionnes = form.cleaned_data['centres']
-            agents_cibles = []
-            if target_role_name:
-                roles = AgentRole.objects.filter(centre__in=centres_selectionnes, role__nom=target_role_name, date_fin__isnull=True).select_related('agent')
-                agents_cibles = [role.agent for role in roles]
-                titre_sous_tache = action_parente.titre
-                categorie_sous_tache = action_parente.categorie
-            else:
-                agents_cibles = Agent.objects.filter(centre__in=centres_selectionnes, actif=True)
-                version_doc = action_parente.objet_source
-                if version_doc:
-                    titre_sous_tache = f"Prise en compte : {version_doc.document.reference} v{version_doc.numero_version}"
-                else:
-                    titre_sous_tache = f"Prise en compte : {action_parente.titre}"
-                categorie_sous_tache = Action.CategorieAction.PRISE_EN_COMPTE_DOC
             try:
                 with transaction.atomic():
-                    action_parente.statut = Action.StatutAction.EN_COURS
-                    action_parente.avancement = 25
-                    action_parente.save()
-                    now_str = timezone.now().strftime('%d/%m/%Y à %H:%M')
-                    nom_centres = ", ".join([c.code_centre for c in centres_selectionnes])
-                    HistoriqueAction.objects.create(
-                        action=action_parente,
-                        type_evenement=HistoriqueAction.TypeEvenement.COMMENTAIRE,
-                        auteur=request.user,
-                        details={'commentaire': f"Diffusion lancée le {now_str} vers le(s) centre(s) : {nom_centres}."}
+                    action_mere = creer_diffusion(
+                        objet_source=objet_source,
+                        initiateur=request.user.agent_profile,
+                        form_data=form.cleaned_data
                     )
-                    for agent in agents_cibles:
-                        if not Action.objects.filter(parent=action_parente, responsable=agent).exists():
-                            Action.objects.create(
-                                parent=action_parente, titre=titre_sous_tache, responsable=agent,
-                                echeance=action_parente.echeance, objet_source=action_parente.objet_source,
-                                categorie=categorie_sous_tache
-                            )
-                messages.success(request, f"L'action a été diffusée à {len(agents_cibles)} destinataire(s).")
-                return redirect('suivi:detail-action', action_id=action_parente.id)
+                
+                messages.success(request, f"La diffusion a été lancée avec succès. L'action mère '{action_mere.numero_action}' a été créée.")
+                return redirect('suivi:detail-action', action_id=action_mere.id)
+
             except Exception as e:
-                messages.error(request, f"Une erreur est survenue : {e}")
+                messages.error(request, f"Une erreur est survenue lors de la création des tâches : {e}")
     else:
-        form = DiffusionCibleForm()
+        form = DiffusionForm()
+
     context = {
-        'form': form, 'action': action_parente,
-        'titre': f"Diffuser l'action : {action_parente.titre}"
+        'form': form,
+        'objet_source': objet_source,
+        'titre': f"Paramètres de diffusion pour : {objet_source}"
     }
-    return render(request, 'suivi/dispatch_action.html', context)
+    return render(request, 'suivi/lancer_diffusion.html', context)
 
-@login_required
-def diffuser_aux_animateurs_qs_view(request, action_id):
-    # MODIFIÉ : Utilisation de la constante de rôle
-    return dispatch_action_view(request, action_id, target_role_name=Role.RoleName.QS_LOCAL)
 
-@login_required
-def lancer_diffusion_agents_view(request, action_id):
-    return dispatch_action_view(request, action_id, target_role_name=None)
-
+# ==============================================================================
+# AUTRES VUES DE WORKFLOW
+# ==============================================================================
 @login_required
 def valider_prise_en_compte_view(request, action_id):
     action_agent = get_object_or_404(Action, pk=action_id)
@@ -205,10 +175,7 @@ def valider_prise_en_compte_view(request, action_id):
         return redirect('suivi:detail-action', action_id=action_agent.id)
     try:
         with transaction.atomic():
-            PriseEnCompte.objects.get_or_create(
-                action_agent=action_agent,
-                defaults={'agent': request.user.agent_profile}
-            )
+            PriseEnCompte.objects.get_or_create(action_agent=action_agent, defaults={'agent': request.user.agent_profile})
             action_agent.statut = Action.StatutAction.VALIDEE
             action_agent.avancement = 100
             action_agent.save()
@@ -232,13 +199,23 @@ def valider_etape_responsable_view(request, action_id):
             ancien_statut_display = action.get_statut_display()
             action.statut = Action.StatutAction.VALIDEE
             action.save()
-            HistoriqueAction.objects.create(
-                action=action, type_evenement=HistoriqueAction.TypeEvenement.CHANGEMENT_STATUT,
-                auteur=request.user, details={'ancien': ancien_statut_display, 'nouveau': action.get_statut_display()}
-            )
+            HistoriqueAction.objects.create(action=action, type_evenement=HistoriqueAction.TypeEvenement.CHANGEMENT_STATUT, auteur=request.user, details={'ancien': ancien_statut_display, 'nouveau': action.get_statut_display()})
             if action.parent:
                 update_parent_progress(action)
         messages.success(request, f"L'étape '{action.titre}' a été validée.")
+    except Exception as e:
+        messages.error(request, f"Une erreur est survenue : {e}")
+    return redirect('suivi:tableau-actions')
+    
+@login_required
+def cloture_initiateur_view(request, action_id):
+    action = get_object_or_404(Action, pk=action_id)
+    if request.user.agent_profile != action.responsable:
+        messages.error(request, "Seul le responsable de l'action peut effectuer la clôture finale.")
+        return redirect('suivi:detail-action', action_id=action.id)
+    try:
+        final_close_action_cascade(action, request.user)
+        messages.success(request, f"L'action '{action.numero_action}' et ses sous-tâches ont été clôturées à 100%.")
     except Exception as e:
         messages.error(request, f"Une erreur est survenue : {e}")
     return redirect('suivi:tableau-actions')
@@ -246,7 +223,6 @@ def valider_etape_responsable_view(request, action_id):
 @login_required
 def cloture_finale_sms_view(request, action_id):
     action = get_object_or_404(Action, pk=action_id)
-    # MODIFIÉ : Utilisation de la constante de rôle
     if not user_has_role(request.user, Role.RoleName.RESPONSABLE_SMS):
         messages.error(request, "Seul un Responsable SMS peut effectuer la clôture finale.")
         return redirect('suivi:detail-action', action_id=action.id)
@@ -261,10 +237,7 @@ def cloture_finale_sms_view(request, action_id):
 def archiver_actions_view(request):
     if request.method == 'POST':
         action_ids_a_archiver = request.POST.getlist('actions_a_archiver')
-        actions_validees = Action.objects.for_user(request.user).filter(
-            pk__in=action_ids_a_archiver,
-            statut=Action.StatutAction.VALIDEE
-        )
+        actions_validees = Action.objects.for_user(request.user).filter(pk__in=action_ids_a_archiver, statut=Action.StatutAction.VALIDEE)
         count = actions_validees.update(statut=Action.StatutAction.ARCHIVEE)
         messages.success(request, f"{count} action(s) ont été archivées.")
     return redirect('suivi:tableau-actions')

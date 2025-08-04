@@ -1,13 +1,35 @@
-<!-- Fichier : templates/documentation/liste_documents.html (avec filtres) -->
+<!-- Fichier : templates/documentation/liste_documents.html (Version Corrigée et Final) -->
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
+{% load diffusion_tags %}
 
 {% block title %}{{ titre }} - GIRREX{% endblock %}
 
 {% block content %}
 <div class="container-fluid mt-4">
-    <h3>{{ titre }}</h3>
-    <p>Consultez la liste des documents de référence applicables.</p>
+
+    <!-- ============================================================================== -->
+    <!--          NOUVEL EN-TÊTE DE PAGE AVEC LE BOUTON DE CRÉATION                  -->
+    <!-- ============================================================================== -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h3>{{ titre }}</h3>
+            <p class="mb-0 text-muted">Consultez la liste des documents de référence applicables.</p>
+        </div>
+        <div>
+            {% comment %}
+                Le bouton "Créer un document" n'apparaît que si l'utilisateur
+                a la permission Django correspondante.
+            {% endcomment %}
+            {% if perms.documentation.add_document %}
+                <a href="{% url 'documentation:create-document' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle-fill"></i> Créer un document
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    <!-- ============================================================================== -->
+
 
     <!-- Formulaire de Filtres -->
     <div class="card card-body mb-4">
@@ -36,11 +58,22 @@
                 </tr>
             </thead>
             <tbody>
-                <!-- IMPORTANT : On itère maintenant sur filter.qs -->
+                <!-- On itère sur filter.qs -->
                 {% for doc in filter.qs %}
                 <tr>
                     <td>
                         <a href="{% url 'documentation:detail-document' doc.id %}"><strong>{{ doc.reference }}</strong></a>
+                        
+                        {% comment %}
+                            INDICATEUR VISUEL "À Diffuser"
+                        {% endcomment %}
+                        {% for version in doc.versions.all %}
+                            {% if version.statut_diffusion == 'A_DIFFUSER' and forloop.first %}
+                                <span class="badge bg-success ms-2" title="Une version de ce document est prête à être diffusée.">
+                                    <i class="bi bi-broadcast"></i> À Diffuser
+                                </span>
+                            {% endif %}
+                        {% endfor %}
                     </td>
                     <td>{{ doc.intitulé }}</td>
                     <td>{{ doc.type_document.nom }}</td>

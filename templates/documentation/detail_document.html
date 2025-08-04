@@ -1,5 +1,6 @@
-<!-- Fichier : templates/documentation/detail_document.html -->
+<!-- Fichier : templates/documentation/detail_document.html (Version Finale Corrigée) -->
 {% extends "base.html" %}
+{% load diffusion_tags %}
 
 {% block title %}{{ titre }} - GIRREX{% endblock %}
 
@@ -17,16 +18,11 @@
         <div class="card-header d-flex justify-content-between align-items-center">
             <h4 class="mb-0">{{ document.reference }} - {{ document.intitulé }}</h4>
             <div>
-                {% comment %}
-                    Le bouton pour ajouter une version n'est visible que si l'utilisateur
-                    a la permission nécessaire.
-                {% endcomment %}
                 {% if perms.documentation.add_versiondocument %}
                 <a href="{% url 'documentation:add-version' document.id %}" class="btn btn-success btn-sm me-2">
                     <i class="bi bi-plus-circle-fill"></i> Ajouter une version
                 </a>
                 {% endif %}
-
                 <span class="badge {% if document.statut_suivi == 'A_JOUR' %}bg-success{% elif document.statut_suivi == 'PERIME' %}bg-danger{% else %}bg-warning text-dark{% endif %} fs-6">{{ document.get_statut_suivi_display }}</span>
             </div>
         </div>
@@ -44,28 +40,35 @@
         <div class="list-group-item">
             <div class="d-flex w-100 justify-content-between">
                 <h5 class="mb-1">Version {{ version.numero_version }}</h5>
-                <span class="badge {% if version.statut == 'EN_VIGUEUR' %}bg-primary{% else %}bg-secondary{% endif %}">{{ version.get_statut_display }}</span>
+                <div>
+                    <span class="badge {% if version.statut_diffusion == 'A_DIFFUSER' %}bg-success{% elif version.statut_diffusion == 'DIFFUSION_LANCEE' %}bg-info text-dark{% else %}bg-secondary{% endif %} me-2">{{ version.get_statut_diffusion_display }}</span>
+                    <span class="badge {% if version.statut == 'EN_VIGUEUR' %}bg-primary{% else %}bg-secondary{% endif %}">{{ version.get_statut_display }}</span>
+                </div>
             </div>
             <p class="mb-1">{{ version.commentaire_version|default:"Aucun commentaire." }}</p>
             <small>Mise en vigueur le {{ version.date_mise_en_vigueur|date:"d/m/Y" }}.</small>
             
-            {% comment %}
-                On affiche les boutons uniquement si la version est "En vigueur" 
-                et qu'un fichier PDF est bien associé.
-            {% endcomment %}
-            {% if version.statut == 'EN_VIGUEUR' and version.fichier_pdf %}
-                <div class="mt-2">
-                    <!-- Bouton pour visualiser dans un nouvel onglet -->
+            <div class="mt-2">
+                {% if version.fichier_pdf %}
                     <a href="{% url 'documentation:view-pdf' version.id %}" target="_blank" class="btn btn-sm btn-primary">
                         <i class="bi bi-eye-fill"></i> Visualiser
                     </a>
-
-                    <!-- Bouton pour lancer le téléchargement -->
                     <a href="{% url 'documentation:download-pdf' version.id %}" class="btn btn-sm btn-outline-secondary">
                         <i class="bi bi-download"></i> Télécharger
                     </a>
-                </div>
-            {% endif %}
+                {% endif %}
+
+                {% if version.statut == 'EN_VIGUEUR' and version.statut_diffusion == 'A_DIFFUSER' %}
+                    {% get_content_type_id version as ctype_id %}
+                    
+                    <!-- ========================================================== -->
+                    <!--                   CORRECTION DE L'URL ICI                  -->
+                    <!-- ========================================================== -->
+                    <a href="{% url 'suivi:lancer-diffusion' content_type_id=ctype_id object_id=version.id %}" class="btn btn-sm btn-success">
+                        <i class="bi bi-broadcast"></i> Diffuser cette version
+                    </a>
+                {% endif %}
+            </div>
 
         </div>
         {% empty %}

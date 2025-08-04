@@ -1,4 +1,4 @@
-<!-- Fichier : templates/suivi/tableau_actions.html (Version Corrigée) -->
+<!-- Fichier : templates/suivi/tableau_actions.html (Version Finale et Robuste) -->
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
 
@@ -27,11 +27,6 @@
         <h3>{{ titre }}</h3>
         <div>
             <a href="{% url 'suivi:archives-actions' %}" class="btn btn-outline-secondary btn-sm">Consulter les archives</a>
-            
-            {% comment %}
-                Ce bouton n'est visible que par les rôles de pilotage transverse
-                qui ont besoin de créer des actions "manuelles" non liées à un domaine.
-            {% endcomment %}
             {% if user_roles.RESPONSABLE_SMS or user_roles.CHEF_DE_DIVISION or user_roles.ADJOINT_CHEF_DE_DIVISION or user_roles.CHEF_DE_CENTRE or user_roles.ADJOINT_CHEF_DE_CENTRE %}
                 <a href="{% url 'suivi:create-action' %}" class="btn btn-primary">
                     <i class="bi bi-plus-circle-fill"></i> Créer une action
@@ -41,19 +36,11 @@
     </div>
 
     <div class="card card-body mb-4">
-        <form method="get" class="row g-3 align-items-end">
-            <div class="col-md-3">{{ filter.form.recherche|as_crispy_field }}</div>
-            <div class="col-md-2">{{ filter.form.categorie|as_crispy_field }}</div>
-            <div class="col-md-2">{{ filter.form.statut|as_crispy_field }}</div>
-            <div class="col-md-2">{{ filter.form.centre|as_crispy_field }}</div>
-            <div class="col-md-2">{{ filter.form.ordering|as_crispy_field }}</div>
-            <div class="col-md-1">
-                <button type="submit" class="btn btn-primary w-100">Filtrer</button>
-            </div>
+        <form method="get">
+            {% crispy filter.form %}
         </form>
     </div>
 
-    <!-- Le formulaire d'archivage enveloppe maintenant le tableau -->
     <form method="post" action="{% url 'suivi:archiver-actions' %}">
         {% csrf_token %}
         <div class="d-flex justify-content-end mb-2">
@@ -66,14 +53,15 @@
             <table class="table table-sm table-striped table-bordered table-hover">
                 <thead class="thead-light">
                     <tr>
-                        <th style="width: 3%;"></th> <!-- Colonne pour la case à cocher -->
-                        <th style="width: 3%;"></th> <!-- Colonne pour le bouton déplier -->
+                        <th style="width: 3%;"></th>
+                        <th style="width: 3%;"></th>
                         <th>N° Action</th>
                         <th>Titre</th>
                         <th>Catégorie</th>
                         <th>Responsable</th>
                         <th>Échéance</th>
                         <th>Statut</th>
+                        <th class="text-center">Prise en compte le</th>
                         <th class="text-center">Avancement</th>
                     </tr>
                 </thead>
@@ -100,38 +88,46 @@
                         <td>
                             <span class="badge {% if action.statut == 'VALIDEE' %}bg-success{% else %}bg-primary{% endif %}">{{ action.get_statut_display }}</span>
                         </td>
+                        <td></td>
                         <td class="text-center align-middle">
                             <div class="progress" style="height: 20px;"><div class="progress-bar" role="progressbar" style="width: {{ action.avancement }}%;" aria-valuenow="{{ action.avancement }}" aria-valuemin="0" aria-valuemax="100">{{ action.avancement }}%</div></div>
                         </td>
                     </tr>
                     
                     {% for sub_task in action.sous_taches.all %}
-                        <tr class="collapse sub-task-row subtasks-of-{{ action.id }}">
-                            <td class="text-center align-middle">
-                                {% if sub_task.statut == 'VALIDEE' %}
-                                <input type="checkbox" class="form-check-input" name="actions_a_archiver" value="{{ sub_task.id }}">
-                                {% endif %}
-                            </td>
-                            <td></td>
-                            <td>
-                                {% include "suivi/partials/action_colored_link.html" with action=sub_task %}
-                            </td>
-                            <td>{{ sub_task.titre }}</td>
-                            <td>{{ sub_task.get_categorie_display }}</td>
-                            <td>{{ sub_task.responsable }}</td>
-                            <td>{{ sub_task.echeance|date:"d/m/Y" }}</td>
-                            <td>
-                                 <span class="badge {% if sub_task.statut == 'VALIDEE' %}bg-success{% else %}bg-primary{% endif %}">{{ sub_task.get_statut_display }}</span>
-                            </td>
-                            <td class="text-center align-middle">
-                                <div class="progress" style="height: 20px;"><div class="progress-bar" role="progressbar" style="width: {{ sub_task.avancement }}%;" aria-valuenow="{{ sub_task.avancement }}" aria-valuemin="0" aria-valuemax="100">{{ sub_task.avancement }}%</div></div>
-                            </td>
-                        </tr>
+                        {% if sub_task.responsable == user.agent_profile or action.responsable == user.agent_profile %}
+                            <tr class="collapse sub-task-row subtasks-of-{{ action.id }}">
+                                <td class="text-center align-middle">
+                                    {% if sub_task.statut == 'VALIDEE' %}
+                                    <input type="checkbox" class="form-check-input" name="actions_a_archiver" value="{{ sub_task.id }}">
+                                    {% endif %}
+                                </td>
+                                <td></td>
+                                <td>
+                                    {% include "suivi/partials/action_colored_link.html" with action=sub_task %}
+                                </td>
+                                <td>{{ sub_task.titre }}</td>
+                                <td>{{ sub_task.get_categorie_display }}</td>
+                                <td>{{ sub_task.responsable }}</td>
+                                <td>{{ sub_task.echeance|date:"d/m/Y" }}</td>
+                                <td>
+                                     <span class="badge {% if sub_task.statut == 'VALIDEE' %}bg-success{% else %}bg-primary{% endif %}">{{ sub_task.get_statut_display }}</span>
+                                </td>
+                                <td class="text-center align-middle">
+                                    {% if sub_task.prise_en_compte %}
+                                        <small>{{ sub_task.prise_en_compte.timestamp|date:"d/m/Y H:i" }}</small>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center align-middle">
+                                    <div class="progress" style="height: 20px;"><div class="progress-bar" role="progressbar" style="width: {{ sub_task.avancement }}%;" aria-valuenow="{{ sub_task.avancement }}" aria-valuemin="0" aria-valuemax="100">{{ sub_task.avancement }}%</div></div>
+                                </td>
+                            </tr>
+                        {% endif %}
                     {% endfor %}
 
                     {% empty %}
                     <tr>
-                        <td colspan="9" class="text-center text-muted">Aucune action ne correspond à vos critères.</td>
+                        <td colspan="10" class="text-center text-muted">Aucune action ne correspond à vos critères.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
