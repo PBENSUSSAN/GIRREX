@@ -1,0 +1,172 @@
+<!-- Fichier : templates/partials/sidebar_menu.html (Version Complète et Corrigée) -->
+
+<ul class="list-unstyled components">
+    
+    <!-- Menu Centre -->
+    {% if has_full_access %}
+    <li class="nav-item">
+        <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#collapseCentre" data-bs-toggle="collapse" aria-expanded="false">
+            <div><i class="bi bi-buildings-fill"></i><span>Centre</span></div>
+            <i class="bi bi-chevron-right sidebar-chevron"></i>
+        </a>
+        <ul class="collapse list-unstyled" id="collapseCentre">
+            <li><a href="#" class="ps-4">Agents</a></li>
+        </ul>
+    </li>
+    {% endif %}
+
+    <!-- Menu Tour de Service -->
+    <li><a href="{% url 'selecteur-centre' %}"><i class="bi bi-calendar-week"></i>Tour de Service</a></li>
+    
+    <!-- Menu Cahier de Marche (LOGIQUE ORIGINALE PRÉSERVÉE) -->
+    {% if centre_agent %}
+    <li class="nav-item">
+        <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#collapseCahierDeMarche" data-bs-toggle="collapse" aria-expanded="false">
+            <div><i class="bi bi-book"></i><span>Cahier de Marche</span></div>
+            <i class="bi bi-chevron-right sidebar-chevron"></i>
+        </a>
+        <ul class="collapse list-unstyled" id="collapseCahierDeMarche">
+            <li class="sidebar-submenu-header">Actions du Service</li>
+            {% if centre_agent %}
+                {% if not service_du_jour %}
+                    {% if effective_perms.core.open_close_service %}
+                        <li>
+                            <form action="{% url 'gerer-service' centre_agent.id 'ouvrir' %}" method="post" class="ps-4">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-link nav-link text-primary fw-bold p-0"><i class="bi bi-play-circle-fill me-1"></i>Ouvrir le Service</button>
+                            </form>
+                        </li>
+                    {% endif %}
+                {% elif service_du_jour.statut == 'OUVERTE' %}
+                    {% if verrou_operationnel and verrou_operationnel.chef_de_quart == request.user.agent_profile %}
+                        {% if effective_perms.core.open_close_service %}
+                            <li>
+                                <form action="{% url 'gerer-service' centre_agent.id 'cloturer' %}" method="post" class="ps-4">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-link nav-link text-danger fw-bold p-0"><i class="bi bi-stop-circle-fill me-1"></i>Fermer le Service</button>
+                                </form>
+                            </li>
+                        {% endif %}
+                    {% else %}
+                          {% if effective_perms.core.change_feuilletemps %}
+                            <li>
+                                <form action="{% url 'gerer-service' centre_agent.id 'forcer-prise' %}" method="post" class="ps-4" title="Service pris par {{ verrou_operationnel.chef_de_quart }}. Cliquez pour forcer.">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-link nav-link text-warning fw-bold p-0"><i class="bi bi-shield-lock-fill me-1"></i>Forcer la Prise</button>
+                                </form>
+                            </li>
+                        {% else %}
+                            <li><span class="ps-4 disabled" title="Le service est actuellement pris par {{ verrou_operationnel.chef_de_quart }}.">Service Pris</span></li>
+                        {% endif %}
+                    {% endif %}
+                {% elif service_du_jour.statut == 'CLOTUREE' %}
+                    {% if effective_perms.core.reopen_service %}
+                        <li>
+                            <form action="{% url 'gerer-service' centre_agent.id 'reouvrir' %}" method="post" class="ps-4">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-link nav-link text-warning fw-bold p-0"><i class="bi bi-arrow-counterclockwise me-1"></i>Rouvrir le Service</button>
+                            </form>
+                        </li>
+                    {% else %}
+                        <li><span class="ps-4 disabled">Service Clôturé</span></li>
+                    {% endif %}
+                {% elif service_du_jour.statut == 'VISEE' %}
+                    <li><span class="ps-4 disabled text-success"><i class="bi bi-patch-check-fill me-1"></i>Service Visé</span></li>
+                {% endif %}
+            {% endif %}
+            <li class="sidebar-submenu-header">Saisie & Modification</li>
+            {% if service_du_jour and service_du_jour.statut == 'OUVERTE' and verrou_operationnel and verrou_operationnel.chef_de_quart == request.user.agent_profile %}
+                <li><a href="{% url 'feuille-temps-specific-jour' centre_agent.id today|date:'Y-m-d' %}" class="ps-4">Feuille d'heure</a></li>
+                <li><a href="{% url 'ajouter-panne' centre_agent.id %}" class="ps-4">Signaler une Panne</a></li>
+                <li><a href="{% url 'ajouter-evenement' centre_agent.id %}" class="ps-4">Consigner un Événement</a></li>
+                <li><a href="{% url 'gestion-zone' centre_agent.id %}" class="ps-4">Gestion Zone</a></li>
+            {% else %}
+                <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle pour accéder à cette fonction.">Feuille d'heure</span></li>
+                <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle pour accéder à cette fonction.">Signaler une Panne</span></li>
+                <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle pour accéder à cette fonction.">Consigner un Événement</span></li>
+                <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle pour accéder à cette fonction.">Gestion Zone</span></li>
+            {% endif %}
+            <li class="sidebar-submenu-header">Consultation</li>
+            <li><a href="{% url 'cahier-de-marche' centre_agent.id today|date:'Y-m-d' %}" class="ps-4">Chronologie du Jour</a></li>
+        </ul>
+    </li>
+    {% endif %}
+    
+    <!-- Menu Activité Aérienne -->
+    <li><a href="#"><i class="bi bi-airplane-fill"></i>Activité aérienne</a></li>
+
+    <hr>
+    <!-- Menu Tableau de Suivi -->
+    <li><a href="{% url 'suivi:tableau-actions' %}"><i class="bi bi-clipboard2-data-fill"></i>Tableau de Suivi</a></li>
+    <hr>
+    
+    <!-- Menu SMS -->
+    {% if has_full_access or user_roles.ADJOINT_CONFORMITE or user_roles.SMS_LOCAL %}
+    <li class="nav-item">
+        <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#collapseSms" data-bs-toggle="collapse" aria-expanded="false">
+            <div><i class="bi bi-shield-shaded"></i><span>SMS</span></div>
+            <i class="bi bi-chevron-right sidebar-chevron"></i>
+        </a>
+        <ul class="collapse list-unstyled" id="collapseSms">
+            <li><a href="{% url 'documentation:liste-documents' %}" class="ps-4">Documentation</a></li>
+        </ul>
+    </li>
+    {% endif %}
+
+    <!-- Menu Formation -->
+    {% if has_full_access or user_roles.FORMATEUR_LOCAL or user_roles.ADJOINT_FORM %}
+    <li class="nav-item">
+        <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#collapseFormation" data-bs-toggle="collapse" aria-expanded="false">
+            <div><i class="bi bi-mortarboard-fill"></i><span>Formation</span></div>
+            <i class="bi bi-chevron-right sidebar-chevron"></i>
+        </a>
+        <ul class="collapse list-unstyled" id="collapseFormation">
+            <li><a href="#" class="ps-4">Agents</a></li>
+            <li><a href="#" class="ps-4">Séances de formation</a></li>
+            <li><a href="#" class="ps-4">Items de formation</a></li>
+        </ul>
+    </li>
+    {% endif %}
+
+    <!-- Menu Technique -->
+    {% if has_full_access or user_roles.ES_LOCAL or user_roles.ADJOINT_ES %}
+    <li class="nav-item">
+        <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#collapseTechnique" data-bs-toggle="collapse" aria-expanded="false">
+            <div><i class="bi bi-tools"></i><span>Technique</span></div>
+            <i class="bi bi-chevron-right sidebar-chevron"></i>
+        </a>
+        <ul class="collapse list-unstyled" id="collapseTechnique">
+            <li><a href="#" class="ps-4">ES</a></li>
+            <li><a href="#" class="ps-4">MISO</a></li>
+            <li><a href="#" class="ps-4">Pannes</a></li>
+        </ul>
+    </li>
+    {% endif %}
+
+    <!-- Menu Sécurité Aérienne -->
+    {% if has_full_access or user_roles.QS_LOCAL or user_roles.ADJOINT_QS %}
+    <li class="nav-item">
+        <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#collapseSecu" data-bs-toggle="collapse" aria-expanded="false">
+            <div><i class="bi bi-shield-check"></i><span>Sécurité aérienne</span></div>
+            <i class="bi bi-chevron-right sidebar-chevron"></i>
+        </a>
+        <ul class="collapse list-unstyled" id="collapseSecu">
+            <li><a href="#" class="ps-4">FNE</a></li>
+            <li><a href="#" class="ps-4">CRFI</a></li>
+        </ul>
+    </li>
+    {% endif %}
+
+    <hr>
+    
+    <!-- Menu Administration -->
+    {% if user.is_staff %}
+    <li>
+        <a href="#adminSubmenu" data-bs-toggle="collapse" aria-expanded="false" class="dropdown-toggle"><i class="bi bi-gear-fill"></i>Administration</a>
+        <ul class="collapse list-unstyled" id="adminSubmenu">
+            <li><a href="#" class="ps-4">Gestion Utilisateurs</a></li>
+            <li><a href="#" class="ps-4">Paramètres</a></li>
+        </ul>
+    </li>
+    {% endif %}
+</ul>
