@@ -1,4 +1,4 @@
-# Fichier : core/urls.py
+# Fichier : core/urls.py (Intégral et Corrigé)
 
 from django.urls import path
 from .views import general, planning, feuille_temps, cahier_de_marche, zone
@@ -8,6 +8,13 @@ urlpatterns = [
     path('', general.home, name='home'),
     path('agents/', general.liste_agents, name='liste-agents'), 
     path('planning/', general.selecteur_centre_view, name='selecteur-centre'),
+
+    # ==============================================================================
+    # NOUVEAUX "HUBS" DE REDIRECTION
+    # ==============================================================================
+    path('tour-de-service/hub/', general.tour_de_service_hub_view, name='tour-de-service-hub'),
+    path('cahier-de-marche/hub/', general.cahier_de_marche_hub_view, name='cahier-de-marche-hub'),
+
 
     # --- Tour de Service (Planning) ---
     path('planning/centre/<int:centre_id>/', planning.tour_de_service_view, name='tour-de-service-centre'),
@@ -28,8 +35,6 @@ urlpatterns = [
     # --- Feuille de Temps & Service ---
     path('feuille-temps/centre/<int:centre_id>/', feuille_temps.feuille_de_temps_view, name='feuille-temps-jour'),
     path('feuille-temps/centre/<int:centre_id>/<str:jour>/', feuille_temps.feuille_de_temps_view, name='feuille-temps-specific-jour'),
-    
-    # URL CORRIGÉE ET SIMPLIFIÉE POUR LA GESTION DU SERVICE
     path('service/centre/<int:centre_id>/<str:action>/', feuille_temps.gerer_service_view, name='gerer-service'),
     
     # --- API Feuille de Temps ---
@@ -47,10 +52,8 @@ urlpatterns = [
      # --- gestion zone ---
     path('gestion-zone/centre/<int:centre_id>/', zone.gestion_zone_view, name='gestion-zone'),
     path('gestion-zone/zone/<int:centre_id>/<int:zone_id>/<str:action>/', zone.activer_desactiver_zone_view, name='activer-desactiver-zone'),
-
     
-    # AJOUT : D'ÉDITION DES ZONES
-    
+    # --- API Gestion des Zones ---
     path('api/zones/list/<int:centre_id>/', zone.api_get_zones, name='api-zone-list'),
     path('api/zones/add/<int:centre_id>/', zone.api_add_zone, name='api-zone-add'),
     path('api/zones/update/<int:zone_id>/', zone.api_update_zone, name='api-zone-update'),

@@ -1,24 +1,50 @@
+<!-- Fichier : templates/core/selecteur_centre.html (Intégral et Corrigé) -->
 {% extends "base.html" %}
 
-{% block title %}Sélection du Centre{% endblock %}
+{% block title %}{{ titre }} - GIRREX{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <div class="card">
-        <div class="card-header">
-            <h3>Sélectionner un Centre</h3>
-        </div>
-        <div class="card-body">
-            <p>Veuillez choisir un centre pour afficher le planning du Tour de Service.</p>
-            <div class="list-group">
-                {% for centre in centres %}
-                    {# CORRECTION : Utilise le nom avec tiret défini dans urls.py #}
-                    <a href="{% url 'tour-de-service-centre' centre.id %}" class="list-group-item list-group-item-action">
-                        {{ centre.nom_centre }} ({{ centre.code_centre }})
-                    </a>
-                {% empty %}
-                    <p class="text-muted">Aucun centre n'a été trouvé.</p>
-                {% endfor %}
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h4>{{ titre }}</h4>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Veuillez choisir un centre dans la liste ci-dessous pour continuer.</p>
+                    
+                    <div class="list-group">
+                        {% for centre in centres %}
+                            {% comment %}
+                                La logique ci-dessous construit le lien de destination
+                                en fonction de la variable 'next_view_name' passée par la vue.
+                            {% endcomment %}
+                            {% if next_view_name == 'cahier-de-marche' %}
+                                <!-- Cas 1 : La destination est le Cahier de Marche -->
+                                <a href="{% url 'cahier-de-marche' centre.id today_str %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                    <span>
+                                        <i class="bi bi-journal-text me-2"></i>
+                                        {{ centre.nom_centre }} ({{ centre.code_centre }})
+                                    </span>
+                                    <i class="bi bi-arrow-right-circle"></i>
+                                </a>
+                            {% else %}
+                                <!-- Cas 2 : La destination par défaut est le Tour de Service -->
+                                <a href="{% url 'tour-de-service-centre' centre.id %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                    <span>
+                                        <i class="bi bi-calendar3-week me-2"></i>
+                                        {{ centre.nom_centre }} ({{ centre.code_centre }})
+                                    </span>
+                                    <i class="bi bi-arrow-right-circle"></i>
+                                </a>
+                            {% endif %}
+                        {% empty %}
+                            <p class="text-center">Aucun centre n'a été configuré dans le système.</p>
+                        {% endfor %}
+                    </div>
+
+                </div>
             </div>
         </div>
     </div>

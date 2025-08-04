@@ -1,95 +1,99 @@
-<!-- Fichier : templates/partials/sidebar_menu.html (Version Complète et Corrigée) -->
+<!-- Fichier : templates/partials/sidebar_menu.html (Version Finale, Complète et Sécurisée) -->
 
 <ul class="list-unstyled components">
     
-    <!-- Menu Centre -->
-    {% if has_full_access %}
-    <li class="nav-item">
-        <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#collapseCentre" data-bs-toggle="collapse" aria-expanded="false">
-            <div><i class="bi bi-buildings-fill"></i><span>Centre</span></div>
-            <i class="bi bi-chevron-right sidebar-chevron"></i>
-        </a>
-        <ul class="collapse list-unstyled" id="collapseCentre">
-            <li><a href="#" class="ps-4">Agents</a></li>
-        </ul>
-    </li>
-    {% endif %}
-
-    <!-- Menu Tour de Service -->
-    <li><a href="{% url 'selecteur-centre' %}"><i class="bi bi-calendar-week"></i>Tour de Service</a></li>
+    <!-- ============================================================================== -->
+    <!--          LOGIQUE D'AFFICHAGE BINAIRE POUR TDS ET CAHIER DE MARCHE           -->
+    <!-- ============================================================================== -->
     
-    <!-- Menu Cahier de Marche (LOGIQUE ORIGINALE PRÉSERVÉE) -->
-    {% if centre_agent %}
-    <li class="nav-item">
-        <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#collapseCahierDeMarche" data-bs-toggle="collapse" aria-expanded="false">
-            <div><i class="bi bi-book"></i><span>Cahier de Marche</span></div>
-            <i class="bi bi-chevron-right sidebar-chevron"></i>
-        </a>
-        <ul class="collapse list-unstyled" id="collapseCahierDeMarche">
-            <li class="sidebar-submenu-header">Actions du Service</li>
-            {% if centre_agent %}
+    {% comment %}
+        On définit ici les rôles qui ont un accès de "Supervision Supérieure".
+    {% endcomment %}
+    {% if user_roles.CHEF_DE_DIVISION or user_roles.ADJOINT_CHEF_DE_DIVISION %}
+        
+        <!-- CAS A : L'utilisateur est un Superviseur Supérieur -->
+
+        <!-- Menu Centre (optionnel, pour l'instant inchangé) -->
+        <li class="nav-item">
+            <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#collapseCentre" data-bs-toggle="collapse" aria-expanded="false">
+                <div><i class="bi bi-buildings-fill"></i><span>Centre</span></div>
+                <i class="bi bi-chevron-right sidebar-chevron"></i>
+            </a>
+            <ul class="collapse list-unstyled" id="collapseCentre">
+                <li><a href="#" class="ps-4">Agents</a></li>
+            </ul>
+        </li>
+
+        <!-- Tour de Service : pointe vers le sélecteur -->
+        <li><a href="{% url 'selecteur-centre' %}?next_view=tour-de-service-centre"><i class="bi bi-calendar-week"></i>Tour de Service</a></li>
+        
+        <!-- Cahier de Marche : devient un lien simple "Chronologie" vers le sélecteur -->
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'selecteur-centre' %}?next_view=cahier-de-marche">
+                <div><i class="bi bi-search"></i><span>Chronologie du Jour</span></div>
+            </a>
+        </li>
+
+    {% else %}
+        
+        <!-- CAS B : L'utilisateur N'EST PAS un Superviseur Supérieur -->
+
+        <!-- Menu Centre : n'est pas affiché pour les utilisateurs standards -->
+
+        <!-- Tour de Service : pointe vers le hub qui redirigera directement -->
+        <li><a href="{% url 'tour-de-service-hub' %}"><i class="bi bi-calendar-week"></i>Tour de Service</a></li>
+        
+        <!-- Cahier de Marche : menu déroulant complet et opérationnel -->
+        {% if centre_agent %}
+        <li class="nav-item">
+            <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#" data-bs-toggle="collapse" data-bs-target="#collapseCahierDeMarche" aria-expanded="false">
+                <div><i class="bi bi-book"></i><span>Cahier de Marche</span></div>
+                <i class="bi bi-chevron-right sidebar-chevron"></i>
+            </a>
+            <ul class="collapse list-unstyled" id="collapseCahierDeMarche">
+                <li class="sidebar-submenu-header">Actions du Service</li>
                 {% if not service_du_jour %}
                     {% if effective_perms.core.open_close_service %}
-                        <li>
-                            <form action="{% url 'gerer-service' centre_agent.id 'ouvrir' %}" method="post" class="ps-4">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-link nav-link text-primary fw-bold p-0"><i class="bi bi-play-circle-fill me-1"></i>Ouvrir le Service</button>
-                            </form>
-                        </li>
+                        <li><form action="{% url 'gerer-service' centre_agent.id 'ouvrir' %}" method="post" class="ps-4">{% csrf_token %}<button type="submit" class="btn btn-link nav-link text-primary fw-bold p-0"><i class="bi bi-play-circle-fill me-1"></i>Ouvrir le Service</button></form></li>
                     {% endif %}
                 {% elif service_du_jour.statut == 'OUVERTE' %}
                     {% if verrou_operationnel and verrou_operationnel.chef_de_quart == request.user.agent_profile %}
                         {% if effective_perms.core.open_close_service %}
-                            <li>
-                                <form action="{% url 'gerer-service' centre_agent.id 'cloturer' %}" method="post" class="ps-4">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-link nav-link text-danger fw-bold p-0"><i class="bi bi-stop-circle-fill me-1"></i>Fermer le Service</button>
-                                </form>
-                            </li>
+                            <li><form action="{% url 'gerer-service' centre_agent.id 'cloturer' %}" method="post" class="ps-4">{% csrf_token %}<button type="submit" class="btn btn-link nav-link text-danger fw-bold p-0"><i class="bi bi-stop-circle-fill me-1"></i>Fermer le Service</button></form></li>
                         {% endif %}
                     {% else %}
-                          {% if effective_perms.core.change_feuilletemps %}
-                            <li>
-                                <form action="{% url 'gerer-service' centre_agent.id 'forcer-prise' %}" method="post" class="ps-4" title="Service pris par {{ verrou_operationnel.chef_de_quart }}. Cliquez pour forcer.">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-link nav-link text-warning fw-bold p-0"><i class="bi bi-shield-lock-fill me-1"></i>Forcer la Prise</button>
-                                </form>
-                            </li>
+                        {% if effective_perms.core.change_feuilletemps %}
+                            <li><form action="{% url 'gerer-service' centre_agent.id 'forcer-prise' %}" method="post" class="ps-4" title="Service pris par {{ verrou_operationnel.chef_de_quart }}. Cliquez pour forcer.">{% csrf_token %}<button type="submit" class="btn btn-link nav-link text-warning fw-bold p-0"><i class="bi bi-shield-lock-fill me-1"></i>Forcer la Prise</button></form></li>
                         {% else %}
                             <li><span class="ps-4 disabled" title="Le service est actuellement pris par {{ verrou_operationnel.chef_de_quart }}.">Service Pris</span></li>
                         {% endif %}
                     {% endif %}
                 {% elif service_du_jour.statut == 'CLOTUREE' %}
                     {% if effective_perms.core.reopen_service %}
-                        <li>
-                            <form action="{% url 'gerer-service' centre_agent.id 'reouvrir' %}" method="post" class="ps-4">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-link nav-link text-warning fw-bold p-0"><i class="bi bi-arrow-counterclockwise me-1"></i>Rouvrir le Service</button>
-                            </form>
-                        </li>
+                        <li><form action="{% url 'gerer-service' centre_agent.id 'reouvrir' %}" method="post" class="ps-4">{% csrf_token %}<button type="submit" class="btn btn-link nav-link text-warning fw-bold p-0"><i class="bi bi-arrow-counterclockwise me-1"></i>Rouvrir le Service</button></form></li>
                     {% else %}
                         <li><span class="ps-4 disabled">Service Clôturé</span></li>
                     {% endif %}
                 {% elif service_du_jour.statut == 'VISEE' %}
                     <li><span class="ps-4 disabled text-success"><i class="bi bi-patch-check-fill me-1"></i>Service Visé</span></li>
                 {% endif %}
-            {% endif %}
-            <li class="sidebar-submenu-header">Saisie & Modification</li>
-            {% if service_du_jour and service_du_jour.statut == 'OUVERTE' and verrou_operationnel and verrou_operationnel.chef_de_quart == request.user.agent_profile %}
-                <li><a href="{% url 'feuille-temps-specific-jour' centre_agent.id today|date:'Y-m-d' %}" class="ps-4">Feuille d'heure</a></li>
-                <li><a href="{% url 'ajouter-panne' centre_agent.id %}" class="ps-4">Signaler une Panne</a></li>
-                <li><a href="{% url 'ajouter-evenement' centre_agent.id %}" class="ps-4">Consigner un Événement</a></li>
-                <li><a href="{% url 'gestion-zone' centre_agent.id %}" class="ps-4">Gestion Zone</a></li>
-            {% else %}
-                <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle pour accéder à cette fonction.">Feuille d'heure</span></li>
-                <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle pour accéder à cette fonction.">Signaler une Panne</span></li>
-                <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle pour accéder à cette fonction.">Consigner un Événement</span></li>
-                <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle pour accéder à cette fonction.">Gestion Zone</span></li>
-            {% endif %}
-            <li class="sidebar-submenu-header">Consultation</li>
-            <li><a href="{% url 'cahier-de-marche' centre_agent.id today|date:'Y-m-d' %}" class="ps-4">Chronologie du Jour</a></li>
-        </ul>
-    </li>
+                <li class="sidebar-submenu-header">Saisie & Modification</li>
+                {% if service_du_jour and service_du_jour.statut == 'OUVERTE' and verrou_operationnel and verrou_operationnel.chef_de_quart == request.user.agent_profile %}
+                    <li><a href="{% url 'feuille-temps-specific-jour' centre_agent.id today|date:'Y-m-d' %}" class="ps-4">Feuille d'heure</a></li>
+                    <li><a href="{% url 'ajouter-panne' centre_agent.id %}" class="ps-4">Signaler une Panne</a></li>
+                    <li><a href="{% url 'ajouter-evenement' centre_agent.id %}" class="ps-4">Consigner un Événement</a></li>
+                    <li><a href="{% url 'gestion-zone' centre_agent.id %}" class="ps-4">Gestion Zone</a></li>
+                {% else %}
+                    <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle pour accéder à cette fonction.">Feuille d'heure</span></li>
+                    <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle pour accéder à cette fonction.">Signaler une Panne</span></li>
+                    <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle pour accéder à cette fonction.">Consigner un Événement</span></li>
+                    <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle pour accéder à cette fonction.">Gestion Zone</span></li>
+                {% endif %}
+                <li class="sidebar-submenu-header">Consultation</li>
+                <li><a href="{% url 'cahier-de-marche' centre_agent.id today|date:'Y-m-d' %}" class="ps-4">Chronologie du Jour</a></li>
+            </ul>
+        </li>
+        {% endif %}
     {% endif %}
     
     <!-- Menu Activité Aérienne -->
