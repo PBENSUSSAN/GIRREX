@@ -1,4 +1,4 @@
-# Fichier : girrex_project/settings.py
+# Fichier : girrex_project/settings.py (Version Corrigée)
 
 import os
 from pathlib import Path
@@ -36,7 +36,7 @@ INSTALLED_APPS = [
 
 
 # ==============================================================================
-# MIDDLEWARE (ORDRE CORRIGÉ)
+# MIDDLEWARE (ORDRE CORRIGÉ ET NETTOYÉ)
 # ==============================================================================
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -49,7 +49,7 @@ MIDDLEWARE = [
     # ENSUITE, notre middleware personnalisé qui dépend de request.user
     "core.middleware.GirrexContextMiddleware", 
     
-    # Le NoCacheMiddleware (une seule fois) pour s'assurer que les pages ne sont pas mises en cache
+    # Le NoCacheMiddleware (une seule fois)
     "core.middleware.NoCacheMiddleware",  
     
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -89,7 +89,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 
                 # Uniquement le processeur de contexte global. 
-                # L'autre a été intégré dans le middleware.
+                # L'autre est maintenant géré par le middleware.
                 'core.context_processors.girrex_global_context',
             ],
         },
