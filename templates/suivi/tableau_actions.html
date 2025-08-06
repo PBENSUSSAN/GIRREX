@@ -1,6 +1,6 @@
 <!-- Fichier : templates/suivi/tableau_actions.html (Version Finale et Robuste) -->
 {% extends "base.html" %}
-{% load crispy_forms_tags %}
+{% load crispy_forms_tags static %}
 
 {% block title %}{{ titre }} - GIRREX{% endblock %}
 
@@ -139,20 +139,5 @@
 
 {% block scripts %}
 {{ block.super }}
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const toggles = document.querySelectorAll('.toggle-subtasks');
-        toggles.forEach(function(toggle) {
-            toggle.addEventListener('click', function() {
-                if (this.classList.contains('bi-plus-square-fill')) {
-                    this.classList.remove('bi-plus-square-fill');
-                    this.classList.add('bi-dash-square-fill');
-                } else {
-                    this.classList.remove('bi-dash-square-fill');
-                    this.classList.add('bi-plus-square-fill');
-                }
-            });
-        });
-    });
-</script>
+ <script src="{% static 'js/suivi_tables.js' %}"></script>
 {% endblock scripts %}

@@ -15,18 +15,10 @@
         <h4>{{ jour_selectionne|date:"l d F Y" }}</h4>
     </div>
 
-    <form class="mb-4 date-selector-form" method="get" action="{% url 'cahier-de-marche' centre_id=centre.id jour='__DATE__' %}">
-        <label for="date-selector" class="me-2">Changer de jour :</label>
-        <input type="date" id="date-selector" class="form-control" value="{{ jour_selectionne|date:'Y-m-d' }}">
-        <script>
-            document.getElementById('date-selector').addEventListener('change', function() {
-                let newDate = this.value;
-                if (newDate) {
-                    let url = "{% url 'cahier-de-marche' centre_id=centre.id jour='__DATE__' %}".replace('__DATE__', newDate);
-                    window.location.href = url;
-                }
-            });
-        </script>
+    <form class="mb-4 date-selector-form">
+    <label for="date-selector" class="me-2">Changer de jour :</label>
+    <input type="date" id="date-selector" class="form-control" value="{{ jour_selectionne|date:'Y-m-d' }}"
+           data-base-url="{% url 'cahier-de-marche' centre_id=centre.id jour='__DATE__' %}">
     </form>
 
     <div class="row g-4">
@@ -189,4 +181,5 @@
 {% block scripts %}
     {{ block.super }}
     <script src="{% static 'js/cahier_de_marche.js' %}"></script>
+    <script src="{% static 'js/date_selector.js' %}"></script>
 {% endblock scripts %}

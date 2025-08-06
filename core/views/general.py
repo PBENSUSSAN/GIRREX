@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
 from django.utils import timezone
-from ..models import Agent, Centre
+from ..models import Agent, Centre, AgentRole
 
 def home(request):
     """ Affiche la page d'accueil. """
@@ -83,3 +83,34 @@ def cahier_de_marche_hub_view(request):
         base_url = reverse('selecteur-centre')
         query_string = '?next_view=cahier-de-marche'
         return redirect(base_url + query_string)
+
+@login_required
+def definir_contexte_role(request, agent_role_id):
+    """
+    Met à jour le rôle actif dans la session de l'utilisateur.
+    """
+    try:
+        # On vérifie que l'AgentRole demandé appartient bien à l'utilisateur connecté.
+        agent_role = AgentRole.objects.get(pk=agent_role_id, agent=request.user.agent_profile)
+        
+        # On stocke l'ID de l'assignation de rôle.
+        request.session['selected_agent_role_id'] = agent_role.id
+        
+    except AgentRole.DoesNotExist:
+        # Si l'utilisateur essaie d'usurper un rôle, on ne fait rien ou on logue une erreur.
+        messages.error(request, "Vous n'avez pas accès à ce rôle.")
+        pass 
+    
+    return redirect('home')
+
+
+@login_required
+def reinitialiser_contexte_centre(request):
+    """
+    Supprime le contexte de centre de la session pour revenir à la vue par défaut (nationale).
+    """
+    if 'selected_centre_id' in request.session:
+        # Si une sélection existait, on la supprime.
+        del request.session['selected_centre_id']
+    
+    return redirect('home')

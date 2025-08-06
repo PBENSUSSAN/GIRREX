@@ -1,4 +1,4 @@
-# Fichier : core/urls.py (Intégral et Corrigé)
+# Fichier : core/urls.py (Corrigé pour la sélection par Rôle)
 
 from django.urls import path
 from .views import general, planning, feuille_temps, cahier_de_marche, zone
@@ -10,7 +10,15 @@ urlpatterns = [
     path('planning/', general.selecteur_centre_view, name='selecteur-centre'),
 
     # ==============================================================================
-    # NOUVEAUX "HUBS" DE REDIRECTION
+    # URLS POUR LE CHANGEMENT DE CONTEXTE (MODIFIÉES)
+    # On utilise maintenant l'ID de l'objet AgentRole pour une sélection plus fine.
+    # ==============================================================================
+    path('contexte/definir-role/<int:agent_role_id>/', general.definir_contexte_role, name='definir_contexte_role'),
+   
+
+
+    # ==============================================================================
+    # NOUVEAUX "HUBS" DE REDIRECTION (INCHANGÉS)
     # ==============================================================================
     path('tour-de-service/hub/', general.tour_de_service_hub_view, name='tour-de-service-hub'),
     path('cahier-de-marche/hub/', general.cahier_de_marche_hub_view, name='cahier-de-marche-hub'),

@@ -162,3 +162,14 @@ a.nav-link:not(.collapsed) .sidebar-chevron {
 .bs-tooltip-start .tooltip-arrow::before {
     border-left-color: #f8f9fa !important;
 }
+
+.role-selector-btn {
+    /* Active le mécanisme de troncature de texte */
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    /* S'assure que le texte est bien aligné à gauche */
+    text-align: left;
+}

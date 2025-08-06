@@ -1,50 +1,32 @@
-<!-- Fichier : templates/partials/sidebar_menu.html (Version Finale, Complète et Sécurisée) -->
+<!-- Fichier : templates/partials/sidebar_menu.html (Version Finale Complète et Corrigée) -->
 
 <ul class="list-unstyled components">
     
     <!-- ============================================================================== -->
-    <!--          LOGIQUE D'AFFICHAGE BINAIRE POUR TDS ET CAHIER DE MARCHE           -->
+    <!--          BLOC 1 : VUE SUPERVISION NATIONALE (indépendant)                      -->
     <!-- ============================================================================== -->
-    
-    {% comment %}
-        On définit ici les rôles qui ont un accès de "Supervision Supérieure".
-    {% endcomment %}
-    {% if user_roles.CHEF_DE_DIVISION or user_roles.ADJOINT_CHEF_DE_DIVISION %}
-        
-        <!-- CAS A : L'utilisateur est un Superviseur Supérieur -->
-
-        <!-- Menu Centre (optionnel, pour l'instant inchangé) -->
-        <li class="nav-item">
-            <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#collapseCentre" data-bs-toggle="collapse" aria-expanded="false">
-                <div><i class="bi bi-buildings-fill"></i><span>Centre</span></div>
-                <i class="bi bi-chevron-right sidebar-chevron"></i>
-            </a>
-            <ul class="collapse list-unstyled" id="collapseCentre">
-                <li><a href="#" class="ps-4">Agents</a></li>
-            </ul>
-        </li>
-
-        <!-- Tour de Service : pointe vers le sélecteur -->
-        <li><a href="{% url 'selecteur-centre' %}?next_view=tour-de-service-centre"><i class="bi bi-calendar-week"></i>Tour de Service</a></li>
-        
-        <!-- Cahier de Marche : devient un lien simple "Chronologie" vers le sélecteur -->
-        <li class="nav-item">
-            <a class="nav-link" href="{% url 'selecteur-centre' %}?next_view=cahier-de-marche">
-                <div><i class="bi bi-search"></i><span>Chronologie du Jour</span></div>
+    {% if is_supervisor_view %}
+        <li>
+            <a href="{% url 'selecteur-centre' %}?next_view=tour-de-service-centre">
+                <i class="bi bi-calendar-week"></i>Tour de Service (Supervision)
             </a>
         </li>
+        <li>
+            <a href="{% url 'selecteur-centre' %}?next_view=cahier-de-marche">
+                <i class="bi bi-book"></i>Cahier de Marche (Supervision)
+            </a>
+        </li>
+    {% endif %}
 
-    {% else %}
-        
-        <!-- CAS B : L'utilisateur N'EST PAS un Superviseur Supérieur -->
-
-        <!-- Menu Centre : n'est pas affiché pour les utilisateurs standards -->
-
-        <!-- Tour de Service : pointe vers le hub qui redirigera directement -->
-        <li><a href="{% url 'tour-de-service-hub' %}"><i class="bi bi-calendar-week"></i>Tour de Service</a></li>
-        
-        <!-- Cahier de Marche : menu déroulant complet et opérationnel -->
-        {% if centre_agent %}
+    <!-- ============================================================================== -->
+    <!--          BLOC 2 : VUE OPÉRATIONNELLE DE CENTRE (indépendant)                   -->
+    <!-- ============================================================================== -->
+    {% if show_operational_view and centre_agent %}
+        <li>
+            <a href="{% url 'tour-de-service-centre' centre_agent.id %}">
+                <i class="bi bi-calendar-week"></i>Tour de Service
+            </a>
+        </li>
         <li class="nav-item">
             <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#" data-bs-toggle="collapse" data-bs-target="#collapseCahierDeMarche" aria-expanded="false">
                 <div><i class="bi bi-book"></i><span>Cahier de Marche</span></div>
@@ -93,19 +75,12 @@
                 <li><a href="{% url 'cahier-de-marche' centre_agent.id today|date:'Y-m-d' %}" class="ps-4">Chronologie du Jour</a></li>
             </ul>
         </li>
-        {% endif %}
     {% endif %}
-    
-    <!-- Menu Activité Aérienne -->
-    <li><a href="#"><i class="bi bi-airplane-fill"></i>Activité aérienne</a></li>
 
-    <hr>
-    <!-- Menu Tableau de Suivi -->
-    <li><a href="{% url 'suivi:tableau-actions' %}"><i class="bi bi-clipboard2-data-fill"></i>Tableau de Suivi</a></li>
-    <hr>
-    
-    <!-- Menu SMS -->
-    {% if has_full_access or user_roles.ADJOINT_CONFORMITE or user_roles.SMS_LOCAL %}
+    <!-- ============================================================================== -->
+    <!--          BLOC 3 : MENUS DE GESTION DE DOMAINE (indépendants)                   -->
+    <!-- ============================================================================== -->
+    {% if show_sms_menu %}
     <li class="nav-item">
         <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#collapseSms" data-bs-toggle="collapse" aria-expanded="false">
             <div><i class="bi bi-shield-shaded"></i><span>SMS</span></div>
@@ -117,8 +92,7 @@
     </li>
     {% endif %}
 
-    <!-- Menu Formation -->
-    {% if has_full_access or user_roles.FORMATEUR_LOCAL or user_roles.ADJOINT_FORM %}
+    {% if show_formation_menu %}
     <li class="nav-item">
         <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#collapseFormation" data-bs-toggle="collapse" aria-expanded="false">
             <div><i class="bi bi-mortarboard-fill"></i><span>Formation</span></div>
@@ -126,14 +100,11 @@
         </a>
         <ul class="collapse list-unstyled" id="collapseFormation">
             <li><a href="#" class="ps-4">Agents</a></li>
-            <li><a href="#" class="ps-4">Séances de formation</a></li>
-            <li><a href="#" class="ps-4">Items de formation</a></li>
         </ul>
     </li>
     {% endif %}
-
-    <!-- Menu Technique -->
-    {% if has_full_access or user_roles.ES_LOCAL or user_roles.ADJOINT_ES %}
+    
+    {% if show_technique_menu %}
     <li class="nav-item">
         <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#collapseTechnique" data-bs-toggle="collapse" aria-expanded="false">
             <div><i class="bi bi-tools"></i><span>Technique</span></div>
@@ -141,14 +112,11 @@
         </a>
         <ul class="collapse list-unstyled" id="collapseTechnique">
             <li><a href="#" class="ps-4">ES</a></li>
-            <li><a href="#" class="ps-4">MISO</a></li>
-            <li><a href="#" class="ps-4">Pannes</a></li>
         </ul>
     </li>
     {% endif %}
 
-    <!-- Menu Sécurité Aérienne -->
-    {% if has_full_access or user_roles.QS_LOCAL or user_roles.ADJOINT_QS %}
+    {% if show_security_menu %}
     <li class="nav-item">
         <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#collapseSecu" data-bs-toggle="collapse" aria-expanded="false">
             <div><i class="bi bi-shield-check"></i><span>Sécurité aérienne</span></div>
@@ -156,14 +124,17 @@
         </a>
         <ul class="collapse list-unstyled" id="collapseSecu">
             <li><a href="#" class="ps-4">FNE</a></li>
-            <li><a href="#" class="ps-4">CRFI</a></li>
         </ul>
     </li>
     {% endif %}
 
+    <!-- ============================================================================== -->
+    <!--          BLOC 4 : LIENS UNIVERSELS                                             -->
+    <!-- ============================================================================== -->
+    <hr>
+    <li><a href="{% url 'suivi:tableau-actions' %}"><i class="bi bi-clipboard2-data-fill"></i>Tableau de Suivi</a></li>
     <hr>
     
-    <!-- Menu Administration -->
     {% if user.is_staff %}
     <li>
         <a href="#adminSubmenu" data-bs-toggle="collapse" aria-expanded="false" class="dropdown-toggle"><i class="bi bi-gear-fill"></i>Administration</a>
@@ -173,4 +144,5 @@
         </ul>
     </li>
     {% endif %}
+    
 </ul>
