@@ -25,17 +25,11 @@
                         </a>
                     </div>
                     
-                    {% comment %}
-                        CORRECTION : On inclut directement le menu.
-                        Toute la logique d'affichage est maintenant gérée à l'intérieur de sidebar_menu.html
-                        et se base sur les variables du context processor.
-                    {% endcomment %}
                     {% include "partials/sidebar_menu.html" %}
 
                 </div>
                 <div class="user-info list-unstyled">
                     
-                    <!-- Le sélecteur de rôle reste ici, il est correct -->
                     {% if all_user_active_roles|length > 1 %}
                     <div class="dropdown mb-2 px-3">
                         <button class="btn btn-outline-light btn-sm dropdown-toggle w-100 d-flex align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -60,7 +54,6 @@
                     </div>
                     {% endif %}
                     
-                    <!-- Le tooltip d'information reste ici, il est correct -->
                     <a href="#" 
                        data-bs-toggle="tooltip" 
                        data-bs-placement="top"

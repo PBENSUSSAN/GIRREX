@@ -1,10 +1,14 @@
-# Fichier : core/views/general.py (Intégral et Corrigé)
+# Fichier : core/views/general.py (Version Finale avec Délégation Corrigée)
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
 from django.utils import timezone
-from ..models import Agent, Centre, AgentRole
+from django.contrib import messages
+from datetime import date
+
+# On s'assure que Delegation est bien importé
+from ..models import Agent, Centre, AgentRole, Delegation
 
 def home(request):
     """ Affiche la page d'accueil. """
@@ -54,10 +58,8 @@ def tour_de_service_hub_view(request):
     user_agent = request.user.agent_profile
     
     if user_agent.centre:
-        # Un agent local est redirigé directement vers le planning de son centre.
         return redirect('tour-de-service-centre', centre_id=user_agent.centre.id)
     else:
-        # Un agent national est redirigé vers le sélecteur.
         base_url = reverse('selecteur-centre')
         query_string = '?next_view=tour-de-service-centre'
         return redirect(base_url + query_string)
@@ -84,22 +86,38 @@ def cahier_de_marche_hub_view(request):
         query_string = '?next_view=cahier-de-marche'
         return redirect(base_url + query_string)
 
+# ==============================================================================
+# VUES POUR LA GESTION DU CONTEXTE DE RÔLE (LOGIQUE CORRIGÉE)
+# ==============================================================================
+
 @login_required
 def definir_contexte_role(request, agent_role_id):
     """
-    Met à jour le rôle actif dans la session de l'utilisateur.
+    Met à jour le rôle actif dans la session de l'utilisateur, en vérifiant
+    s'il s'agit d'un rôle propre OU d'un rôle délégué.
     """
-    try:
-        # On vérifie que l'AgentRole demandé appartient bien à l'utilisateur connecté.
-        agent_role = AgentRole.objects.get(pk=agent_role_id, agent=request.user.agent_profile)
-        
-        # On stocke l'ID de l'assignation de rôle.
-        request.session['selected_agent_role_id'] = agent_role.id
-        
-    except AgentRole.DoesNotExist:
-        # Si l'utilisateur essaie d'usurper un rôle, on ne fait rien ou on logue une erreur.
+    agent_connecte = request.user.agent_profile
+    today = date.today()
+    
+    # 1. On vérifie si le rôle demandé est un des rôles propres de l'utilisateur.
+    is_own_role = AgentRole.objects.filter(pk=agent_role_id, agent=agent_connecte).exists()
+    
+    # 2. Si ce n'est pas un rôle propre, on vérifie si c'est un rôle qui lui est délégué.
+    is_delegated_role = False
+    if not is_own_role:
+        is_delegated_role = Delegation.objects.filter(
+            delegataire=agent_connecte,
+            agent_role_delegue_id=agent_role_id,
+            date_debut__lte=today,
+            date_fin__gte=today
+        ).exists()
+
+    # 3. Si l'une des deux conditions est vraie, on autorise le changement.
+    if is_own_role or is_delegated_role:
+        request.session['selected_agent_role_id'] = agent_role_id
+    else:
+        # Sinon, on affiche l'erreur.
         messages.error(request, "Vous n'avez pas accès à ce rôle.")
-        pass 
     
     return redirect('home')
 
@@ -107,10 +125,9 @@ def definir_contexte_role(request, agent_role_id):
 @login_required
 def reinitialiser_contexte_centre(request):
     """
-    Supprime le contexte de centre de la session pour revenir à la vue par défaut (nationale).
+    Supprime le contexte de rôle de la session pour revenir au rôle par défaut.
     """
-    if 'selected_centre_id' in request.session:
-        # Si une sélection existait, on la supprime.
-        del request.session['selected_centre_id']
+    if 'selected_agent_role_id' in request.session:
+        del request.session['selected_agent_role_id']
     
     return redirect('home')
