@@ -1,22 +1,22 @@
 # Fichier : core/forms.py
 
 from django import forms
-from .models import PanneCentre, EvenementCentre, CategorieEvenement
+from .models import EvenementCentre, CategorieEvenement
 
-class PanneCentreForm(forms.ModelForm):
-    class Meta:
-        model = PanneCentre
-        fields = [
-            'equipement_concerne', 
-            'date_heure_debut', 
-            'criticite', 
-            'description', 
-            'notification_generale'
-        ]
-        widgets = {
-            'date_heure_debut': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
-            'description': forms.Textarea(attrs={'rows': 4}),
-        }
+#class PanneCentreForm(forms.ModelForm):
+ #   class Meta:
+  #      model = PanneCentre
+   #     fields = [
+    #        'equipement_concerne', 
+     ##       'date_heure_debut', 
+       #     'criticite', 
+        #    'description', 
+         #   'notification_generale'
+        #]
+        #widgets = {
+        #    'date_heure_debut': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+        #    'description': forms.Textarea(attrs={'rows': 4}),
+        #}
 
 class EvenementCentreForm(forms.ModelForm):
     categorie = forms.ModelChoiceField(

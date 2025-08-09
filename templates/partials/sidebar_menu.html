@@ -82,7 +82,15 @@
     <li class="nav-item">
         <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#collapseTechnique" data-bs-toggle="collapse" aria-expanded="false">
             <div><i class="bi bi-tools"></i><span>Technique</span></div><i class="bi bi-chevron-right sidebar-chevron"></i>
-        </a><ul class="collapse list-unstyled" id="collapseTechnique"><li><a href="#" class="ps-4">ES</a></li></ul>
+        </a>
+        
+        {# NOUVEAU CONTENU DU SOUS-MENU #}
+        <ul class="collapse list-unstyled" id="collapseTechnique">
+            {# Le lien MISO pointe vers une URL que nous créerons à la phase 3 #}
+            <li><a href="{% url 'technique:liste-miso' %}" class="ps-4">MISO</a></li>
+            {# Le lien Pannes est désactivé pour le moment #}
+            <li><a href="#" class="ps-4 disabled">Pannes</a></li>
+        </ul>
     </li>
     {% endif %}
 

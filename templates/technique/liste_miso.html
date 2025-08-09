@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% load static crispy_forms_tags %}
+
+{% block title %}{{ titre }} - GIRREX{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>{{ titre }}</h3>
+        <div>
+            <a href="{% url 'technique:archives-miso' %}" class="btn btn-outline-secondary btn-sm">Consulter les archives</a>
+            
+            {# On n'affiche le bouton "Créer" que si l'utilisateur a la permission #}
+            {% if effective_perms.technique.add_miso %}
+                <a href="{% url 'technique:creer-miso' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle-fill"></i> Créer un préavis MISO
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card card-body mb-4">
+        <form method="get">
+            <div class="row g-3">
+                <div class="col-md-4">{{ filter.form.description|as_crispy_field }}</div>
+                <div class="col-md-3">{{ filter.form.type_maintenance|as_crispy_field }}</div>
+                <div class="col-md-3">{{ filter.form.date_debut_apres|as_crispy_field }}</div>
+                {% if not request.centre_agent %}
+                    <div class="col-md-2">{{ filter.form.centre|as_crispy_field }}</div>
+                {% endif %}
+            </div>
+            <button type="submit" class="btn btn-primary mt-3">
+                <i class="bi bi-search"></i> Filtrer
+            </button>
+        </form>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped align-middle">
+                    <thead>
+                        <tr>
+                            <th>Statut</th>
+                            <th>Centre</th>
+                            <th>Type</th>
+                            <th>Date de Début</th>
+                            <th>Date de Fin</th>
+                            <th>Description</th>
+                            <th>Responsable</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for miso in filter.qs %}
+                        <tr>
+                            <td>
+                                <span class="badge 
+                                    {% if miso.statut == Miso.Statut.PLANIFIE %}bg-primary
+                                    {% elif miso.statut == Miso.Statut.EN_COURS %}bg-success
+                                    {% elif miso.statut == Miso.Statut.TERMINE %}bg-secondary
+                                    {% endif %}">
+                                    {{ miso.statut.label }}
+                                </span>
+                            </td>
+                            <td>{{ miso.centre.code_centre }}</td>
+                            <td>{{ miso.get_type_maintenance_display }}</td>
+                            <td>{{ miso.date_debut|date:"d/m/Y H:i" }}</td>
+                            <td>{{ miso.date_fin|date:"d/m/Y H:i" }}</td>
+                            <td>{{ miso.description|truncatewords:15 }}</td>
+                            <td>{{ miso.responsable.trigram }}</td>
+                            <td class="text-center">
+                                {# Le bouton "Voir" est toujours visible car l'accès à cette page est déjà protégé par view_miso #}
+                                <a href="{% url 'technique:modifier-miso' miso.id %}" class="btn btn-sm btn-outline-secondary" title="Voir le détail">
+                                    <i class="bi bi-eye-fill"></i>
+                                </a>
+
+                                {# Le bouton "Modifier" n'est visible que si l'utilisateur a la permission "change_miso" #}
+                                {% if effective_perms.technique.change_miso %}
+                                <a href="{% url 'technique:modifier-miso' miso.id %}" class="btn btn-sm btn-outline-primary" title="Modifier">
+                                    <i class="bi bi-pencil-fill"></i>
+                                </a>
+                                {% endif %}
+                                
+                                {# Le bouton "Annuler" n'est visible que pour les éditeurs et si le MISO n'est pas déjà annulé #}
+                                {% if effective_perms.technique.delete_miso and miso.statut != miso.Statut.ANNULE %}
+                                <a href="{% url 'technique:annuler-miso' miso.id %}" class="btn btn-sm btn-outline-danger" title="Annuler">
+                                    <i class="bi bi-x-circle-fill"></i>
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted">Aucun préavis de maintenance ne correspond à vos critères.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

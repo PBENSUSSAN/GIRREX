@@ -22,7 +22,6 @@ from .models import (
     FeuilleTempsEntree, FeuilleTempsVerrou,
 
     # Importation des nouveaux modèles depuis leurs fichiers dédiés
-    PanneCentre,
     CategorieEvenement,
     EvenementCentre,
 
@@ -229,13 +228,13 @@ class FeuilleTempsVerrouAdmin(admin.ModelAdmin):
 # SECTION IX : ACTIVITÉ DU CENTRE
 # ==============================================================================
 
-@admin.register(PanneCentre)
-class PanneCentreAdmin(admin.ModelAdmin):
-    list_display = ('date_heure_debut', 'equipement_concerne', 'criticite', 'statut', 'centre', 'auteur', 'notification_generale')
-    list_filter = ('centre', 'criticite', 'statut', 'date_heure_debut')
-    search_fields = ('equipement_concerne', 'description', 'auteur__trigram')
-    autocomplete_fields = ['centre', 'auteur']
-    date_hierarchy = 'date_heure_debut'
+###@admin.register(PanneCentre)
+#class PanneCentreAdmin(admin.ModelAdmin):
+ #   list_display = ('date_heure_debut', 'equipement_concerne', 'criticite', 'statut', 'centre', 'auteur', 'notification_generale')
+  #  list_filter = ('centre', 'criticite', 'statut', 'date_heure_debut')
+   #search_fields = ('equipement_concerne', 'description', 'auteur__trigram')
+    #autocomplete_fields = ['centre', 'auteur']
+    #date_hierarchy = 'date_heure_debut'
 
 @admin.register(CategorieEvenement)
 class CategorieEvenementAdmin(admin.ModelAdmin):

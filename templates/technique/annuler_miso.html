@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card shadow-sm border-danger">
+                <div class="card-header bg-danger text-white"><h4>{{ titre }}</h4></div>
+                <div class="card-body">
+                    <p>Vous êtes sur le point d'annuler le préavis suivant :</p>
+                    <div class="alert alert-secondary">
+                        <strong>Centre:</strong> {{ miso.centre.code_centre }} <br>
+                        <strong>Type:</strong> {{ miso.get_type_maintenance_display }} <br>
+                        <strong>Période:</strong> du {{ miso.date_debut|date:"d/m/Y H:i" }} au {{ miso.date_fin|date:"d/m/Y H:i" }}
+                    </div>
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        <div class="d-flex justify-content-end mt-4">
+                            <a href="{% url 'technique:liste-miso' %}" class="btn btn-secondary me-2">Ne pas annuler</a>
+                            <button type="submit" class="btn btn-danger">Confirmer l'Annulation</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

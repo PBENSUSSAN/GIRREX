@@ -173,6 +173,37 @@
                 </div>
             </div>
 
+            <!-- CARTE MISO - FERMÉE PAR DÉFAUT -->
+            <div class="card shadow-sm">
+                <a href="#collapseMiso" data-bs-toggle="collapse" class="card-header collapsible-header d-flex justify-content-between align-items-center" aria-expanded="true">
+                    <h5 class="mb-0"><i class="bi bi-cone-striped text-info me-2"></i>Préavis de Maintenance (MISO)</h5>
+                    <i class="bi bi-chevron-down"></i>
+                </a>
+                <div id="collapseMiso" class="collapse show">
+                    <div class="scrollable-card-content">
+                        <div class="list-group list-group-flush">
+                            {% for miso in miso_du_jour %}
+                                <a href="{% url 'technique:modifier-miso' miso.id %}" class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h5 class="mb-1">{{ miso.get_type_maintenance_display }}</h5>
+                                        <small>
+                                            <span class="badge {% if miso.statut == 'EN_COURS' %}bg-success{% else %}bg-primary{% endif %}">
+                                                {{ miso.statut.label }}
+                                            </span>
+                                        </small>
+                                    </div>
+                                    <p class="mb-1">{{ miso.description }}</p>
+                                    <small class="text-muted">
+                                        Du {{ miso.date_debut|date:"d/m H:i" }} au {{ miso.date_fin|date:"d/m H:i" }}
+                                    </small>
+                                </a>
+                            {% empty %}
+                                <div class="list-group-item text-muted">Aucun préavis de maintenance pour ce jour.</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div> <!-- Fin de la div.row -->
 </div> <!-- Fin de la div.container -->

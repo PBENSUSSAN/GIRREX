@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ titre }} - GIRREX{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'technique:liste-miso' %}">Bibliothèque MISO</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Créer</li>
+                </ol>
+            </nav>
+
+            <div class="card shadow-sm mt-3">
+                <div class="card-header">
+                    <h4>{{ titre }}</h4>
+                </div>
+                <div class="card-body">
+                    {# `enctype="multipart/form-data"` est crucial pour permettre l'upload de la pièce jointe. #}
+                    <form method="post" enctype="multipart/form-data" novalidate>
+                        
+                        {# Le jeton de sécurité de Django #}
+                        {% csrf_token %}
+                        
+                        {# Affiche le formulaire en utilisant le style Bootstrap grâce à Crispy Forms #}
+                        {{ form|crispy }}
+                        
+                        <div class="d-flex justify-content-end mt-4">
+                            {# On change le bouton "Annuler" pour un bouton "Retour" toujours visible #}
+                            <a href="{% url 'technique:liste-miso' %}" class="btn btn-secondary me-2">Retour à la liste</a>
+    
+                            {# On n'affiche le bouton de sauvegarde que si l'utilisateur peut éditer #}
+                            {% if can_edit %}
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle me-2"></i>Enregistrer les modifications
+                                </button>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

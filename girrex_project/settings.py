@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'core',
     'suivi',
     'documentation',
+    'technique',
     'crispy_forms',
     'crispy_bootstrap5',
     'django_filters',

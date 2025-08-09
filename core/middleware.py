@@ -118,7 +118,8 @@ class GirrexContextMiddleware:
             
             if role_nom in super_roles or role_nom in manager_roles or role_nom in [Role.RoleName.ADJOINT_CONFORMITE, Role.RoleName.SMS_LOCAL, Role.RoleName.RESPONSABLE_SMS]: request.show_sms_menu = True
             if role_nom in super_roles or role_nom in manager_roles or role_nom in [Role.RoleName.ADJOINT_FORM, Role.RoleName.FORM_LOCAL]: request.show_formation_menu = True
-            if role_nom in super_roles or role_nom in manager_roles or role_nom in [Role.RoleName.ES_LOCAL, Role.RoleName.ADJOINT_ES]: request.show_technique_menu = True
+            #if role_nom in super_roles or role_nom in manager_roles or role_nom in [Role.RoleName.ES_LOCAL, Role.RoleName.ADJOINT_ES]: request.show_technique_menu = True
+            if role_nom in super_roles or role_nom in manager_roles or role_nom in [Role.RoleName.ES_LOCAL, Role.RoleName.ADJOINT_ES, Role.RoleName.RESPONSABLE_SMS]: request.show_technique_menu = True
             if role_nom in super_roles or role_nom in manager_roles or role_nom in [Role.RoleName.QS_LOCAL, Role.RoleName.ADJOINT_QS]: request.show_security_menu = True
         
         # 6. LOGIQUE POUR LE TOOLTIP D'INFORMATIONS UTILISATEUR

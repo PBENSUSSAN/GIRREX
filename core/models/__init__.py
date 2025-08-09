@@ -13,7 +13,6 @@ from .planning import PositionJour, TourDeService, TourDeServiceHistorique, Vers
 from .feuille_temps import FeuilleTempsEntree, FeuilleTempsVerrou
 
 # Importation des modèles séparés pour le cahier de marche
-from .panne import PanneCentre
 from .evenement import CategorieEvenement, EvenementCentre
 
 # On importe ServiceJournalier ET ServiceJournalierHistorique depuis le même fichier.
