@@ -1,8 +1,6 @@
-# Fichier : technique/panne.py
+# Fichier : technique/models/panne.py
 
 from django.db import models
-#from .rh import Agent, Centre
-from core.models import Agent, Centre
 from core.models import Agent, Centre
 
 class PanneCentre(models.Model):
@@ -17,11 +15,33 @@ class PanneCentre(models.Model):
     class Statut(models.TextChoices):
         EN_COURS = 'EN_COURS', 'En cours'
         RESOLUE = 'RESOLUE', 'Résolue'
+        
+    # --- NOUVELLE ÉNUMÉRATION POUR LE TYPE D'ÉQUIPEMENT ---
+    class TypeEquipement(models.TextChoices):
+        RADIO = 'RADIO', 'Radio'
+        RADAR = 'RADAR', 'Radar'
+        VISU = 'VISU', 'Visualisation'
+        TELEPHONE= 'TELEPHONIE', 'Telephone'
+        INTERPHONE= 'INTERPHONIE', 'Interphone'
+        INFRA = 'INFRA', 'Infrastructure'
+        AUTRE = 'AUTRE', 'Autre'
 
-    equipement_concerne = models.CharField(
-        max_length=255,
-        help_text="Nom du système ou de l'équipement en panne."
+    # --- CHAMPS MODIFIÉS ---
+    type_equipement = models.CharField(
+        max_length=30,
+        choices=TypeEquipement.choices,
+        verbose_name="Système concerné",
+        default=TypeEquipement.AUTRE
     )
+    
+    equipement_details = models.CharField(
+        max_length=255,
+        verbose_name="Précisions sur l'équipement",
+        help_text="Nom ou référence exacte de l'équipement en panne.",
+        blank=True
+    )
+
+    # --- CHAMPS INCHANGÉS ---
     date_heure_debut = models.DateTimeField(
         db_index=True,
         help_text="Date et heure du début de la panne."
@@ -69,4 +89,5 @@ class PanneCentre(models.Model):
         ]
 
     def __str__(self):
-        return f"Panne de {self.equipement_concerne} sur {self.centre.code_centre} le {self.date_heure_debut.strftime('%d/%m/%Y')}"
+        # On met à jour la représentation textuelle pour qu'elle soit plus claire
+        return f"Panne {self.get_type_equipement_display()} sur {self.centre.code_centre} le {self.date_heure_debut.strftime('%d/%m/%Y')}"

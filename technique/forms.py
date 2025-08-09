@@ -1,14 +1,24 @@
 # Fichier : technique/forms.py
 
 from django import forms
-from .models import Miso, PanneCentre # Assurez-vous que PanneCentre est bien importé
+from .models import Miso, PanneCentre, MisoHistorique # Assurez-vous que PanneCentre est bien importé
 
 # Le formulaire PanneCentreForm reste inchangé
 class PanneCentreForm(forms.ModelForm):
+     
+    commentaire_mise_a_jour = forms.CharField(
+        label="Commentaire de mise à jour",
+        required=False, # Le commentaire est optionnel
+        widget=forms.Textarea(attrs={'rows': 3}),
+        help_text="Optionnel : décrivez la modification effectuée."
+    )
+
     class Meta:
         model = PanneCentre
+        # On utilise les nouveaux champs du modèle
         fields = [
-            'equipement_concerne', 
+            'type_equipement',
+            'equipement_details',
             'date_heure_debut', 
             'criticite', 
             'description', 

@@ -89,7 +89,7 @@
             {# Le lien MISO pointe vers une URL que nous créerons à la phase 3 #}
             <li><a href="{% url 'technique:liste-miso' %}" class="ps-4">MISO</a></li>
             {# Le lien Pannes est désactivé pour le moment #}
-            <li><a href="#" class="ps-4 disabled">Pannes</a></li>
+             <li><a href="{% url 'technique:liste-pannes' %}" class="ps-4">Pannes</a></li>
         </ul>
     </li>
     {% endif %}

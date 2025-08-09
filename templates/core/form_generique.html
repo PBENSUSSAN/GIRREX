@@ -3,7 +3,7 @@
 {% comment %}
     Fichier : templates/core/form_generique.html
     Auteur : Gemini pour GIRREX
-    Date de mise à jour : 25/07/2025
+    Date de mise à jour : 09/08/2025
     Description : 
     Template réutilisable pour l'affichage de formulaires simples.
     Il utilise la librairie `django-crispy-forms` pour un rendu propre et rapide
@@ -13,6 +13,8 @@
     - `form` : L'instance du formulaire Django à afficher.
     - `titre` : Le titre à afficher en haut de la page et dans la carte.
     - `centre` : L'objet Centre concerné, pour l'affichage dans l'en-tête.
+    - `form_action_url` (Optionnel): L'URL complète pour l'attribut "action" du formulaire,
+      utile pour conserver les paramètres GET lors de la soumission.
 {% endcomment %}
 
 {# Chargement de la librairie de tags pour crispy-forms #}
@@ -33,9 +35,9 @@
                     <h4>{{ titre }} - {{ centre.nom_centre }}</h4>
                 </div>
                 <div class="card-body">
-                    {# Le formulaire est envoyé avec la méthode POST. `novalidate` empêche la validation HTML5 #}
-                    {# par défaut pour laisser Django gérer entièrement la validation. #}
-                    <form method="post" novalidate>
+                    {# --- LIGNE MODIFIÉE --- #}
+                    {# On ajoute l'attribut `action` pour la redirection et `enctype` pour les fichiers. #}
+                    <form method="post" action="{{ form_action_url|default:'' }}" enctype="multipart/form-data" novalidate>
                         
                         {# Le token CSRF est une sécurité essentielle de Django contre les attaques Cross-Site Request Forgery. #}
                         {% csrf_token %}
@@ -46,7 +48,6 @@
                         
                         <div class="d-flex justify-content-end mt-4">
                             {# Bouton "Annuler" qui utilise l'historique du navigateur pour revenir à la page précédente. #}
-                            {# `request.META.HTTP_REFERER` contient l'URL de la page d'où vient l'utilisateur. #}
                             <a href="{{ request.META.HTTP_REFERER|escape }}" class="btn btn-secondary me-2">Annuler</a>
                             
                             {# Le bouton de soumission principal du formulaire. #}
@@ -62,3 +63,4 @@
     </div>
 </div>
 {% endblock %}
+

@@ -1,4 +1,4 @@
-<!-- Fichier : templates/base.html (Version Finale Simplifiée) -->
+<!-- Fichier : templates/base.html (Version Finale Corrigée) -->
 {% load static %}
 <!DOCTYPE html>
 <html lang="fr">
@@ -17,6 +17,7 @@
     {% block sidebar_override %}
         {% if user.is_authenticated %}
             <nav id="sidebar">
+                {# La sidebar est un conteneur flex vertical qui s'étire sur toute la hauteur #}
                 <div>
                     <div class="sidebar-header">
                         <a href="{% url 'home' %}">
@@ -24,12 +25,22 @@
                             <img src="{% static 'images/logo dgaev.jpeg' %}" alt="Logo DGA" style="height: 80px; margin-left: 10px;"> 
                         </a>
                     </div>
+
+                    <div class="sidebar-clocks">
+                        <div class="clock-display">
+                            <span id="local-time-display" class="clock-time">--:--:--</span>
+                            <span class="clock-label">(Heure LOC)</span>
+                        </div>
+                        <div class="clock-display">
+                            <span id="zulu-time-display" class="clock-time">--:--:--</span>
+                            <span class="clock-label">(Heure Z)</span>
+                        </div>
+                    </div>
                     
                     {% include "partials/sidebar_menu.html" %}
-
                 </div>
+
                 <div class="user-info list-unstyled">
-                    
                     {% if all_user_active_roles|length > 1 %}
                     <div class="dropdown mb-2 px-3">
                         <button class="btn btn-outline-light btn-sm dropdown-toggle w-100 d-flex align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -88,12 +99,13 @@
 </div>
 {% if user.is_authenticated %}<form id="logout-form" method="post" action="{% url 'logout' %}" style="display: none;">{% csrf_token %}</form>{% endif %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-{% block scripts %}<script>
+{% block scripts %}
+<script>
 document.addEventListener('DOMContentLoaded', function() {
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-      return new bootstrap.Tooltip(tooltipTriggerEl)
-    })
+      return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
     const logoutLink = document.getElementById('logout-link');
     if (logoutLink) {
         logoutLink.addEventListener('click', function(event) {
@@ -102,6 +114,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-</script>{% endblock scripts %}
+</script>
+<script src="{% static 'js/clocks.js' %}"></script>
+{% endblock scripts %}
 </body>
 </html>

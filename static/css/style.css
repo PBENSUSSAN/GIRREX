@@ -173,3 +173,33 @@ a.nav-link:not(.collapsed) .sidebar-chevron {
     /* S'assure que le texte est bien aligné à gauche */
     text-align: left;
 }
+
+/* ==================================== */
+/* STYLE DES HORLOGES (VERSION FINALE)  */
+/* ==================================== */
+.sidebar-clocks {
+    padding: 15px 10px;
+    border-top: 1px solid #47748b;
+    display: flex; /* Active Flexbox pour aligner les enfants */
+    justify-content: center; /* <<< LA MAGIE EST ICI : Centre les enfants horizontalement */
+    gap: 30px; /* Ajoute un espace propre entre les deux horloges */
+}
+
+.clock-display {
+    text-align: center; /* Centre le texte (heure et libellé) à l'intérieur de chaque bloc */
+}
+
+.clock-label {
+    display: block;
+    font-size: 0.7rem; /* Police du libellé plus petite */
+    color: rgba(255, 255, 255, 0.7);
+    text-transform: uppercase;
+}
+
+.clock-time {
+    display: block;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 1.1rem; /* Police de l'heure légèrement réduite */
+    font-weight: 600;
+    color: #fff;
+}    

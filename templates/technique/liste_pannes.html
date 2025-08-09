@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% load static crispy_forms_tags %}
+
+{% block title %}{{ titre }} - GIRREX{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>{{ titre }}</h3>
+        <div>
+            {% if request.centre_agent %}
+                <a href="{% url 'cahier-de-marche' request.centre_agent.id today|date:'Y-m-d' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-book"></i> Aller au Cahier de Marche
+                </a>
+            {% else %}
+                <a href="{% url 'cahier-de-marche-hub' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-book"></i> Aller au Cahier de Marche
+                </a>
+            {% endif %}
+            
+            {% if request.centre_agent and effective_perms.technique.add_pannecentre %}
+                <a href="{% url 'ajouter-panne' request.centre_agent.id %}?next={% url 'technique:liste-pannes' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle-fill"></i> Créer une panne
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Formulaire de Filtres -->
+    <div class="card card-body mb-4">
+        <form method="get">
+            <div class="row g-3">
+                <div class="col-md-3">{{ filter.form.equipement_details|as_crispy_field }}</div>
+                <div class="col-md-2">{{ filter.form.type_equipement|as_crispy_field }}</div>
+                <div class="col-md-2">{{ filter.form.criticite|as_crispy_field }}</div>
+                <div class="col-md-2">{{ filter.form.statut|as_crispy_field }}</div>
+                <div class="col-md-3">{{ filter.form.date_debut_apres|as_crispy_field }}</div>
+                {% if not request.centre_agent %}
+                    <div class="col-md-2">{{ filter.form.centre|as_crispy_field }}</div>
+                {% endif %}
+            </div>
+            <button type="submit" class="btn btn-primary mt-3"><i class="bi bi-search"></i> Filtrer</button>
+        </form>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped align-middle">
+                    <thead>
+                        <tr>
+                            <th>Statut</th>
+                            <th>Date de Début</th>
+                            <th>Centre</th>
+                            <th>Système</th>
+                            <th>Précisions</th>
+                            <th>Criticité</th>
+                            <th>Auteur</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for panne in filter.qs %}
+                        <tr>
+                            <td>
+                                <span class="badge {% if panne.statut == 'EN_COURS' %}bg-danger{% else %}bg-success{% endif %}">
+                                    {{ panne.get_statut_display }}
+                                </span>
+                            </td>
+                            <td>{{ panne.date_heure_debut|date:"d/m/Y H:i" }}</td>
+                            <td>{{ panne.centre.code_centre }}</td>
+                            <td>{{ panne.get_type_equipement_display }}</td>
+                            <td>{{ panne.equipement_details|default:"-" }}</td>
+                            <td>{{ panne.get_criticite_display }}</td>
+                            <td>{{ panne.auteur.trigram }}</td>
+                            <td class="text-center">
+                                {# Ce bouton pointe maintenant vers notre vue de détail/modification #}
+                                <a href="{% url 'technique:detail-panne' panne.id %}" class="btn btn-sm btn-outline-secondary" title="Voir le détail">
+                                    <i class="bi bi-eye-fill"></i>
+                                </a>
+    
+                                {% if effective_perms.technique.change_pannecentre %}
+                                    {# Ce bouton pointe aussi vers la même vue #}
+                                    <a href="{% url 'technique:detail-panne' panne.id %}" class="btn btn-sm btn-outline-primary" title="Modifier">
+                                        <i class="bi bi-pencil-fill"></i>
+                                    </a>
+                                {% endif %}
+    
+                                {% if effective_perms.technique.resolve_pannecentre and panne.statut == 'EN_COURS' %}
+                                {# Ce bouton pointe vers la vue de résolution directe #}
+                                    <a href="{% url 'technique:resoudre-panne' panne.id %}" class="btn btn-sm btn-outline-success" title="Résoudre">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                    </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted">Aucune panne ne correspond à vos critères.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

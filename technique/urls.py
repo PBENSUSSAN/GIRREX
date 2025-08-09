@@ -2,7 +2,7 @@
 
 from django.urls import path
 # On importe bien le module "miso" depuis notre dossier "views"
-from .views import miso
+from .views import miso, pannes
 
 app_name = 'technique'
 
@@ -13,4 +13,9 @@ urlpatterns = [
     path('miso/<int:miso_id>/modifier/', miso.modifier_miso_view, name='modifier-miso'),
     path('miso/<int:miso_id>/annuler/', miso.annuler_miso_view, name='annuler-miso'),
     path('miso/archives/', miso.archives_miso_view, name='archives-miso'),
+
+    path('pannes/liste/', pannes.liste_pannes_view, name='liste-pannes'),
+    path('pannes/<int:panne_id>/detail/', pannes.detail_panne_view, name='detail-panne'),
+
+    path('pannes/<int:panne_id>/resoudre/', pannes.resoudre_panne_view, name='resoudre-panne'),
 ]

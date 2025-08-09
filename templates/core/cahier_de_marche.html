@@ -1,4 +1,4 @@
-<!-- Fichier : templates/core/cahier_de_marche.html (VERSION AVEC ÉVÉNEMENTS OUVERTS PAR DÉFAUT) -->
+<!-- Fichier : templates/core/cahier_de_marche.html -->
 {% extends "base.html" %}
 {% load static %}
 
@@ -23,15 +23,85 @@
 
     <div class="row g-4">
 
-        <!-- CARTE ÉVÉNEMENTS - OUVERTE PAR DÉFAUT -->
-        <div class="col-12">
+        <!-- COLONNE DE GAUCHE : ÉVÉNEMENTS TECHNIQUES -->
+        <div class="col-md-6 d-flex flex-column gap-4">
+
+            <!-- CARTE PANNES - OUVERTE PAR DÉFAUT -->
             <div class="card shadow-sm">
-                <!-- NOTE : "aria-expanded=true" indique que la carte est ouverte -->
+                <a href="#collapsePannes" data-bs-toggle="collapse" class="card-header collapsible-header d-flex justify-content-between align-items-center" aria-expanded="true">
+                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Pannes</h5>
+                    <i class="bi bi-chevron-down"></i>
+                </a>
+                <div id="collapsePannes" class="collapse show">
+                    <div class="scrollable-card-content">
+                        <div class="list-group list-group-flush">
+                            {% for panne in pannes %}
+                                <div class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <a href="{% url 'technique:detail-panne' panne.id %}" class="text-decoration-none text-dark">
+                                            <h5 class="mb-1">{{ panne.get_type_equipement_display }}{% if panne.equipement_details %}: {{ panne.equipement_details }}{% endif %}</h5>
+                                        </a>
+                                        <small>{% if panne.statut == 'EN_COURS' %}<span class="badge bg-danger">En cours</span>{% else %}<span class="badge bg-success">Résolue</span>{% endif %}</small>
+                                    </div>
+                                    <p class="mb-1">{{ panne.description }}</p>
+                                    <div class="d-flex justify-content-between align-items-center mt-2">
+                                        <small class="text-muted">Début : {{ panne.date_heure_debut|date:"d/m/Y H:i" }} | Par : {{ panne.auteur }}</small>
+                                        
+                                        {% if panne.statut == 'EN_COURS' and verrou_operationnel and verrou_operationnel.chef_de_quart == request.user.agent_profile and effective_perms.technique.resolve_pannecentre %}
+                                            <button class="btn btn-sm btn-success resolve-panne-btn" data-url="{% url 'resoudre-panne' centre_id=centre.id panne_id=panne.id %}" data-csrf="{{ csrf_token }}"><i class="bi bi-check-circle me-1"></i>Résoudre</button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% empty %}
+                                <div class="list-group-item text-muted">Aucune panne active pour ce jour.</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARTE MISO - OUVERTE PAR DÉFAUT -->
+            <div class="card shadow-sm">
+                <a href="#collapseMiso" data-bs-toggle="collapse" class="card-header collapsible-header d-flex justify-content-between align-items-center" aria-expanded="true">
+                    <h5 class="mb-0"><i class="bi bi-cone-striped text-info me-2"></i>Préavis de Maintenance (MISO)</h5>
+                    <i class="bi bi-chevron-down"></i>
+                </a>
+                <div id="collapseMiso" class="collapse show">
+                    <div class="scrollable-card-content">
+                        <div class="list-group list-group-flush">
+                            {% for miso in miso_du_jour %}
+                                <a href="{% url 'technique:modifier-miso' miso.id %}" class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h5 class="mb-1">{{ miso.get_type_maintenance_display }}</h5>
+                                        <small>
+                                            <span class="badge {% if miso.statut == miso.Statut.EN_COURS %}bg-success{% else %}bg-primary{% endif %}">
+                                                {{ miso.statut.label }}
+                                            </span>
+                                        </small>
+                                    </div>
+                                    <p class="mb-1">{{ miso.description }}</p>
+                                    <small class="text-muted">
+                                        Du {{ miso.date_debut|date:"d/m H:i" }} au {{ miso.date_fin|date:"d/m H:i" }}
+                                    </small>
+                                </a>
+                            {% empty %}
+                                <div class="list-group-item text-muted">Aucun préavis de maintenance pour ce jour.</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLONNE DE DROITE : ÉVÉNEMENTS OPÉRATIONNELS & HUMAINS -->
+        <div class="col-md-6 d-flex flex-column gap-4">
+
+            <!-- CARTE ÉVÉNEMENTS - OUVERTE PAR DÉFAUT -->
+            <div class="card shadow-sm">
                 <a href="#collapseEvenements" data-bs-toggle="collapse" class="card-header collapsible-header d-flex justify-content-between align-items-center" aria-expanded="true">
                     <h5 class="mb-0"><i class="bi bi-info-circle-fill text-primary me-2"></i>Événements</h5>
                     <i class="bi bi-chevron-down"></i>
                 </a>
-                <!-- NOTE : La classe "show" rend le contenu visible au chargement -->
                 <div id="collapseEvenements" class="collapse show">
                     <div class="scrollable-card-content">
                         <div class="list-group list-group-flush">
@@ -51,19 +121,13 @@
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- COLONNE DE GAUCHE -->
-        <div class="col-md-6 d-flex flex-column gap-4">
             
             <!-- CARTE HISTORIQUE SERVICE - FERMÉE PAR DÉFAUT -->
             <div class="card shadow-sm">
-                <!-- NOTE : "aria-expanded=false" indique que la carte est fermée -->
                 <a href="#collapseHistorique" data-bs-toggle="collapse" class="card-header collapsible-header d-flex justify-content-between align-items-center" aria-expanded="false">
                     <h5 class="mb-0"><i class="bi bi-clock-history text-info me-2"></i>Historique du Service</h5>
                     <i class="bi bi-chevron-down"></i>
                 </a>
-                <!-- NOTE : La classe "show" est ABSENTE, le contenu est donc caché -->
                 <div id="collapseHistorique" class="collapse">
                     <div class="scrollable-card-content">
                         <ul class="list-group list-group-flush">
@@ -83,41 +147,6 @@
                     </div>
                 </div>
             </div>
-            
-            <!-- CARTE PANNES - FERMÉE PAR DÉFAUT -->
-            <div class="card shadow-sm">
-                <a href="#collapsePannes" data-bs-toggle="collapse" class="card-header collapsible-header d-flex justify-content-between align-items-center" aria-expanded="false">
-                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Pannes</h5>
-                    <i class="bi bi-chevron-down"></i>
-                </a>
-                <div id="collapsePannes" class="collapse">
-                    <div class="scrollable-card-content">
-                        <div class="list-group list-group-flush">
-                            {% for panne in pannes %}
-                                <div class="list-group-item">
-                                    <div class="d-flex w-100 justify-content-between">
-                                        <h5 class="mb-1">{{ panne.equipement_concerne }}</h5>
-                                        <small>{% if panne.statut == 'EN_COURS' %}<span class="badge bg-danger">En cours</span>{% else %}<span class="badge bg-success">Résolue</span>{% endif %}</small>
-                                    </div>
-                                    <p class="mb-1">{{ panne.description }}</p>
-                                    <div class="d-flex justify-content-between align-items-center mt-2">
-                                        <small class="text-muted">Début : {{ panne.date_heure_debut|date:"d/m/Y H:i" }} | Par : {{ panne.auteur }}</small>
-                                        {% if panne.statut == 'EN_COURS' and verrou_operationnel and verrou_operationnel.chef_de_quart == request.user.agent_profile and effective_perms.core.resolve_pannecentre %}
-                                            <button class="btn btn-sm btn-success resolve-panne-btn" data-url="{% url 'resoudre-panne' centre_id=centre.id panne_id=panne.id %}" data-csrf="{{ csrf_token }}"><i class="bi bi-check-circle me-1"></i>Résoudre</button>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            {% empty %}
-                                <div class="list-group-item text-muted">Aucune panne active pour ce jour.</div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- COLONNE DE DROITE -->
-        <div class="col-md-6 d-flex flex-column gap-4">
             
             <!-- CARTE MOUVEMENTS - FERMÉE PAR DÉFAUT -->
             <div class="card shadow-sm">
@@ -169,38 +198,6 @@
                                 <li class="list-group-item text-muted">Aucune activité de zone enregistrée pour ce jour.</li>
                             {% endfor %}
                         </ul>
-                    </div>
-                </div>
-            </div>
-
-            <!-- CARTE MISO - FERMÉE PAR DÉFAUT -->
-            <div class="card shadow-sm">
-                <a href="#collapseMiso" data-bs-toggle="collapse" class="card-header collapsible-header d-flex justify-content-between align-items-center" aria-expanded="true">
-                    <h5 class="mb-0"><i class="bi bi-cone-striped text-info me-2"></i>Préavis de Maintenance (MISO)</h5>
-                    <i class="bi bi-chevron-down"></i>
-                </a>
-                <div id="collapseMiso" class="collapse show">
-                    <div class="scrollable-card-content">
-                        <div class="list-group list-group-flush">
-                            {% for miso in miso_du_jour %}
-                                <a href="{% url 'technique:modifier-miso' miso.id %}" class="list-group-item list-group-item-action">
-                                    <div class="d-flex w-100 justify-content-between">
-                                        <h5 class="mb-1">{{ miso.get_type_maintenance_display }}</h5>
-                                        <small>
-                                            <span class="badge {% if miso.statut == 'EN_COURS' %}bg-success{% else %}bg-primary{% endif %}">
-                                                {{ miso.statut.label }}
-                                            </span>
-                                        </small>
-                                    </div>
-                                    <p class="mb-1">{{ miso.description }}</p>
-                                    <small class="text-muted">
-                                        Du {{ miso.date_debut|date:"d/m H:i" }} au {{ miso.date_fin|date:"d/m H:i" }}
-                                    </small>
-                                </a>
-                            {% empty %}
-                                <div class="list-group-item text-muted">Aucun préavis de maintenance pour ce jour.</div>
-                            {% endfor %}
-                        </div>
                     </div>
                 </div>
             </div>
