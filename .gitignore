@@ -11,7 +11,7 @@ db.sqlite3
 *.env
 
 # Dossiers pour les fichiers uploadés par les utilisateurs et les fichiers statiques collectés
-#/media/
+/media/
 #/static/
 /staticfiles/
 

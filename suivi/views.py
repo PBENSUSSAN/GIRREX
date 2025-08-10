@@ -1,19 +1,18 @@
-# Fichier : suivi/views.py (Version Finale avec Nouvelle Logique de Diffusion)
+# Fichier : suivi/views.py
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
-from django.db import transaction, models
+from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
 from django.http import Http404
 
 from .models import Action, HistoriqueAction, PriseEnCompte
 from .forms import CreateActionForm, UpdateActionForm, AddActionCommentForm, DiffusionForm
 from .services import update_parent_progress, final_close_action_cascade, creer_diffusion
-from core.models import Agent, AgentRole, Centre, Role
-# --- LIGNE CORRIGÉE ---
-from documentation.models import Document, DocumentType
+from core.models import AgentRole, Role
+from documentation.models import Document
 from .filters import ActionFilter, ArchiveFilter
 
 def user_has_role(user, role_name):
@@ -51,17 +50,14 @@ def tableau_actions_view(request):
 
 @login_required
 def create_action_view(request):
+    """
+    Gère la création d'une nouvelle action générique (non-documentaire).
+    """
     if request.method == 'POST':
         form = CreateActionForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
-            # La logique de création d'action est maintenant plus simple
             action = form.save()
-            form.save_m2m()
-            
-            # --- SUPPRESSION DE L'ANCIENNE LOGIQUE ---
-            # Le bloc "if action.categorie == Action.CategorieAction.DIFFUSION_DOC:"
-            # qui créait un Document et un VersionDocument est maintenant inutile et a été retiré.
-            
+            # La méthode save() du formulaire ModelForm gère les ManyToMany si commit=True
             messages.success(request, f"L'action '{action.numero_action}' a été créée.")
             return redirect('suivi:tableau-actions')
     else:
@@ -72,7 +68,10 @@ def create_action_view(request):
 
 @login_required
 def detail_action_view(request, action_id):
-    action = get_object_or_404(Action, pk=action_id)
+    """
+    Affiche le détail d'une action, son historique et les formulaires d'interaction.
+    """
+    action = get_object_or_404(Action.archives.select_related('responsable', 'parent'), pk=action_id)
     historique = action.historique.all().order_by('-timestamp')
     update_form = UpdateActionForm(instance=action)
     comment_form = AddActionCommentForm()
@@ -114,15 +113,10 @@ def detail_action_view(request, action_id):
     }
     return render(request, 'suivi/detail_action.html', context)
 
-
-# ==============================================================================
-# VUE DE DIFFUSION GÉNÉRIQUE (REMPLACÉE)
-# ==============================================================================
 @login_required
 def lancer_diffusion_view(request, content_type_id, object_id):
     """
-    Affiche le formulaire de paramétrage de la diffusion et appelle le service
-    métier pour exécuter le scénario choisi par l'utilisateur.
+    Affiche le formulaire de paramétrage de la diffusion et appelle le service métier.
     """
     try:
         content_type = get_object_or_404(ContentType, pk=content_type_id)
@@ -132,7 +126,7 @@ def lancer_diffusion_view(request, content_type_id, object_id):
         return redirect('home')
 
     if request.method == 'POST':
-        form = DiffusionForm(request.POST)
+        form = DiffusionForm(request.POST, user=request.user)
         if form.is_valid():
             try:
                 with transaction.atomic():
@@ -141,14 +135,12 @@ def lancer_diffusion_view(request, content_type_id, object_id):
                         initiateur=request.user.agent_profile,
                         form_data=form.cleaned_data
                     )
-                
                 messages.success(request, f"La diffusion a été lancée avec succès. L'action mère '{action_mere.numero_action}' a été créée.")
                 return redirect('suivi:detail-action', action_id=action_mere.id)
-
             except Exception as e:
                 messages.error(request, f"Une erreur est survenue lors de la création des tâches : {e}")
     else:
-        form = DiffusionForm()
+        form = DiffusionForm(user=request.user)
 
     context = {
         'form': form,
@@ -157,10 +149,6 @@ def lancer_diffusion_view(request, content_type_id, object_id):
     }
     return render(request, 'suivi/lancer_diffusion.html', context)
 
-
-# ==============================================================================
-# AUTRES VUES DE WORKFLOW
-# ==============================================================================
 @login_required
 def valider_prise_en_compte_view(request, action_id):
     action_agent = get_object_or_404(Action, pk=action_id)

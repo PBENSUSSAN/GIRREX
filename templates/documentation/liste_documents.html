@@ -28,6 +28,8 @@
                 <div class="col-md">
                     {{ filter.form.statut|as_crispy_field }}
                 </div>
+
+                {# On n'affiche ces filtres que s'ils existent dans le formulaire (pour les nationaux) #}
                 {% if filter.form.scope %}
                 <div class="col-md">
                     {{ filter.form.scope|as_crispy_field }}
@@ -54,7 +56,7 @@
                     <th>Référence</th>
                     <th>Intitulé</th>
                     <th>Type</th>
-                    <th>Périmètre</th> {# <-- NOUVELLE COLONNE #}
+                    <th>Périmètre</th>
                     <th>Responsable Suivi</th>
                     <th>Mise en vigueur</th>
                     <th>Prochaine Échéance</th>
@@ -70,14 +72,11 @@
                     <td>{{ doc.intitulé }}</td>
                     <td>{{ doc.type_document.nom }}</td>
                     <td>
-                        {# --- NOUVELLE LOGIQUE D'AFFICHAGE --- #}
                         {% if doc.centres_applicables.all %}
-                            {# Si des centres sont liés, on affiche leurs codes #}
                             {% for centre in doc.centres_applicables.all %}
                                 {{ centre.code_centre }}{% if not forloop.last %}, {% endif %}
                             {% endfor %}
                         {% else %}
-                            {# Sinon, c'est un document national #}
                             <span class="badge bg-info">National</span>
                         {% endif %}
                     </td>
@@ -97,7 +96,6 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    {# On met à jour le colspan à 8 #}
                     <td colspan="8" class="text-center text-muted">Aucun document ne correspond à vos critères.</td>
                 </tr>
                 {% endfor %}

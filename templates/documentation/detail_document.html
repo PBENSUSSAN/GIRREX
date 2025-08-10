@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load diffusion_tags %}
+{% load diffusion_tags %} {# On s'assure que le tag est bien chargé #}
 
 {% block title %}{{ titre }} - GIRREX{% endblock %}
 
@@ -50,17 +50,7 @@
         </div>
     </div>
 
-    <!-- Tableau de bord des Avenants -->
-    {% if document.avenants.all %}
-    <h4 class="mt-4">Avenants Associés</h4>
-    <div class="list-group">
-        {% for avenant in document.avenants.all %}
-            <a href="{% url 'documentation:detail-document' avenant.id %}" class="list-group-item list-group-item-action">{{ avenant.reference }} - {{ avenant.intitule }}</a>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    <!-- Tableau de bord des Diffusions -->
+    <!-- La section de l'historique des diffusions que nous allons restaurer -->
     <h4 class="mt-4">Historique des Diffusions</h4>
     <div class="card">
         <div class="list-group list-group-flush">
@@ -68,7 +58,6 @@
             <a href="{% url 'suivi:detail-action' action.id %}" class="list-group-item list-group-item-action">
                 <div class="d-flex w-100 justify-content-between">
                     <h5 class="mb-1">Diffusion #{{ action.numero_action }}</h5>
-                    {# On cherche la date de création dans l'historique de l'action elle-même #}
                     <small>Lancée le {{ action.historique.last.timestamp|date:"d/m/Y" }}</small>
                 </div>
                 <p class="mb-1">Responsable : {{ action.responsable }}</p>
@@ -82,6 +71,7 @@
     
     {% if document.statut == 'EN_VIGUEUR' %}
     <div class="mt-4">
+        {# --- BLOC CORRIGÉ ET DÉCOMMENTÉ --- #}
         {% get_content_type_id document as ctype_id %}
         <a href="{% url 'suivi:lancer-diffusion' content_type_id=ctype_id object_id=document.id %}" class="btn btn-success">
             <i class="bi bi-broadcast"></i> Lancer une nouvelle diffusion

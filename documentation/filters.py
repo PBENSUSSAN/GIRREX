@@ -21,7 +21,7 @@ class DocumentFilter(django_filters.FilterSet):
         label="Centre Concerné"
     )
 
-    SCOPE_CHOICES = ( ('', 'Tous'), ('nationaux', 'Nationaux'), ('locaux', 'Locaux'),)
+    SCOPE_CHOICES = (('', 'Tous'), ('nationaux', 'Nationaux'), ('locaux', 'Locaux'),)
     scope = django_filters.ChoiceFilter(
         choices=SCOPE_CHOICES, 
         method='filter_by_scope', 

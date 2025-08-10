@@ -4,8 +4,7 @@ from django.utils import timezone
 from datetime import timedelta
 from .models import Action, HistoriqueAction
 from core.models import Agent, Role, Centre
-# On importe le nouveau modèle Document pour vérifier son type
-from documentation.models import Document
+from documentation.models import Document # On importe notre nouveau Document
 
 def update_parent_progress(action_fille):
     """
@@ -105,7 +104,6 @@ def creer_diffusion(objet_source, initiateur, form_data):
         else:
             responsables_locaux = Agent.objects.filter(
                 roles_assignes__centre__in=centres_cibles,
-                # On peut cibler plusieurs types de responsables locaux
                 roles_assignes__role__nom__in=[Role.RoleName.ADJOINT_CHEF_DE_CENTRE, Role.RoleName.CHEF_DE_CENTRE],
                 roles_assignes__date_fin__isnull=True,
                 actif=True
@@ -142,7 +140,5 @@ def creer_diffusion(objet_source, initiateur, form_data):
     else:
         action_mere.avancement = 1
     action_mere.save()
-    
-    # La logique qui mettait à jour 'statut_diffusion' a été supprimée car le champ n'existe plus.
     
     return action_mere
