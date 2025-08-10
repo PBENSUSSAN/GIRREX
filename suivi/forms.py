@@ -1,45 +1,39 @@
 # Fichier : suivi/forms.py (Version Finale avec Formulaire de Diffusion Flexible)
 
+# Fichier : suivi/forms.py
+
 from django import forms
 from .models import Action
 from core.models import Agent, Centre
 
-# ==============================================================================
-# FORMULAIRE DE DIFFUSION FLEXIBLE
-# ==============================================================================
 class DiffusionForm(forms.Form):
     """
-    Formulaire générique et flexible pour paramétrer tous les scénarios de diffusion.
+    Formulaire flexible pour paramétrer tous les scénarios de diffusion.
+    S'adapte au contexte de l'utilisateur (local vs national).
     """
     TYPE_DIFFUSION_CHOICES = [
         ('ACTION', "Pour Action (créer des tâches de suivi)"),
         ('INFO', "Pour Information (ne crée aucune tâche)"),
     ]
 
-    # Scénario 3 & 2 : Diffusion par centre(s)
     centres_cibles = forms.ModelMultipleChoiceField(
         queryset=Centre.objects.all(),
         widget=forms.CheckboxSelectMultiple,
         label="Diffuser via les responsables locaux des centres suivants :",
         required=False,
-        help_text="Chaque responsable local recevra une tâche pour dispatcher à ses équipes."
     )
     
-    # Option pour le Scénario 2
     diffusion_directe_agents = forms.BooleanField(
         label="Diffuser directement à tous les agents concernés (sans passer par l'intermédiaire local)",
         required=False
     )
 
-    # Scénario 1 : Diffusion par agent(s) spécifique(s)
     agents_cibles = forms.ModelMultipleChoiceField(
         queryset=Agent.objects.filter(actif=True).order_by('trigram'),
         label="OU diffuser directement à des agents spécifiques :",
         required=False,
-        help_text="Utilisez ce champ pour une diffusion ciblée, quel que soit le centre."
     )
 
-    # Choix final : Action ou Information
     type_diffusion = forms.ChoiceField(
         choices=TYPE_DIFFUSION_CHOICES,
         widget=forms.RadioSelect,
@@ -47,19 +41,25 @@ class DiffusionForm(forms.Form):
         initial='ACTION'
     )
 
-    def clean(self):
-        """
-        Vérifie que l'utilisateur a bien sélectionné au moins une cible.
-        """
-        cleaned_data = super().clean()
-        centres_cibles = cleaned_data.get('centres_cibles')
-        agents_cibles = cleaned_data.get('agents_cibles')
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
 
-        if not centres_cibles and not agents_cibles:
+        # --- NOUVELLE LOGIQUE D'ADAPTATION ---
+        if user and hasattr(user, 'agent_profile') and user.agent_profile.centre:
+            # Si l'utilisateur est local, on restreint et pré-coche son centre
+            centre_local = user.agent_profile.centre
+            self.fields['centres_cibles'].queryset = Centre.objects.filter(pk=centre_local.pk)
+            self.fields['centres_cibles'].initial = [centre_local]
+            # On pourrait aussi masquer le champ s'il n'y a qu'un choix
+            # self.fields['centres_cibles'].widget = forms.HiddenInput()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if not cleaned_data.get('centres_cibles') and not cleaned_data.get('agents_cibles'):
             raise forms.ValidationError(
                 "Vous devez sélectionner au moins un centre ou un agent destinataire."
             )
-        
         return cleaned_data
 
 

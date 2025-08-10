@@ -1,4 +1,4 @@
-<!-- Fichier : templates/documentation/create_document.html (Nouveau Fichier) -->
+<!-- Fichier : templates/documentation/create_document.html -->
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
 
@@ -11,13 +11,15 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="{% url 'documentation:liste-documents' %}">Bibliothèque</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Créer une fiche document</li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ document.reference|default:"Créer un document" }}</li>
                 </ol>
             </nav>
             <div class="card shadow-sm mt-3">
                 <div class="card-header"><h4>{{ titre }}</h4></div>
                 <div class="card-body">
-                    <form method="post" novalidate>
+                    {# --- CORRECTION MAJEURE ICI --- #}
+                    {# On ajoute enctype="multipart/form-data" pour permettre l'envoi de fichiers #}
+                    <form method="post" enctype="multipart/form-data" novalidate>
                         {% csrf_token %}
                         {{ form|crispy }}
                         <div class="d-flex justify-content-end mt-4">

@@ -2,20 +2,26 @@
 
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from ..models import Document
+from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
+from suivi.models import Action
+from ..models import Document, DocumentType
 from ..filters import DocumentFilter
 
 @login_required
 def liste_documents_view(request):
-    """
-    Affiche la liste des documents actifs, en appliquant les filtres
-    et en pré-chargeant les versions pour un affichage optimisé.
-    """
+    """ Affiche la bibliothèque documentaire. """
     base_queryset = Document.objects.filter(
-        statut_suivi__in=['A_JOUR', 'EN_REDACTION', 'RENOUVELLEMENT_PLANIFIE', 'PERIME']
-    ).prefetch_related('versions')
+        statut__in=['EN_VIGUEUR', 'REMPLACE', 'EN_REDACTION']
+    ).select_related('type_document', 'responsable_suivi')
 
-    document_filter = DocumentFilter(request.GET, queryset=base_queryset)
+    if hasattr(request, 'centre_agent') and request.centre_agent:
+        base_queryset = base_queryset.filter(
+            Q(centres_applicables__isnull=True) |
+            Q(centres_applicables=request.centre_agent)
+        ).distinct()
+    
+    document_filter = DocumentFilter(request.GET, queryset=base_queryset, request=request)
     
     context = {
         'filter': document_filter,
@@ -23,10 +29,27 @@ def liste_documents_view(request):
     }
     return render(request, 'documentation/liste_documents.html', context)
 
+
 @login_required
 def detail_document_view(request, document_id):
-    """ Affiche les détails d'un document et la liste de ses versions. """
-    document = get_object_or_404(Document, pk=document_id)
-    versions = document.versions.all().order_by('-date_mise_en_vigueur')
-    context = { 'document': document, 'versions': versions, 'titre': f"Détail : {document.reference}" }
+    """ Affiche la vue à 360° d'un document et l'historique de ses diffusions. """
+    document = get_object_or_404(Document.objects.select_related(
+        'remplace_document', 'document_parent', 'remplace_par'
+    ), pk=document_id)
+
+    # On récupère le "type" de l'objet Document
+    content_type = ContentType.objects.get_for_model(document)
+    
+    # On cherche TOUTES les actions (même archivées) qui pointent vers ce document.
+    diffusions = Action.archives.filter(
+        content_type=content_type, 
+        object_id=document.id,
+        parent__isnull=True # On ne prend que les actions mères de diffusion
+    ).order_by('-id') # On trie par ID pour avoir les plus récentes en premier
+
+    context = { 
+        'document': document, 
+        'diffusions': diffusions, # On passe la liste des actions au template
+        'titre': f"Détail : {document.reference}" 
+    }
     return render(request, 'documentation/detail_document.html', context)

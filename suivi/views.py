@@ -12,8 +12,9 @@ from .models import Action, HistoriqueAction, PriseEnCompte
 from .forms import CreateActionForm, UpdateActionForm, AddActionCommentForm, DiffusionForm
 from .services import update_parent_progress, final_close_action_cascade, creer_diffusion
 from core.models import Agent, AgentRole, Centre, Role
+# --- LIGNE CORRIGÉE ---
+from documentation.models import Document, DocumentType
 from .filters import ActionFilter, ArchiveFilter
-from documentation.models import Document, VersionDocument, DocumentType
 
 def user_has_role(user, role_name):
     """ Vérifie si un utilisateur a un rôle métier spécifique et actif. """
@@ -53,23 +54,16 @@ def create_action_view(request):
     if request.method == 'POST':
         form = CreateActionForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
-            try:
-                with transaction.atomic():
-                    action = form.save(commit=False)
-                    action.save()
-                    form.save_m2m()
-
-                    if action.categorie == Action.CategorieAction.DIFFUSION_DOC:
-                        doc_type, _ = DocumentType.objects.get_or_create(nom="Document Externe")
-                        document = Document.objects.create(intitule=form.cleaned_data['document_intitule'], reference=f"MANUEL-{timezone.now().strftime('%Y%m%d-%H%M%S')}", type_document=doc_type, responsable_suivi=action.responsable)
-                        version = VersionDocument.objects.create(document=document, numero_version="1.0", fichier_pdf=form.cleaned_data['piece_jointe'], enregistre_par=request.user)
-                        action.objet_source = version
-                        action.save()
-                    
-                    messages.success(request, f"L'action '{action.numero_action}' a été créée.")
-                    return redirect('suivi:tableau-actions')
-            except Exception as e:
-                messages.error(request, f"Une erreur est survenue : {e}")
+            # La logique de création d'action est maintenant plus simple
+            action = form.save()
+            form.save_m2m()
+            
+            # --- SUPPRESSION DE L'ANCIENNE LOGIQUE ---
+            # Le bloc "if action.categorie == Action.CategorieAction.DIFFUSION_DOC:"
+            # qui créait un Document et un VersionDocument est maintenant inutile et a été retiré.
+            
+            messages.success(request, f"L'action '{action.numero_action}' a été créée.")
+            return redirect('suivi:tableau-actions')
     else:
         form = CreateActionForm(user=request.user)
 

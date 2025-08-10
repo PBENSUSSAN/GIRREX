@@ -1,9 +1,11 @@
-# Fichier : suivi/services.py (Version Finale avec "Espions" et Correction Définitive)
+# Fichier : suivi/services.py
 
 from django.utils import timezone
 from datetime import timedelta
 from .models import Action, HistoriqueAction
 from core.models import Agent, Role, Centre
+# On importe le nouveau modèle Document pour vérifier son type
+from documentation.models import Document
 
 def update_parent_progress(action_fille):
     """
@@ -59,38 +61,27 @@ def creer_diffusion(objet_source, initiateur, form_data):
     """
     Service centralisé et flexible qui gère tous les scénarios de diffusion.
     """
-    print("\n--- DÉBUT DU SERVICE DE DIFFUSION ---")
-
-    # 1. Extraire les données du formulaire
     type_diffusion = form_data['type_diffusion']
     centres_cibles = form_data['centres_cibles']
     agents_specifiques = form_data['agents_cibles']
     diffusion_directe = form_data['diffusion_directe_agents']
     
-    # 2. Déterminer le périmètre et générer le numéro de la Tâche Mère
     tous_les_centres_cibles = Centre.objects.filter(pk__in=[c.pk for c in centres_cibles])
     portee_code = "LOC" if tous_les_centres_cibles.exists() or agents_specifiques.exists() else "NAT"
     categorie_action_mere = Action.CategorieAction.DIFFUSION_DOC
     
     prefix = f"{portee_code}-{categorie_action_mere.name.split('_')[0]}-{timezone.now().year}-"
-    print(f"[ESPION] Préfixe du numéro calculé : {prefix}")
-
-    # On cherche la dernière action qui est une TÂCHE MÈRE (parent is None)
     last_action = Action.archives.filter(
         numero_action__startswith=prefix,
-        parent__isnull=True  # Condition cruciale pour ignorer les tâches filles
+        parent__isnull=True
     ).order_by('numero_action').last()
     
-    print(f"[ESPION] Dernière action mère trouvée pour ce préfixe : {last_action}")
-
     new_sequence = 1
     if last_action and last_action.numero_action.split('-')[-1].isdigit():
         new_sequence = int(last_action.numero_action.split('-')[-1]) + 1
     
     numero_mere = f"{prefix}{new_sequence:04d}"
-    print(f"[ESPION] Nouveau numéro généré pour la tâche mère : {numero_mere}")
 
-    # 3. Créer la Tâche Mère
     action_mere = Action.objects.create(
         numero_action=numero_mere,
         titre=f"Diffusion de : {objet_source}",
@@ -103,48 +94,38 @@ def creer_diffusion(objet_source, initiateur, form_data):
     if tous_les_centres_cibles.exists():
         action_mere.centres.set(tous_les_centres_cibles)
 
-    # 4. Logique de création des tâches filles
     destinataires_finaux = set(agents_specifiques)
-
     if centres_cibles.exists():
         if diffusion_directe:
-            controleurs = Agent.objects.filter(
-                roles_assignes__centre__in=centres_cibles,
-                roles_assignes__role__nom=Role.RoleName.CONTROLEUR,
-                roles_assignes__date_fin__isnull=True,
+            agents_concernes = Agent.objects.filter(
+                centre__in=centres_cibles,
                 actif=True
             ).distinct()
-            destinataires_finaux.update(controleurs)
-            print(f"[ESPION] Scénario 2: {len(destinataires_finaux)} destinataires finaux directs trouvés.")
-        
+            destinataires_finaux.update(agents_concernes)
         else:
             responsables_locaux = Agent.objects.filter(
                 roles_assignes__centre__in=centres_cibles,
-                roles_assignes__role__nom=Role.RoleName.ADJOINT_CHEF_DE_CENTRE, # Rôle à confirmer/adapter
+                # On peut cibler plusieurs types de responsables locaux
+                roles_assignes__role__nom__in=[Role.RoleName.ADJOINT_CHEF_DE_CENTRE, Role.RoleName.CHEF_DE_CENTRE],
                 roles_assignes__date_fin__isnull=True,
                 actif=True
             ).distinct()
-            print(f"[ESPION] Scénario 3: {len(responsables_locaux)} responsables locaux trouvés.")
-
-            for i, responsable in enumerate(responsables_locaux):
+            for responsable in responsables_locaux:
                 numero_intermediaire = f"{numero_mere}.{responsable.centre.code_centre}"
-                print(f"[ESPION] Création de la tâche intermédiaire : {numero_intermediaire}")
-                tache_fille_intermediaire = Action.objects.create(
+                Action.objects.create(
                     parent=action_mere,
                     numero_action=numero_intermediaire,
                     titre=f"Dispatcher la diffusion de : {objet_source}",
                     responsable=responsable,
                     echeance=action_mere.echeance,
                     objet_source=objet_source,
-                    categorie=categorie_action_mere
+                    categorie=categorie_action_mere,
+                    centres=[responsable.centre]
                 )
-                tache_fille_intermediaire.centres.add(responsable.centre)
 
-    # Création des tâches pour les destinataires finaux (Scénarios 1 & 2)
     index_depart = action_mere.sous_taches.filter(numero_action__contains='.').count()
     for i, agent in enumerate(destinataires_finaux):
         numero_final = f"{numero_mere}.{index_depart + i + 1}"
-        print(f"[ESPION] Création de la tâche finale : {numero_final}")
         Action.objects.create(
             parent=action_mere,
             numero_action=numero_final,
@@ -155,19 +136,13 @@ def creer_diffusion(objet_source, initiateur, form_data):
             categorie=Action.CategorieAction.PRISE_EN_COMPTE_DOC
         )
         
-    # 5. Mise à jour finale de l'action mère
-    if type_diffusion == 'INFO' or not action_mere.sous_taches.exists():
+    if type_diffusion == 'INFO' or not (action_mere.sous_taches.exists() or destinataires_finaux):
         action_mere.avancement = 100
         action_mere.statut = Action.StatutAction.VALIDEE
     else:
         action_mere.avancement = 1
     action_mere.save()
-
-    # 6. Mise à jour de l'objet source (ex: document)
-    if hasattr(objet_source, 'statut_diffusion'):
-        from documentation.models import VersionDocument
-        objet_source.statut_diffusion = VersionDocument.StatutDiffusion.DIFFUSION_LANCEE
-        objet_source.save()
     
-    print("--- FIN DU SERVICE DE DIFFUSION ---\n")
+    # La logique qui mettait à jour 'statut_diffusion' a été supprimée car le champ n'existe plus.
+    
     return action_mere
