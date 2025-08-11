@@ -1,4 +1,4 @@
-<!-- Fichier : templates/suivi/lancer_diffusion.html (Version Finale) -->
+<!-- Fichier : templates/suivi/lancer_diffusion.html -->
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
 
@@ -23,6 +23,13 @@
                         
                         <fieldset class="border p-3 mb-3">
                             <legend class="float-none w-auto px-2 fs-6">Scénario de Diffusion</legend>
+                            
+                            <!-- On affiche le nouveau champ s'il existe dans le formulaire -->
+                            {% if form.tous_les_centres %}
+                                {{ form.tous_les_centres|as_crispy_field }}
+                                <hr>
+                            {% endif %}
+                            
                             {{ form.centres_cibles|as_crispy_field }}
                             {{ form.diffusion_directe_agents|as_crispy_field }}
                             <hr>
@@ -47,3 +54,42 @@
     </div>
 </div>
 {% endblock %}
+
+<!-- ========================================================== -->
+<!--            AJOUT DU BLOC SCRIPT CI-DESSOUS                 -->
+<!-- ========================================================== -->
+{% block scripts %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('select-all-centres');
+    const centreCheckboxes = document.querySelectorAll('[name="centres_cibles"]');
+
+    // On s'assure que les éléments existent avant d'ajouter des écouteurs
+    if (selectAllCheckbox && centreCheckboxes.length > 0) {
+        
+        // Action quand on clique sur la case "Tous les centres"
+        selectAllCheckbox.addEventListener('change', function() {
+            centreCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+        });
+
+        // Action quand on clique sur une case de centre individuelle
+        centreCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                // Si on décoche une case, la case "Tous les centres" doit se décocher
+                if (!this.checked) {
+                    selectAllCheckbox.checked = false;
+                }
+                // Si toutes les cases sont cochées, on coche aussi "Tous les centres"
+                else {
+                    const allChecked = Array.from(centreCheckboxes).every(c => c.checked);
+                    selectAllCheckbox.checked = allChecked;
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock scripts %}

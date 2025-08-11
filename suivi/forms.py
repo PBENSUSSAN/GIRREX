@@ -1,5 +1,3 @@
-# Fichier : suivi/forms.py (Version Finale avec Formulaire de Diffusion Flexible)
-
 # Fichier : suivi/forms.py
 
 from django import forms
@@ -15,6 +13,15 @@ class DiffusionForm(forms.Form):
         ('ACTION', "Pour Action (créer des tâches de suivi)"),
         ('INFO', "Pour Information (ne crée aucune tâche)"),
     ]
+
+    # --- DÉBUT DE L'AJOUT DU NOUVEAU CHAMP ---
+    tous_les_centres = forms.BooleanField(
+        label="Diffuser à TOUS les centres",
+        required=False,
+        # On ajoute un 'id' pour que le JavaScript puisse le cibler facilement.
+        widget=forms.CheckboxInput(attrs={'id': 'select-all-centres'})
+    )
+    # --- FIN DE L'AJOUT ---
 
     centres_cibles = forms.ModelMultipleChoiceField(
         queryset=Centre.objects.all(),
@@ -45,14 +52,17 @@ class DiffusionForm(forms.Form):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
 
-        # --- NOUVELLE LOGIQUE D'ADAPTATION ---
         if user and hasattr(user, 'agent_profile') and user.agent_profile.centre:
             # Si l'utilisateur est local, on restreint et pré-coche son centre
             centre_local = user.agent_profile.centre
             self.fields['centres_cibles'].queryset = Centre.objects.filter(pk=centre_local.pk)
             self.fields['centres_cibles'].initial = [centre_local]
-            # On pourrait aussi masquer le champ s'il n'y a qu'un choix
-            # self.fields['centres_cibles'].widget = forms.HiddenInput()
+            
+            # --- LOGIQUE AJOUTÉE ---
+            # On supprime le champ "tous_les_centres" pour les utilisateurs locaux
+            # car cette option n'a pas de sens pour eux.
+            if 'tous_les_centres' in self.fields:
+                self.fields.pop('tous_les_centres')
 
     def clean(self):
         cleaned_data = super().clean()

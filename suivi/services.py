@@ -4,7 +4,8 @@ from django.utils import timezone
 from datetime import timedelta
 from .models import Action, HistoriqueAction
 from core.models import Agent, Role, Centre
-from documentation.models import Document # On importe notre nouveau Document
+from documentation.models import Document
+from core.models.qualite import RecommendationQS
 
 def update_parent_progress(action_fille):
     """
@@ -61,11 +62,14 @@ def creer_diffusion(objet_source, initiateur, form_data):
     Service centralisé et flexible qui gère tous les scénarios de diffusion.
     """
     type_diffusion = form_data['type_diffusion']
-    centres_cibles = form_data['centres_cibles']
+    # --- LOGIQUE SIMPLIFIÉE ---
+    # La variable `centres_a_traiter` reçoit directement la liste du formulaire.
+    # Plus besoin de deviner si c'est une diffusion nationale.
+    centres_a_traiter = form_data['centres_cibles']
     agents_specifiques = form_data['agents_cibles']
     diffusion_directe = form_data['diffusion_directe_agents']
     
-    tous_les_centres_cibles = Centre.objects.filter(pk__in=[c.pk for c in centres_cibles])
+    tous_les_centres_cibles = Centre.objects.filter(pk__in=[c.pk for c in centres_a_traiter])
     portee_code = "LOC" if tous_les_centres_cibles.exists() or agents_specifiques.exists() else "NAT"
     categorie_action_mere = Action.CategorieAction.DIFFUSION_DOC
     
@@ -94,33 +98,63 @@ def creer_diffusion(objet_source, initiateur, form_data):
         action_mere.centres.set(tous_les_centres_cibles)
 
     destinataires_finaux = set(agents_specifiques)
-    if centres_cibles.exists():
+    
+    # La condition est simple : s'il y a des centres à traiter, on entre dans la logique.
+    if centres_a_traiter.exists():
         if diffusion_directe:
             agents_concernes = Agent.objects.filter(
-                centre__in=centres_cibles,
+                centre__in=centres_a_traiter,
                 actif=True
             ).distinct()
             destinataires_finaux.update(agents_concernes)
         else:
-            responsables_locaux = Agent.objects.filter(
-                roles_assignes__centre__in=centres_cibles,
-                roles_assignes__role__nom__in=[Role.RoleName.ADJOINT_CHEF_DE_CENTRE, Role.RoleName.CHEF_DE_CENTRE],
-                roles_assignes__date_fin__isnull=True,
-                actif=True
-            ).distinct()
-            for responsable in responsables_locaux:
-                numero_intermediaire = f"{numero_mere}.{responsable.centre.code_centre}"
-                Action.objects.create(
-                    parent=action_mere,
-                    numero_action=numero_intermediaire,
-                    titre=f"Dispatcher la diffusion de : {objet_source}",
-                    responsable=responsable,
-                    echeance=action_mere.echeance,
-                    objet_source=objet_source,
-                    categorie=categorie_action_mere,
-                    centres=[responsable.centre]
-                )
+            ROLE_MAPPING = {
+                Document: Role.RoleName.SMS_LOCAL,
+                RecommendationQS: Role.RoleName.QS_LOCAL,
+            }
+            objet_type = type(objet_source)
+            role_cible = ROLE_MAPPING.get(objet_type)
 
+            for centre in centres_a_traiter:
+                responsable_a_assigner = None
+                if role_cible:
+                    responsable_a_assigner = Agent.objects.filter(
+                        roles_assignes__centre=centre,
+                        roles_assignes__role__nom=role_cible,
+                        roles_assignes__date_fin__isnull=True,
+                        actif=True
+                    ).first()
+                
+                if not responsable_a_assigner:
+                    responsable_a_assigner = Agent.objects.filter(
+                        roles_assignes__centre=centre,
+                        roles_assignes__role__nom=Role.RoleName.CHEF_DE_CENTRE,
+                        roles_assignes__date_fin__isnull=True,
+                        actif=True
+                    ).first()
+                    if not responsable_a_assigner:
+                        responsable_a_assigner = Agent.objects.filter(
+                            roles_assignes__centre=centre,
+                            roles_assignes__role__nom=Role.RoleName.ADJOINT_CHEF_DE_CENTRE,
+                            roles_assignes__date_fin__isnull=True,
+                            actif=True
+                        ).first()
+
+                if responsable_a_assigner:
+                    numero_intermediaire = f"{numero_mere}.{centre.code_centre}"
+                    
+                    action_intermediaire = Action.objects.create(
+                        parent=action_mere,
+                        numero_action=numero_intermediaire,
+                        titre=f"Dispatcher la diffusion de : {objet_source}",
+                        responsable=responsable_a_assigner,
+                        echeance=action_mere.echeance,
+                        objet_source=objet_source,
+                        categorie=categorie_action_mere
+                    )
+                    action_intermediaire.centres.set([centre])
+
+    # Le reste de la fonction est inchangé
     index_depart = action_mere.sous_taches.filter(numero_action__contains='.').count()
     for i, agent in enumerate(destinataires_finaux):
         numero_final = f"{numero_mere}.{index_depart + i + 1}"

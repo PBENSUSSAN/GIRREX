@@ -50,12 +50,12 @@
                         <li><strong>Priorité :</strong> {{ action.get_priorite_display }}</li>
                     </ul>
                     
-                    {% if action.objet_source and action.content_type.model == 'versiondocument' %}
+                    {% if action.objet_source and action.content_type.model == 'document' %}
                         <div class="mt-3 p-3 bg-light border rounded">
                             <h6 class="mb-2">Document à consulter :</h6>
                             <p class="mb-2">
-                                <strong>{{ action.objet_source.document.reference }} - v{{ action.objet_source.numero_version }}</strong><br>
-                                <small class="text-muted">{{ action.objet_source.document.intitule }}</small>
+                                <strong>{{ action.objet_source.reference }}</strong><br>
+                                <small class="text-muted">{{ action.objet_source.intitule }}</small>
                             </p>
                             <a href="{% url 'documentation:view-pdf' action.objet_source.id %}" target="_blank" class="btn btn-sm btn-primary">
                                 <i class="bi bi-eye-fill"></i> Visualiser le PDF
@@ -67,30 +67,31 @@
                     {% endif %}
 
                     <div class="mt-4">
-                        {% if action.statut == 'A_FAIRE' and action.responsable == user.agent_profile %}
-                            {% comment %}
-                                Scénario 1 : Tâche de dispatch pour un responsable local
-                            {% endcomment %}
-                            {% if action.titre|slice:":11" == 'Dispatcher' %}
-                                <!-- ========================================================== -->
-                                <!--             CORRECTION DU LIEN DE DISPATCH                 -->
-                                <!-- ========================================================== -->
-                                <a href="#" class="btn btn-lg btn-success">
-                                    <i class="bi bi-diagram-3-fill"></i> Dispatcher aux Agents du Centre
-                                </a>
-                            
-                            {% comment %}
-                                Scénario 2 : Tâche finale de Prise en Compte pour l'agent
-                            {% endcomment %}
-                            {% elif action.categorie == 'PRISE_EN_COMPTE_DOC' %}
-                                 <form method="post" action="{% url 'suivi:valider-prise-en-compte' action.id %}">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-lg btn-primary">
-                                        <i class="bi bi-check2-circle"></i> Confirmer la lecture et la prise en compte
-                                    </button>
-                                </form>
-                            {% endif %}
+                        <!-- ========================================================== -->
+                        <!--                DÉBUT DE LA CORRECTION                    -->
+                        <!-- ========================================================== -->
+                        
+                        {# Scénario 1 : Tâche de dispatch pour un responsable local (condition inchangée) #}
+                        {% if action.statut == 'A_FAIRE' and action.responsable == user.agent_profile and action.titre|slice:":11" == 'Dispatcher' %}
+                            <a href="#" class="btn btn-lg btn-success">
+                                <i class="bi bi-diagram-3-fill"></i> Dispatcher aux Agents du Centre
+                            </a>
                         {% endif %}
+                        
+                        {# Scénario 2 : Tâche de Prise en Compte (condition modifiée) #}
+                        {# La nouvelle condition vérifie que la prise en compte n'a PAS encore été faite #}
+                        {% if action.categorie == 'PRISE_EN_COMPTE_DOC' and not action.prise_en_compte and action.responsable == user.agent_profile %}
+                             <form method="post" action="{% url 'suivi:valider-prise-en-compte' action.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-lg btn-primary">
+                                    <i class="bi bi-check2-circle"></i> Confirmer la lecture et la prise en compte
+                                </button>
+                            </form>
+                        {% endif %}
+
+                        <!-- ========================================================== -->
+                        <!--                  FIN DE LA CORRECTION                      -->
+                        <!-- ========================================================== -->
                     </div>
                 </div>
             </div>
