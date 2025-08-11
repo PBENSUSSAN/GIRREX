@@ -71,9 +71,9 @@ class ArchiveFilter(django_filters.FilterSet):
         label="Trier par"
     )
     
-    centres = django_filters.ModelMultipleChoiceFilter(
+    centres = django_filters.ModelChoiceFilter(
+        field_name='centres', # On garde le nom du champ du modèle
         queryset=Centre.objects.all(),
-        widget=forms.SelectMultiple(attrs={'class': 'form-select'}),
         label="Centres Concernés"
     )
     
