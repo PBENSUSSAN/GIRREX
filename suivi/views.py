@@ -12,7 +12,8 @@ from .models import Action, HistoriqueAction, PriseEnCompte
 from .forms import CreateActionForm, UpdateActionForm, AddActionCommentForm, DiffusionForm
 from .services import update_parent_progress, final_close_action_cascade, creer_diffusion
 from core.models import AgentRole, Role
-from documentation.models import Document
+# --- MODIFICATION DE CETTE LIGNE ---
+from documentation.models import Document, DocumentPriseEnCompte
 from .filters import ActionFilter, ArchiveFilter
 
 def user_has_role(user, role_name):
@@ -157,11 +158,27 @@ def valider_prise_en_compte_view(request, action_id):
         return redirect('suivi:detail-action', action_id=action_agent.id)
     try:
         with transaction.atomic():
+            # La logique existante pour le suivi de la tâche est conservée
             PriseEnCompte.objects.get_or_create(action_agent=action_agent, defaults={'agent': request.user.agent_profile})
             action_agent.statut = Action.StatutAction.VALIDEE
             action_agent.avancement = 100
             action_agent.save()
             update_parent_progress(action_agent)
+
+            # --- DÉBUT DE L'AJOUT ---
+            # On vérifie si l'objet source de l'action est bien un Document
+            # C'est cette vérification qui garantit la généricité de votre module de suivi.
+            if isinstance(action_agent.objet_source, Document):
+                document_concerne = action_agent.objet_source
+                # On crée l'enregistrement d'audit dans notre nouveau modèle.
+                # get_or_create est parfait car il évite les doublons si l'action est
+                # validée plusieurs fois par erreur.
+                DocumentPriseEnCompte.objects.get_or_create(
+                    document=document_concerne,
+                    agent=request.user.agent_profile
+                )
+            # --- FIN DE L'AJOUT ---
+
         messages.success(request, "Votre prise en compte a bien été enregistrée.")
     except Exception as e:
         messages.error(request, f"Une erreur est survenue : {e}")

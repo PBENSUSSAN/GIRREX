@@ -1,7 +1,14 @@
 {% extends "base.html" %}
-{% load diffusion_tags %} {# On s'assure que le tag est bien chargé #}
+{% load diffusion_tags %}
+{% load static %}
 
 {% block title %}{{ titre }} - GIRREX{% endblock %}
+
+{% block page_specific_styles %}
+{# On importe les styles du cahier de marche pour réutiliser le style des en-têtes dépliables #}
+<link rel="stylesheet" href="{% static 'css/cahier_de_marche.css' %}">
+{% endblock %}
+
 
 {% block content %}
 <div class="container-fluid mt-4">
@@ -21,17 +28,38 @@
                     <i class="bi bi-pencil-fill"></i> Modifier
                 </a>
                 {% endif %}
-                <span class="badge {% if document.statut == 'EN_VIGUEUR' %}bg-success{% else %}bg-secondary{% endif %} fs-6">{{ document.get_statut_display }}</span>
+                <span class="badge {% if document.statut == 'EN_VIGUEUR' %}bg-success{% elif document.statut == 'EN_REDACTION' %}bg-warning text-dark{% else %}bg-secondary{% endif %} fs-6">{{ document.get_statut_display }}</span>
             </div>
         </div>
+        
         <div class="card-body">
-            <p><strong>Description :</strong> {{ document.description|default:"Aucune description." }}</p>
-            <hr>
             <div class="row">
                 <div class="col-md-6">
-                    <p><strong>Responsable du suivi :</strong> {{ document.responsable_suivi }}</p>
-                    <p><strong>Prochaine échéance de relecture :</strong> {{ document.date_prochaine_echeance|date:"d/m/Y" }}</p>
+                    <h5>Informations Générales</h5>
+                    <p><strong>Type :</strong> {{ document.type_document.nom }}</p>
+                    <p><strong>Objet du document :</strong><br>{{ document.description|default:"Aucune description."|linebreaksbr }}</p>
+                    {% if document.fichier_pdf %}
+                        <a href="{% url 'documentation:view-pdf' document.id %}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye-fill"></i> Visualiser le PDF</a>
+                    {% endif %}
                 </div>
+                <div class="col-md-6">
+                    <h5>Pilotage et Cycle de Vie</h5>
+                    <p><strong>Responsable du suivi :</strong> {{ document.responsable_suivi }}</p>
+                    <p><strong>Périmètre :</strong> 
+                        {% for centre in document.centres_applicables.all %}
+                            <span class="badge bg-light text-dark border">{{ centre.code_centre }}</span>
+                        {% empty %}
+                            <span class="badge bg-info">National</span>
+                        {% endfor %}
+                    </p>
+                    <p><strong>Mise en vigueur le :</strong> {{ document.date_mise_en_vigueur|date:"d/m/Y"|default:"Non définie" }}</p>
+                    <p><strong>Périodicité de relecture :</strong> {{ document.periodicite_relecture_mois }} mois</p>
+                    <p><strong>Prochaine échéance de relecture :</strong> {{ document.date_prochaine_echeance|date:"d/m/Y"|default:"N/A" }}</p>
+                </div>
+            </div>
+            <hr>
+            <h5>Relations</h5>
+             <div class="row">
                 <div class="col-md-6">
                     {% if document.remplace_document %}
                         <p><strong>Remplace le document :</strong> <a href="{% url 'documentation:detail-document' document.remplace_document.id %}">{{ document.remplace_document.reference }}</a></p>
@@ -39,39 +67,78 @@
                     {% if document.remplace_par %}
                         <p><strong>Remplacé par le document :</strong> <a href="{% url 'documentation:detail-document' document.remplace_par.id %}">{{ document.remplace_par.reference }}</a></p>
                     {% endif %}
+                </div>
+                <div class="col-md-6">
                     {% if document.document_parent %}
                         <p><strong>Avenant au document :</strong> <a href="{% url 'documentation:detail-document' document.document_parent.id %}">{{ document.document_parent.reference }}</a></p>
                     {% endif %}
                 </div>
             </div>
-            {% if document.fichier_pdf %}
-                <a href="{% url 'documentation:view-pdf' document.id %}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye-fill"></i> Visualiser le PDF</a>
+        </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <!--          NOUVELLE STRUCTURE POUR LA SECTION JOURNAL          -->
+    <!-- ========================================================== -->
+
+    <!-- 1. Le titre et le bouton de filtre sont maintenant à l'extérieur -->
+    <div class="d-flex justify-content-between align-items-center mt-4 mb-2">
+        <h4 class="mb-0">Journal des Prises en Compte</h4>
+        <div>
+            {% if show_inactive %}
+                <a href="{% url 'documentation:detail-document' document.id %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-person-check-fill"></i> Masquer les agents inactifs
+                </a>
+            {% else %}
+                <a href="?show_inactive=true" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-person-fill-slash"></i> Afficher les agents inactifs
+                </a>
             {% endif %}
         </div>
     </div>
 
-    <!-- La section de l'historique des diffusions que nous allons restaurer -->
-    <h4 class="mt-4">Historique des Diffusions</h4>
-    <div class="card">
-        <div class="list-group list-group-flush">
-            {% for action in diffusions %}
-            <a href="{% url 'suivi:detail-action' action.id %}" class="list-group-item list-group-item-action">
-                <div class="d-flex w-100 justify-content-between">
-                    <h5 class="mb-1">Diffusion #{{ action.numero_action }}</h5>
-                    <small>Lancée le {{ action.historique.last.timestamp|date:"d/m/Y" }}</small>
+    <!-- 2. La carte ne contient que la zone dépliable -->
+    <div class="card shadow-sm">
+        <a href="#collapsePrisesEnCompte" data-bs-toggle="collapse" class="card-header collapsible-header d-flex align-items-center" aria-expanded="false">
+            <!-- 3. L'icône et le texte sont regroupés, et la flèche est juste à côté -->
+            <i class="bi bi-pen-fill text-primary me-2"></i>
+            <h5 class="mb-0">Afficher/Masquer le journal des signatures</h5>
+            <i class="bi bi-chevron-down ms-2"></i>
+        </a>
+        <div id="collapsePrisesEnCompte" class="collapse">
+             <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Agent</th>
+                                <th>Centre</th>
+                                <th>Date et Heure de Prise en Compte</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pec in prises_en_compte %}
+                            <tr>
+                                <td>{{ pec.agent }}</td>
+                                <td>{{ pec.agent.centre.code_centre|default:"N/A" }}</td>
+                                <td>{{ pec.timestamp|date:"d/m/Y à H:i:s" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted">
+                                    Aucune prise en compte enregistrée pour ce périmètre.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
-                <p class="mb-1">Responsable : {{ action.responsable }}</p>
-                <small>Statut : {{ action.get_statut_display }} ({{ action.avancement }}%)</small>
-            </a>
-            {% empty %}
-            <div class="list-group-item text-muted">Aucune diffusion n'a été lancée pour ce document.</div>
-            {% endfor %}
+            </div>
         </div>
     </div>
     
     {% if document.statut == 'EN_VIGUEUR' %}
     <div class="mt-4">
-        {# --- BLOC CORRIGÉ ET DÉCOMMENTÉ --- #}
         {% get_content_type_id document as ctype_id %}
         <a href="{% url 'suivi:lancer-diffusion' content_type_id=ctype_id object_id=document.id %}" class="btn btn-success">
             <i class="bi bi-broadcast"></i> Lancer une nouvelle diffusion

@@ -77,3 +77,38 @@ class Document(models.Model):
 
     def __str__(self):
         return f"{self.reference} - {self.intitule}"
+
+# --- DÉBUT DE L'AJOUT ---
+# Ce nouveau modèle va servir de registre d'audit permanent pour les signatures.
+# Il est directement lié au Document et à l'Agent.
+class DocumentPriseEnCompte(models.Model):
+    """
+    Trace de manière immuable la prise en compte d'un document par un agent.
+    C'est le registre d'audit des signatures.
+    """
+    document = models.ForeignKey(
+        Document, 
+        on_delete=models.CASCADE, 
+        related_name='prises_en_compte'
+    )
+    agent = models.ForeignKey(
+        'core.Agent',  # On utilise la chaîne 'app.Model' pour éviter les imports circulaires
+        on_delete=models.PROTECT,
+        related_name='documents_pris_en_compte'
+    )
+    timestamp = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Date et heure de la prise en compte"
+    )
+
+    class Meta:
+        verbose_name = "Prise en Compte de Document"
+        verbose_name_plural = "Prises en Compte de Documents"
+        ordering = ['timestamp']
+        # Cette contrainte est cruciale : elle garantit qu'un agent ne peut 
+        # "signer" qu'une seule fois le même document.
+        unique_together = ('document', 'agent')
+
+    def __str__(self):
+        return f"{self.agent} a pris en compte {self.document.reference} le {self.timestamp.strftime('%d/%m/%Y')}"
+# --- FIN DE L'AJOUT ---
