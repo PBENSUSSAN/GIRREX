@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'suivi',
     'documentation',
     'technique',
+    'qs',
     'crispy_forms',
     'crispy_bootstrap5',
     'django_filters',

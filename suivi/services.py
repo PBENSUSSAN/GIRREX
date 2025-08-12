@@ -5,7 +5,7 @@ from datetime import timedelta
 from .models import Action, HistoriqueAction
 from core.models import Agent, Role, Centre
 from documentation.models import Document
-from core.models.qualite import RecommendationQS
+from qs.models import RecommendationQS 
 
 def update_parent_progress(action_fille):
     """

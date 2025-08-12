@@ -13,9 +13,6 @@ from .models import (
     # Section V: Changement & MRR
     CentreRole, ResponsableSMS, MRR, MRRSignataire, MRRProgression, Changement, Action, 
     Notification,
-    # Section VI: QS/SMS
-    ResponsableQSCentral, EvenementQS, RecommendationQS, ActionQS, 
-    AuditQS, EvaluationRisqueQS, NotificationQS,
     # Section VII : TDS
     PositionJour, TourDeService, TourDeServiceHistorique, VersionTourDeService,
     # SECTION VIII : GESTION DES FEUILLES DE TEMPS
@@ -153,23 +150,6 @@ admin.site.register(Action)
 admin.site.register(Notification)
 
 # ==============================================================================
-# SECTION VI : QUALITE/SECURITE DES VOLS (QS/SMS)
-# ==============================================================================
-
-@admin.register(EvenementQS)
-class EvenementQSAdmin(admin.ModelAdmin):
-    list_display = ('__str__', 'centre', 'rapporteur', 'niveau_gravite', 'statut')
-    list_filter = ('statut', 'niveau_gravite', 'centre')
-    search_fields = ('description', 'analyse', 'rapporteur__trigram')
-
-admin.site.register(ResponsableQSCentral)
-admin.site.register(RecommendationQS)
-admin.site.register(ActionQS)
-admin.site.register(AuditQS)
-admin.site.register(EvaluationRisqueQS)
-admin.site.register(NotificationQS)
-
-# ==============================================================================
 # SECTION VII : TDS
 # ==============================================================================
 @admin.register(PositionJour)
@@ -228,14 +208,6 @@ class FeuilleTempsVerrouAdmin(admin.ModelAdmin):
 # SECTION IX : ACTIVITÉ DU CENTRE
 # ==============================================================================
 
-###@admin.register(PanneCentre)
-#class PanneCentreAdmin(admin.ModelAdmin):
- #   list_display = ('date_heure_debut', 'equipement_concerne', 'criticite', 'statut', 'centre', 'auteur', 'notification_generale')
-  #  list_filter = ('centre', 'criticite', 'statut', 'date_heure_debut')
-   #search_fields = ('equipement_concerne', 'description', 'auteur__trigram')
-    #autocomplete_fields = ['centre', 'auteur']
-    #date_hierarchy = 'date_heure_debut'
-
 @admin.register(CategorieEvenement)
 class CategorieEvenementAdmin(admin.ModelAdmin):
     list_display = ('nom', 'centre', 'couleur')
@@ -277,8 +249,6 @@ class ServiceJournalierHistoriqueAdmin(admin.ModelAdmin):
     
     readonly_fields = ('service_journalier', 'type_action', 'modifie_par', 'agent_action', 'timestamp')
 
-    
-
 # ==============================================================================
 # NOUVELLE SECTION XII : gesiton zones
 # ==============================================================================
@@ -290,8 +260,6 @@ class ZoneAdmin(admin.ModelAdmin):
     search_fields = ('nom', 'description', 'centre__code_centre')
     ordering = ('centre', 'nom')
     
-    # On met les champs de statut en lecture seule, car ils seront gérés
-    # par la logique métier de l'application, pas manuellement.
     readonly_fields = ('est_active', 'derniere_activite', 'dernier_agent')
     
     fieldsets = (
@@ -299,7 +267,7 @@ class ZoneAdmin(admin.ModelAdmin):
             'fields': ('nom', 'description', 'centre')
         }),
         ('État Actuel (géré automatiquement)', {
-            'classes': ('collapse',), # On peut masquer cette section par défaut
+            'classes': ('collapse',),
             'fields': readonly_fields,
         }),
     )
@@ -312,17 +280,5 @@ class ActiviteZoneAdmin(admin.ModelAdmin):
     search_fields = ('zone__nom', 'agent_action__trigram')
     date_hierarchy = 'timestamp'
     
-    # Cette section doit être en lecture seule, c'est un journal de bord.
-    #readonly_fields = ('zone', 'type_action', 'timestamp', 'agent_action', 'service_journalier')
     readonly_fields = ('timestamp',)
     autocomplete_fields = ['zone', 'agent_action', 'service_journalier']
-
-    # On empêche la création, modification ou suppression manuelle depuis l'admin.
-    #def has_add_permission(self, request):
-     #   return False
-
-    #def has_change_permission(self, request, obj=None):
-    #    return False
-
-    #def has_delete_permission(self, request, obj=None):
-     #   return False
