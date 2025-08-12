@@ -12,9 +12,10 @@ from .models import Action, HistoriqueAction, PriseEnCompte
 from .forms import CreateActionForm, UpdateActionForm, AddActionCommentForm, DiffusionForm
 from .services import update_parent_progress, final_close_action_cascade, creer_diffusion
 from core.models import AgentRole, Role
-# --- MODIFICATION DE CETTE LIGNE ---
 from documentation.models import Document, DocumentPriseEnCompte
 from .filters import ActionFilter, ArchiveFilter
+from qs.models import FNE, HistoriqueFNE
+from qs.audit import log_audit_fne
 
 def user_has_role(user, role_name):
     """ Vérifie si un utilisateur a un rôle métier spécifique et actif. """
@@ -86,17 +87,48 @@ def detail_action_view(request, action_id):
                 updated_action = update_form.save()
                 if updated_action.parent:
                     update_parent_progress(updated_action)
+                
+                # Étape 1 : On enregistre l'historique dans suivi (comportement normal)
                 HistoriqueAction.objects.create(
                     action=updated_action, type_evenement=HistoriqueAction.TypeEvenement.CHANGEMENT_AVANCEMENT, auteur=request.user,
                     details={ 'ancien_statut': ancien_statut, 'nouveau_statut': updated_action.get_statut_display(), 'ancien_avancement': f"{ancien_avancement}%", 'nouvel_avancement': f"{updated_action.avancement}%", 'commentaire': update_form.cleaned_data.get('update_comment') }
                 )
+
+                # Étape 2 : On vérifie la nature de la tâche et on envoie à l'audit si nécessaire
+                if isinstance(updated_action.objet_source, FNE):
+                    log_audit_fne(
+                        fne=updated_action.objet_source,
+                        type_evenement=HistoriqueFNE.TypeEvenement.CHANGEMENT_STATUT_INSTRUCTION,
+                        auteur=request.user,
+                        details={
+                            'ancien_statut': ancien_statut, 
+                            'nouveau_statut': updated_action.get_statut_display(), 
+                            'ancien_avancement': f"{ancien_avancement}%", 
+                            'nouvel_avancement': f"{updated_action.avancement}%", 
+                            'commentaire': update_form.cleaned_data.get('update_comment')
+                        }
+                    )
+
                 messages.success(request, "L'action a été mise à jour.")
                 return redirect('suivi:detail-action', action_id=action.id)
+        
         elif 'add_comment' in request.POST:
             comment_form = AddActionCommentForm(request.POST)
             if comment_form.is_valid():
                 commentaire_texte = comment_form.cleaned_data['commentaire']
+                
+                # Étape 1 : On enregistre l'historique dans suivi
                 HistoriqueAction.objects.create(action=action, type_evenement=HistoriqueAction.TypeEvenement.COMMENTAIRE, auteur=request.user, details={'commentaire': commentaire_texte})
+
+                # Étape 2 : On vérifie la nature de la tâche et on envoie à l'audit
+                if isinstance(action.objet_source, FNE):
+                    log_audit_fne(
+                        fne=action.objet_source,
+                        type_evenement=HistoriqueFNE.TypeEvenement.COMMENTAIRE,
+                        auteur=request.user,
+                        details={'commentaire': commentaire_texte}
+                    )
+
                 messages.success(request, "Votre commentaire a été ajouté.")
                 return redirect('suivi:detail-action', action_id=action.id)
     
@@ -165,7 +197,6 @@ def valider_prise_en_compte_view(request, action_id):
             action_agent.save()
             update_parent_progress(action_agent)
 
-            # --- DÉBUT DE L'AJOUT ---
             # On vérifie si l'objet source de l'action est bien un Document
             # C'est cette vérification qui garantit la généricité de votre module de suivi.
             if isinstance(action_agent.objet_source, Document):
@@ -177,7 +208,6 @@ def valider_prise_en_compte_view(request, action_id):
                     document=document_concerne,
                     agent=request.user.agent_profile
                 )
-            # --- FIN DE L'AJOUT ---
 
         messages.success(request, "Votre prise en compte a bien été enregistrée.")
     except Exception as e:

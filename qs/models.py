@@ -146,3 +146,48 @@ class RapportExterne(models.Model):
         ordering = ['-date_reception']
     def __str__(self):
         return f"Rapport de {self.organisme_source} ({self.reference_externe})"
+
+# ==============================================================================
+# 4. MODÈLE POUR LE JOURNAL D'AUDIT PERMANENT
+# ==============================================================================
+class HistoriqueFNE(models.Model):
+    """
+    Journal d'audit pérenne des événements importants survenus
+    pendant l'instruction d'une Fiche de Notification d'Événement (FNE).
+    """
+    class TypeEvenement(models.TextChoices):
+        CREATION = 'CREATION', "Création du processus d'instruction"
+        DECLARATION_OASIS = 'DECLARATION_OASIS', "Déclaration OASIS effectuée"
+        COMMENTAIRE = 'COMMENTAIRE', 'Commentaire ajouté'
+        CHANGEMENT_STATUT_INSTRUCTION = 'CHANGEMENT_STATUT_INSTRUCTION', "Changement d'état de l'instruction"
+        CLOTURE = 'CLOTURE', 'Clôture de la FNE'
+
+    fne = models.ForeignKey(
+        FNE, 
+        on_delete=models.CASCADE, 
+        related_name='historique_permanent' # Nom de relation explicite
+    )
+    timestamp = models.DateTimeField(
+        help_text="Date et heure effectives de l'événement."
+    )
+    auteur = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.PROTECT,
+        help_text="Utilisateur à l'origine de l'événement."
+    )
+    type_evenement = models.CharField(
+        max_length=40, # Augmenté pour correspondre à la nouvelle valeur
+        choices=TypeEvenement.choices
+    )
+    details = models.JSONField(
+        default=dict,
+        help_text="Données contextuelles de l'événement (ex: le commentaire, l'ancien/nouveau statut)."
+    )
+
+    class Meta:
+        verbose_name = "Historique Permanent FNE"
+        verbose_name_plural = "Historiques Permanents FNE"
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"Audit FNE #{self.fne_id} - {self.get_type_evenement_display()}"
