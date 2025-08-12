@@ -48,11 +48,15 @@
                     <li><a href="{% url 'feuille-temps-specific-jour' centre_agent.id today|date:'Y-m-d' %}" class="ps-4">Feuille d'heure</a></li>
                     <li><a href="{% url 'ajouter-panne' centre_agent.id %}" class="ps-4">Signaler une Panne</a></li>
                     <li><a href="{% url 'ajouter-evenement' centre_agent.id %}" class="ps-4">Consigner un Événement</a></li>
+                    <!-- RÉINTÉGRATION DU LIEN CONTEXTUEL POUR LE CDQ -->
+                    <li><a href="{% url 'qs:pre-declarer-fne' centre_agent.id %}" class="ps-4 text-warning fw-bold">Signaler un Événement QS</a></li>
                     <li><a href="{% url 'gestion-zone' centre_agent.id %}" class="ps-4">Gestion Zone</a></li>
                 {% else %}
                     <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle.">Feuille d'heure</span></li>
                     <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle.">Signaler une Panne</span></li>
                     <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle.">Consigner un Événement</span></li>
+                    <!-- RÉINTÉGRATION DU LIEN CONTEXTUEL (désactivé) -->
+                    <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle.">Signaler un Événement QS</span></li>
                     <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle.">Gestion Zone</span></li>
                 {% endif %}
                 <li class="sidebar-submenu-header">Consultation</li>
@@ -83,12 +87,8 @@
         <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#collapseTechnique" data-bs-toggle="collapse" aria-expanded="false">
             <div><i class="bi bi-tools"></i><span>Technique</span></div><i class="bi bi-chevron-right sidebar-chevron"></i>
         </a>
-        
-        {# NOUVEAU CONTENU DU SOUS-MENU #}
         <ul class="collapse list-unstyled" id="collapseTechnique">
-            {# Le lien MISO pointe vers une URL que nous créerons à la phase 3 #}
             <li><a href="{% url 'technique:liste-miso' %}" class="ps-4">MISO</a></li>
-            {# Le lien Pannes est désactivé pour le moment #}
              <li><a href="{% url 'technique:liste-pannes' %}" class="ps-4">Pannes</a></li>
         </ul>
     </li>
@@ -98,12 +98,29 @@
     <li class="nav-item">
         <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#collapseSecu" data-bs-toggle="collapse" aria-expanded="false">
             <div><i class="bi bi-shield-check"></i><span>Sécurité aérienne</span></div><i class="bi bi-chevron-right sidebar-chevron"></i>
-        </a><ul class="collapse list-unstyled" id="collapseSecu"><li><a href="#" class="ps-4">FNE</a></li></ul>
+        </a>
+        <ul class="collapse list-unstyled" id="collapseSecu">
+            <!-- LOGIQUE CORRIGÉE ET SIMPLIFIÉE -->
+            <li><a href="{% url 'qs:tableau-bord-qs' %}" class="ps-4">Tableau des FNE</a></li>
+            {% if user_roles.RESPONSABLE_SMS or user_roles.ADJOINT_QS %}
+                <li><a href="{% url 'qs:tableau-bord-qs-national' %}" class="ps-4">Pilotage par Dossier</a></li>
+            {% endif %}
+        </ul>
     </li>
     {% endif %}
 
     <!-- BLOC 4 : LIENS UNIVERSELS -->
     <hr>
+    
+    <!-- AJOUT DU LIEN UNIVERSEL POUR TOUS LES AGENTS -->
+    {% if user.is_authenticated and user.agent_profile.centre %}
+        <li>
+            <a href="{% url 'qs:pre-declarer-fne' user.agent_profile.centre.id %}" class="text-warning">
+                <i class="bi bi-shield-exclamation"></i>Déclarer un Événement QS
+            </a>
+        </li>
+    {% endif %}
+
     <li><a href="{% url 'suivi:tableau-actions' %}"><i class="bi bi-clipboard2-data-fill"></i>Tableau de Suivi</a></li>
     <hr>
     {% if user.is_staff %}

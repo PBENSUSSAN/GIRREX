@@ -1,0 +1,96 @@
+<!-- Fichier : qs/templates/qs/detail_dossier.html -->
+{% extends "base.html" %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'qs:tableau-bord-qs-national' %}">Pilotage National QS</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ dossier.id_girrex }}</li>
+        </ol>
+    </nav>
+
+    <!-- Carte principale d'information du Dossier -->
+    <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">{{ dossier.titre }}</h4>
+            <span class="badge {% if dossier.statut_global == 'OUVERT' %}bg-warning text-dark{% else %}bg-success{% endif %} fs-6">{{ dossier.get_statut_global_display }}</span>
+        </div>
+        <div class="card-body">
+            <p><strong>Identifiant Girrex :</strong> {{ dossier.id_girrex }}</p>
+            <p><strong>Date de l'événement :</strong> {{ dossier.date_evenement|date:"d/m/Y" }}</p>
+            <p><strong>Analyse globale (QS National) :</strong><br>{{ dossier.description_detaillee|default:"Aucune analyse globale pour le moment."|linebreaksbr }}</p>
+        </div>
+    </div>
+
+    <!-- Section des FNE gérées en interne -->
+    <div class="d-flex justify-content-between align-items-center mt-4 mb-2">
+        <h4 class="mb-0">FNE Rattachées à ce Dossier</h4>
+    </div>
+    <div class="list-group shadow-sm">
+        {% for fne in fne_liees %}
+            <!-- Chaque FNE est maintenant dans une div pour aligner le bouton -->
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                
+                <!-- Le lien cliquable prend toute la place disponible à gauche -->
+                <a href="{% url 'qs:detail-fne' fne.id %}" class="text-decoration-none text-dark flex-grow-1">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1 text-primary">{{ fne.numero_oasis|default:"(en attente de N° OASIS)" }} - {{ fne.centre.code_centre }}</h5>
+                        <small>{{ fne.get_statut_fne_display }}</small>
+                    </div>
+                    <p class="mb-1">Responsable instruction : {{ fne.agent_implique.trigram }}</p>
+                    <small>Échéance : {{ fne.echeance_cloture|date:"d/m/Y"|default:"-" }}</small>
+                </a>
+                
+                <!-- ========================================================== -->
+                <!--          BOUTON DE DÉSOLIDARISATION AJOUTÉ ICI           -->
+                <!-- ========================================================== -->
+                <div class="ms-3">
+                    {# On n'affiche le bouton que s'il y a plus d'une FNE dans le dossier #}
+                    {% if fne_liees|length > 1 %}
+                    <form method="post" action="{% url 'qs:desolidariser-fne' fne.id %}" onsubmit="return confirm('Êtes-vous sûr de vouloir détacher cette FNE de ce dossier ? Elle sera placée dans un nouveau dossier indépendant.');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-warning" title="Détacher cette FNE dans son propre dossier">
+                            <i class="bi bi-box-arrow-up-right"></i> Détacher
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        {% empty %}
+            <div class="list-group-item text-muted">Aucune FNE interne n'est rattachée à ce dossier.</div>
+        {% endfor %}
+    </div>
+
+    <!-- Section des Rapports Externes -->
+    <div class="d-flex justify-content-between align-items-center mt-4 mb-2">
+        <h4 class="mb-0">Rapports Externes Versés au Dossier</h4>
+        <div>
+            <a href="{% url 'qs:ajouter-rapport-externe' dossier.id %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle-fill"></i> Ajouter un rapport externe
+            </a>
+        </div>
+    </div>
+    <div class="list-group shadow-sm">
+        {% for rapport in rapports_externes %}
+            <div class="list-group-item">
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">{{ rapport.organisme_source }} - {{ rapport.reference_externe|default:"(sans référence)" }}</h5>
+                    <small>Reçu le {{ rapport.date_reception|date:"d/m/Y" }}</small>
+                </div>
+                <p class="mb-1">{{ rapport.description|linebreaksbr }}</p>
+                {% if rapport.fichier_joint %}
+                    <a href="{{ rapport.fichier_joint.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-file-earmark-arrow-down"></i> Voir la pièce jointe
+                    </a>
+                {% endif %}
+            </div>
+        {% empty %}
+            <div class="list-group-item text-muted">Aucun rapport externe n'a été ajouté à ce dossier.</div>
+        {% endfor %}
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,91 @@
+<!-- Fichier : qs/templates/qs/tableau_bord_qs.html -->
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>{{ titre }} {% if not is_national_view and request.centre_agent %}- [{{ request.centre_agent.code_centre }}]{% endif %}</h3>
+        <div>
+            <!-- Le bouton de pré-déclaration est maintenant fonctionnel pour un utilisateur local -->
+            <a href="{% if request.centre_agent %}{% url 'qs:pre-declarer-fne' request.centre_agent.id %}{% else %}#{% endif %}" 
+               class="btn btn-primary {% if not request.centre_agent %}disabled{% endif %}"
+               title="{% if not request.centre_agent %}Veuillez sélectionner un rôle local pour déclarer un événement.{% endif %}">
+                <i class="bi bi-plus-circle-fill"></i> Pré-déclarer un événement
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped align-middle">
+                    <thead>
+                        <tr>
+                            {% if is_national_view %}
+                                <th>Dossier</th>
+                            {% endif %}
+                            <th>N° OASIS</th>
+                            <th>Date Déclaration</th>
+                            <th>Centre</th>
+                            <th>Statut</th>
+                            <th>Échéance Clôture</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fne in fne_list %}
+                        <!-- On ajoute une classe si la FNE fait partie d'un regroupement -->
+                        <tr class="{% if fne.dossier.id in dossiers_regroupes_ids %}table-info{% endif %}">
+                            {% if is_national_view %}
+                                <td data-bs-toggle="tooltip" 
+                                    data-bs-html="true" 
+                                    title="
+                                        <strong>FNE dans ce dossier :</strong><br>
+                                        {% for fne_soeur in fne.dossier.fne_liees.all %}
+                                            - {{ fne_soeur.numero_oasis|default:fne_soeur.id }} ({{ fne_soeur.centre.code_centre }})<br>
+                                        {% endfor %}
+                                    ">
+                                    <a href="{% url 'qs:detail-dossier' fne.dossier.id %}">{{ fne.dossier.id_girrex }}</a>
+                                </td>
+                            {% endif %}
+                            <td><strong>{{ fne.numero_oasis|default:"(en attente)" }}</strong></td>
+                            <td>{{ fne.date_declaration_oasis|date:"d/m/Y"|default:"-" }}</td>
+                            <td>{{ fne.centre.code_centre }}</td>
+                            <td><span class="badge bg-primary">{{ fne.get_statut_fne_display }}</span></td>
+                            <td class="{% if fne.echeance_cloture and fne.echeance_cloture < today %}text-danger fw-bold{% endif %}">
+                                {{ fne.echeance_cloture|date:"d/m/Y"|default:"-" }}
+                            </td>
+                            <td>
+                                <a href="{% url 'qs:detail-fne' fne.id %}" class="btn btn-sm btn-outline-secondary" title="Voir le détail de la FNE">
+                                    <i class="bi bi-eye-fill"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="{% if is_national_view %}7{% else %}6{% endif %}" class="text-center text-muted">Aucune FNE à afficher.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+// On réactive le script pour initialiser les tooltips de Bootstrap
+document.addEventListener('DOMContentLoaded', function () {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}

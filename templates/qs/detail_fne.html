@@ -1,0 +1,138 @@
+<!-- Fichier : qs/templates/qs/detail_fne.html -->
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'qs:tableau-bord-qs' %}">Tableau de Bord QS</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ fne.numero_oasis|default:"Nouvelle FNE" }}</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <!-- Colonne de gauche : Fiche FNE et Historique -->
+        <div class="col-md-7">
+            
+            <div class="card shadow-sm mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">{{ titre }}</h4>
+                    <div>
+                        {% if is_national_view %}
+                        <a href="{% url 'qs:regrouper-fne' fne.id %}" class="btn btn-sm btn-outline-secondary me-2">
+                            <i class="bi bi-link-45deg"></i> Regrouper
+                        </a>
+                        {% endif %}
+                        <span class="badge bg-primary fs-6">{{ fne.get_statut_fne_display }}</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p><strong>Dossier parent :</strong> <a href="{% url 'qs:detail-dossier' fne.dossier.id %}">{{ fne.dossier.titre }}</a></p>
+                    <p><strong>Centre :</strong> {{ fne.centre }}</p>
+                    <p><strong>Agent impliqué :</strong> {{ fne.agent_implique }}</p>
+                    <p><strong>Échéance de clôture :</strong> <strong class="text-danger">{{ fne.echeance_cloture|date:"d/m/Y"|default:"À définir" }}</strong></p>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header"><h5>Historique de l'Instruction</h5></div>
+                <ul class="list-group list-group-flush" style="max-height: 400px; overflow-y:auto;">
+                    {% for event in historique_action %}
+                        <li class="list-group-item">
+                            <p class="mb-1">
+                                <strong>{{ event.get_type_evenement_display }}</strong> par <strong>{{ event.auteur.username }}</strong>
+                                le {{ event.timestamp|date:"d/m/Y à H:i" }}
+                            </p>
+                            {% if event.details.commentaire %}
+                                <p class="mb-0 mt-1 fst-italic">"{{ event.details.commentaire }}"</p>
+                            {% elif event.details.ancien_statut %}
+                                <small class="text-muted">
+                                    Statut: {{ event.details.ancien_statut }} -> {{ event.details.nouveau_statut }} | 
+                                    Avancement: {{ event.details.ancien_avancement }} -> {{ event.details.nouvel_avancement }}
+                                </small>
+                            {% endif %}
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item text-muted">Aucun historique de suivi pour le moment.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- Colonne de droite : Formulaires de pilotage -->
+        <div class="col-md-5 d-flex flex-column gap-4">
+
+            <div class="card shadow-sm">
+                <div class="card-header"><h5>1. Déclaration OASIS</h5></div>
+                <div class="card-body">
+                    {% if fne.numero_oasis %}
+                        <p><strong>Numéro OASIS :</strong> {{ fne.numero_oasis }}</p>
+                        <p><strong>Date de déclaration :</strong> {{ fne.date_declaration_oasis|date:"d/m/Y" }}</p>
+                        <div class="alert alert-success mt-3" role="alert">
+                          <i class="bi bi-check-circle-fill"></i> Déclaration enregistrée.
+                        </div>
+                    {% else %}
+                        <form method="post">
+                            {% csrf_token %}
+                            {{ update_oasis_form|crispy }}
+                            <button type="submit" name="submit_oasis" class="btn btn-primary mt-3">Enregistrer et Démarrer l'Instruction</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if action_principale %}
+            <div class="card shadow-sm">
+                <div class="card-header {% if action_principale.statut == 'A_VALIDER' %}bg-warning{% endif %}"><h5>2. Pilotage de l'Instruction</h5></div>
+                <div class="card-body">
+                    <p><strong>Responsable :</strong> {{ action_principale.responsable }}</p>
+                    <p><strong>Statut :</strong> {{ action_principale.get_statut_display }}</p>
+                    <div class="progress mb-3" style="height: 25px;">
+                        <div class="progress-bar" role="progressbar" style="width: {{ action_principale.avancement }}%;" aria-valuenow="{{ action_principale.avancement }}" aria-valuemin="0" aria-valuemax="100">{{ action_principale.avancement }}%</div>
+                    </div>
+                    
+                    {% if action_principale.responsable == user.agent_profile and action_principale.statut != 'VALIDEE' %}
+                    <hr>
+                    <form method="post">
+                        {% csrf_token %}
+                        <h6>Mettre à jour l'avancement</h6>
+                        {{ update_action_form|crispy }}
+                        <button type="submit" name="update_action" class="btn btn-primary mt-3">Mettre à jour</button>
+                    </form>
+                    {% endif %}
+
+                    <hr>
+                    <form method="post">
+                         {% csrf_token %}
+                         <h6>Ajouter un commentaire</h6>
+                         {{ add_comment_form|crispy }}
+                         <button type="submit" name="add_comment" class="btn btn-secondary mt-3">Ajouter le commentaire</button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if is_national_view %}
+            <div class="card shadow-sm">
+                <div class="card-header {% if action_principale.statut == 'A_VALIDER' %}bg-success text-white{% endif %}">
+                    <h5>3. Clôture du Dossier (National)</h5>
+                </div>
+                <div class="card-body">
+                    {% if action_principale and action_principale.statut == 'A_VALIDER' %}
+                        <div class="alert alert-info">Le QS Local a terminé son instruction. Veuillez finaliser le dossier.</div>
+                    {% endif %}
+                     <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {{ cloture_form|crispy }}
+                        <button type="submit" name="submit_cloture" class="btn btn-success mt-3">Clôturer Définitivement la FNE (100%)</button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

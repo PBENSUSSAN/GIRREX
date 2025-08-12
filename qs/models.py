@@ -1,66 +1,127 @@
-# ==============================================================================
-# Fichier : core/models/qualite.py
-# Modèles de données pour la gestion de la Qualité / Sécurité des Vols (QS/SMS).
-# ==============================================================================
+# Fichier : qs/models.py
 
 from django.db import models
+from django.conf import settings
+from django.utils import timezone
+from datetime import timedelta
+
+# On importe les modèles des autres applications avec lesquels on a des relations
 from core.models import Agent, Centre, Formation
 from documentation.models import Document
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 
 
 # ==============================================================================
-# SECTION VI : QUALITE/SECURITE DES VOLS (QS/SMS)
+# 1. NOUVEAU MODÈLE : LE DOSSIER D'ÉVÉNEMENT (CHAPEAU)
 # ==============================================================================
+class DossierEvenement(models.Model):
+    """
+    Objet "chapeau" qui regroupe toutes les FNE liées à un même incident.
+    """
+    class Statut(models.TextChoices):
+        OUVERT = 'OUVERT', 'Ouvert'
+        CLOTURE = 'CLOTURE', 'Clôturé'
 
-class ResponsableQSCentral(models.Model):
-    agent = models.OneToOneField(Agent, on_delete=models.CASCADE, related_name='responsabilite_qs_central')
-    date_debut = models.DateField()
-    date_fin = models.DateField(null=True, blank=True)
-    
-    class Meta:
-        verbose_name = "Responsable QS Central"
-        verbose_name_plural = "Responsables QS Central"
-
-    def __str__(self):
-        return f"Responsabilité QS Centrale de {self.agent}"
-
-class EvenementQS(models.Model):
-    STATUT_CHOICES = [('ouvert', 'Ouvert'), ('analyse', 'En analyse'), ('clos', 'Clos')]
-    
+    id_girrex = models.CharField(max_length=50, unique=True, verbose_name="ID Girrex")
+    titre = models.CharField(max_length=255, verbose_name="Titre de l'événement")
     date_evenement = models.DateField()
-    type_evenement = models.CharField(max_length=100)
-    description = models.TextField()
-    centre = models.ForeignKey(Centre, on_delete=models.PROTECT)
-    rapporteur = models.ForeignKey(Agent, on_delete=models.PROTECT, related_name='evenements_rapportes_qs')
-    niveau_gravite = models.CharField(max_length=50, help_text="Ex: Mineur, Significatif, Majeur")
-    analyse = models.TextField(blank=True, help_text="Analyse à froid de l'événement")
-    statut = models.CharField(max_length=50, choices=STATUT_CHOICES, default='ouvert')
-    
+    statut_global = models.CharField(max_length=20, choices=Statut.choices, default=Statut.OUVERT)
+    description_detaillee = models.TextField(blank=True, verbose_name="Analyse globale (QS National)")
+
     class Meta:
-        verbose_name = "Événement QS"
-        verbose_name_plural = "Événements QS"
+        verbose_name = "Dossier d'Événement"
+        verbose_name_plural = "Dossiers d'Événement"
+        ordering = ['-date_evenement']
 
     def __str__(self):
-        return f"Événement du {self.date_evenement}: {self.type_evenement}"
+        return f"{self.id_girrex} - {self.titre}"
 
-class RecommendationQS(models.Model):
-    STATUT_CHOICES = [
-        ('proposee', 'Proposée'), 
-        ('acceptee', 'Acceptée'), 
-        ('refusee', 'Refusée'), 
-        ('implementee', 'Implémentée')
-    ]
+# ==============================================================================
+# 2. MODÈLE ADAPTÉ : LA FICHE DE NOTIFICATION D'ÉVÉNEMENT (FNE)
+# ==============================================================================
+class FNE(models.Model):
+    """
+    Représente le dossier d'instruction local pour un centre, lié à une déclaration OASIS.
+    """
+    class StatutFNE(models.TextChoices):
+        PRE_DECLAREE = 'PRE_DECLAREE', 'Pré-déclarée (en attente OASIS)'
+        EN_ATTENTE_INSTRUCTION = 'ATTENTE_INSTRUCTION', "En attente d'instruction"
+        INSTRUCTION_EN_COURS = 'INSTRUCTION_COURS', 'Instruction en cours'
+        ATTENTE_PROLONGATION = 'ATTENTE_PROLONGATION', 'En attente de prolongation'
+        CLOTUREE = 'CLOTUREE', 'Clôturée'
+        CLOTUREE_PROLONGATION = 'CLOTUREE_PROLONGATION', 'Clôturée (avec prolongation)'
+
+    class TypeEvenement(models.TextChoices):
+        ATM = 'ATM', 'ATM (Air Traffic Management)'
+        TECHNIQUE = 'TECHNIQUE', 'Technique'
+        AUTRE = 'AUTRE', 'Autre'
+
+    class TypeCloture(models.TextChoices):
+        STANDARD = 'STANDARD', 'Standard'
+        CLS = 'CLS', 'Commission Locale de Sécurité'
+        CLM = 'CLM', 'Commission Locale Mixte'
+
+    dossier = models.ForeignKey(DossierEvenement, on_delete=models.CASCADE, related_name='fne_liees')
+    numero_oasis = models.CharField(max_length=100, unique=True, null=True, blank=True, verbose_name="Numéro OASIS")
+    centre = models.ForeignKey(Centre, on_delete=models.PROTECT, related_name='fne')
+    agent_implique = models.ForeignKey(Agent, on_delete=models.PROTECT, related_name='fne_implique')
+    type_evenement = models.CharField(max_length=20, choices=TypeEvenement.choices, default=TypeEvenement.AUTRE)
+    statut_fne = models.CharField(max_length=30, choices=StatutFNE.choices, default=StatutFNE.PRE_DECLAREE)
     
-    evenement = models.ForeignKey(EvenementQS, on_delete=models.CASCADE, related_name='recommandations')
+    date_declaration_oasis = models.DateField(null=True, blank=True)
+    echeance_cloture = models.DateField(null=True, blank=True)
+    
+    classification_gravite_atm = models.CharField(max_length=100, blank=True)
+    classification_gravite_ats = models.CharField(max_length=100, blank=True)
+    classification_probabilite = models.CharField(max_length=100, blank=True)
+    
+    rapport_cloture_pdf = models.FileField(upload_to='qs/rapports_cloture/%Y/%m/', blank=True, null=True)
+    presente_en_cdsa_cmsa = models.BooleanField(default=False, verbose_name="Présenté en CDSA/CMSA")
+    type_cloture = models.CharField(max_length=20, choices=TypeCloture.choices, default=TypeCloture.STANDARD)
+    
+    date_demande_prolongation = models.DateField(null=True, blank=True)
+    motif_prolongation = models.TextField(blank=True)
+    nouvelle_echeance = models.DateField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Fiche de Notification d'Événement (FNE)"
+        verbose_name_plural = "Fiches de Notification d'Événement (FNE)"
+        ordering = ['-echeance_cloture']
+
+    def save(self, *args, **kwargs):
+        if self.date_declaration_oasis and not self.echeance_cloture:
+            self.echeance_cloture = self.date_declaration_oasis + timedelta(days=87)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.numero_oasis or f"FNE non déclarée pour {self.centre.code_centre}"
+
+# ==============================================================================
+# 3. MODÈLE ADAPTÉ : LA RECOMMANDATION QS
+# ==============================================================================
+class RecommendationQS(models.Model):
+    class Statut(models.TextChoices):
+        PROPOSEE = 'PROPOSEE', 'Proposée'
+        ACCEPTEE = 'ACCEPTEE', 'Acceptée'
+        REFUSEE = 'REFUSEE', 'Refusée'
+        IMPLEMENTEE = 'IMPLEMENTEE', 'Implémentée'
+
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    source = GenericForeignKey('content_type', 'object_id')
+    
     description = models.TextField()
     priorite = models.CharField(max_length=50, help_text="Ex: Haute, Moyenne, Basse")
-    statut = models.CharField(max_length=50, choices=STATUT_CHOICES, default='proposee')
+    statut = models.CharField(max_length=50, choices=Statut.choices, default=Statut.PROPOSEE)
     date_emission = models.DateField(auto_now_add=True)
     date_echeance = models.DateField()
     responsable = models.ForeignKey(Agent, on_delete=models.PROTECT, related_name='recommandations_qs_responsable')
-    diffusion_nationale = models.BooleanField(default=False)
-    centres_cibles = models.ManyToManyField(Centre, blank=True, related_name='recommandations_qs_cibles')
     
+    destinataires_centres = models.ManyToManyField(Centre, blank=True)
+    destinataires_agents = models.ManyToManyField(Agent, blank=True)
+    destinataires_externes = models.TextField(blank=True, help_text="Liste d'emails séparés par des virgules")
+
     class Meta:
         verbose_name = "Recommandation QS"
         verbose_name_plural = "Recommandations QS"
@@ -68,60 +129,20 @@ class RecommendationQS(models.Model):
     def __str__(self):
         return f"Reco: {self.description[:80]}"
 
-class ActionQS(models.Model):
-    STATUT_CHOICES = [('a_faire', 'À faire'), ('en_cours', 'En cours'), ('fait', 'Fait'), ('annule', 'Annulé')]
-    
-    recommendation = models.ForeignKey(RecommendationQS, on_delete=models.CASCADE, related_name='actions_qs')
-    description = models.TextField()
-    date_prevue = models.DateField()
-    date_realisation = models.DateField(null=True, blank=True)
-    statut = models.CharField(max_length=50, choices=STATUT_CHOICES, default='a_faire')
-    formation = models.ForeignKey(Formation, on_delete=models.SET_NULL, null=True, blank=True, help_text="Lien vers une formation si l'action en est une")
-    document = models.ForeignKey(Document, on_delete=models.SET_NULL, null=True, blank=True, help_text="Lien vers un document si l'action est documentaire")
-    archive = models.BooleanField(default=False)
-    
-    class Meta:
-        verbose_name = "Action QS"
-        verbose_name_plural = "Actions QS"
+# ==============================================================================
+# 3. MODÈLE ADAPTÉ : RAPPORT EXTERNE
+# ==============================================================================
 
+class RapportExterne(models.Model):
+    dossier = models.ForeignKey(DossierEvenement, on_delete=models.CASCADE, related_name='rapports_externes')
+    organisme_source = models.CharField(max_length=255, verbose_name="Organisme Source")
+    reference_externe = models.CharField(max_length=255, blank=True, verbose_name="Référence externe")
+    description = models.TextField(verbose_name="Description")
+    fichier_joint = models.FileField(upload_to='qs/rapports_externes/%Y/%m/', blank=True, null=True)
+    date_reception = models.DateField()
+    class Meta:
+        verbose_name = "Rapport Externe"
+        verbose_name_plural = "Rapports Externes"
+        ordering = ['-date_reception']
     def __str__(self):
-        return f"Action QS: {self.description[:80]}"
-
-class AuditQS(models.Model):
-    auditeur = models.ForeignKey(Agent, on_delete=models.PROTECT)
-    centre = models.ForeignKey(Centre, on_delete=models.PROTECT, related_name='audits_recus')
-    date_audit = models.DateField()
-    type_audit = models.CharField(max_length=100)
-    rapport = models.TextField(blank=True, help_text="Résumé du rapport d'audit")
-    document = models.ForeignKey(Document, on_delete=models.SET_NULL, null=True, blank=True, help_text="Lien vers le rapport d'audit complet")
-    
-    class Meta:
-        verbose_name = "Audit QS"
-        verbose_name_plural = "Audits QS"
-
-class EvaluationRisqueQS(models.Model):
-    STATUT_CHOICES = [('identifie', 'Identifié'), ('evalue', 'Évalué'), ('maitrise', 'Maîtrisé'), ('clos', 'Clos')]
-    
-    centre = models.ForeignKey(Centre, on_delete=models.PROTECT)
-    date_evaluation = models.DateField()
-    description = models.TextField()
-    niveau_risque = models.CharField(max_length=50, help_text="Ex: Acceptable, Tolérable, Inacceptable")
-    recommandations = models.TextField(blank=True)
-    statut = models.CharField(max_length=50, choices=STATUT_CHOICES, default='identifie')
-    
-    class Meta:
-        verbose_name = "Évaluation de Risque QS"
-        verbose_name_plural = "Évaluations de Risques QS"
-
-class NotificationQS(models.Model):
-    STATUT_CHOICES = [('a_envoyer', 'À envoyer'), ('envoye', 'Envoyé'), ('erreur', 'Erreur')]
-    
-    action = models.ForeignKey(ActionQS, on_delete=models.CASCADE, related_name='notifications_qs')
-    destinataire = models.CharField(max_length=255)
-    date_envoi = models.DateTimeField(null=True, blank=True)
-    statut = models.CharField(max_length=50, choices=STATUT_CHOICES, default='a_envoyer')
-    message = models.TextField()
-    
-    class Meta:
-        verbose_name = "Notification QS"
-        verbose_name_plural = "Notifications QS"
+        return f"Rapport de {self.organisme_source} ({self.reference_externe})"

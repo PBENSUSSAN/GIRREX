@@ -26,6 +26,7 @@ urlpatterns = [
     path('suivi/', include('suivi.urls')), 
     path('documentation/', include('documentation.urls')),
     path('technique/', include('technique.urls')),
+     path('qs/', include('qs.urls')),
 ]
 
 if settings.DEBUG:
