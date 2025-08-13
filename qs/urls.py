@@ -13,5 +13,7 @@ urlpatterns = [
 
     # URL modifiée : elle est maintenant liée à une FNE, pas à un dossier
     path('fne/<int:fne_id>/ajouter-rapport/', views.ajouter_rapport_externe_view, name='ajouter-rapport-externe'),
+    #URL pour reco qs
+    path('fne/<int:fne_id>/ajouter-recommandation/', views.ajouter_recommandation_view, name='ajouter-recommandation'),
     
 ]

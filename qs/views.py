@@ -11,10 +11,10 @@ from core.decorators import effective_permission_required
 from core.models import Centre, Role
 from .forms import (
     PreDeclarationFNEForm, FNEUpdateOasisForm, FNEClotureForm,
-    RapportExterneForm # On ne supprime que RegrouperFNEForm
+    RapportExterneForm, RecommendationQSForm # On ajoute l'import du nouveau formulaire
 )
 from .services import creer_processus_fne_depuis_pre_declaration
-from .models import FNE, RapportExterne # On ne supprime que DossierEvenement
+from .models import FNE, RapportExterne, RecommendationQS # On ajoute l'import de RecommendationQS
 from suivi.models import Action
 from qs.audit import log_audit_fne
 
@@ -47,7 +47,7 @@ def pre_declarer_fne_view(request, centre_id):
 @effective_permission_required('qs.view_fne', raise_exception=True)
 def detail_fne_view(request, fne_id):
     fne = get_object_or_404(
-        FNE.objects.select_related('centre', 'agent_implique').prefetch_related('rapports_externes'), 
+        FNE.objects.select_related('centre', 'agent_implique').prefetch_related('rapports_externes', 'recommendations'), 
         pk=fne_id
     )
     historique_permanent = fne.historique_permanent.select_related('auteur').order_by('-timestamp')
@@ -103,7 +103,7 @@ def detail_fne_view(request, fne_id):
 
     context = {
         'fne': fne,
-        'rapports_externes': fne.rapports_externes.all(), # Ajout pour le template
+        'rapports_externes': fne.rapports_externes.all(),
         'action_principale': action_principale,
         'historique_permanent': historique_permanent,
         'update_oasis_form': update_oasis_form,
@@ -139,7 +139,7 @@ def ajouter_rapport_externe_view(request, fne_id):
         form = RapportExterneForm(request.POST, request.FILES)
         if form.is_valid():
             rapport = form.save(commit=False)
-            rapport.fne = fne # On lie le rapport à la FNE
+            rapport.fne = fne
             rapport.save()
             messages.success(request, "Le rapport externe a été ajouté à la FNE.")
             return redirect('qs:detail-fne', fne_id=fne.id)
@@ -147,3 +147,36 @@ def ajouter_rapport_externe_view(request, fne_id):
         form = RapportExterneForm()
     context = {'form': form, 'fne': fne, 'titre': f"Ajouter un rapport externe à la FNE {fne.id_girrex}"}
     return render(request, 'core/form_generique.html', context)
+
+# ==============================================================================
+#                 DÉBUT DE L'AJOUT DE LA NOUVELLE VUE
+# ==============================================================================
+@login_required
+@effective_permission_required('qs.add_recommendationqs', raise_exception=True)
+def ajouter_recommandation_view(request, fne_id):
+    """
+    Gère la création d'une nouvelle recommandation QS liée à une FNE.
+    """
+    fne = get_object_or_404(FNE, pk=fne_id)
+    if request.method == 'POST':
+        form = RecommendationQSForm(request.POST)
+        if form.is_valid():
+            reco = form.save(commit=False)
+            reco.source = fne  # On lie la recommandation à la FNE via la GenericForeignKey
+            reco.save()
+            messages.success(request, "La recommandation a été ajoutée avec succès.")
+            return redirect('qs:detail-fne', fne_id=fne.id)
+    else:
+        form = RecommendationQSForm()
+    
+    context = {
+        'form': form,
+        'fne': fne, # On passe la fne pour afficher des infos contextuelles
+        'titre': f"Ajouter une recommandation pour la FNE {fne.id_girrex}"
+    }
+    # On peut réutiliser le template générique, mais il serait mieux d'en créer un dédié.
+    # Pour l'instant, utilisons le générique.
+    return render(request, 'core/form_generique.html', context)
+# ==============================================================================
+#                   FIN DE L'AJOUT DE LA NOUVELLE VUE
+# ==============================================================================

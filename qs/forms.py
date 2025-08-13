@@ -2,7 +2,7 @@
 
 from django import forms
 from core.models import Agent
-from .models import FNE, RapportExterne
+from .models import FNE, RapportExterne, RecommendationQS # On ajoute RecommendationQS à l'import
 
 class PreDeclarationFNEForm(forms.Form):
     """
@@ -73,3 +73,36 @@ class RapportExterneForm(forms.ModelForm):
             'date_reception': forms.DateInput(attrs={'type': 'date'}),
             'description': forms.Textarea(attrs={'rows': 3})
         }
+
+# ==============================================================================
+#                 DÉBUT DE L'AJOUT DU NOUVEAU FORMULAIRE
+# ==============================================================================
+class RecommendationQSForm(forms.ModelForm):
+    """
+    Formulaire pour la création d'une nouvelle recommandation de sécurité.
+    """
+    class Meta:
+        model = RecommendationQS
+        # On ne sélectionne que les champs nécessaires à la création.
+        # La 'source' sera gérée automatiquement dans la vue.
+        fields = [
+            'description',
+            'priorite',
+            'responsable',
+            'date_echeance'
+        ]
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 4}),
+            'date_echeance': forms.DateInput(
+                attrs={'type': 'date', 'class': 'form-control'},
+                format='%Y-%m-%d'
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # On s'assure que le queryset pour le responsable est trié et ne contient que les agents actifs.
+        self.fields['responsable'].queryset = Agent.objects.filter(actif=True).order_by('trigram')
+# ==============================================================================
+#                   FIN DE L'AJOUT DU NOUVEAU FORMULAIRE
+# ==============================================================================

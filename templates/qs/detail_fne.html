@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
+{% load diffusion_tags %} {# <-- On charge notre tag personnalisé #}
 
 {% block content %}
 
@@ -59,10 +60,6 @@
                         <dt class="col-sm-4">Échéance de clôture</dt>
                         <dd class="col-sm-8">{{ fne.echeance_cloture|date:"d/m/Y"|default:"N/A" }}</dd>
                         
-                        <!-- ========================================================== -->
-                        <!--                 DÉBUT DE LA MODIFICATION                 -->
-                        <!-- ========================================================== -->
-                        
                         {% if fne.statut_fne == 'CLOTUREE' or fne.statut_fne == 'CLOTUREE_PROLONGATION' %}
                             <hr class="my-3">
                             <h5 class="col-12 mb-3">Informations de Clôture</h5>
@@ -87,13 +84,57 @@
                                 {% endif %}
                             </dd>
                         {% endif %}
-                        
-                        <!-- ========================================================== -->
-                        <!--                   FIN DE LA MODIFICATION                   -->
-                        <!-- ========================================================== -->
                     </dl>
                 </div>
             </div>
+
+            <!-- Section Recommandations -->
+            <div class="d-flex justify-content-between align-items-center mt-4 mb-2">
+                <h4 class="mb-0">Recommandations Issues de l'Instruction</h4>
+                {% if is_national_view %}
+                <a href="{% url 'qs:ajouter-recommandation' fne.id %}" class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus-circle-fill"></i> Ajouter une recommandation
+                </a>
+                {% endif %}
+            </div>
+            <div class="list-group shadow-sm mb-4">
+                {% for reco in fne.recommendations.all %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">Recommandation #{{ reco.id }}</h5>
+                            <small>Statut : <span class="badge bg-info">{{ reco.get_statut_display }}</span></small>
+                        </div>
+                        <p class="mb-1">{{ reco.description|linebreaksbr }}</p>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <small>
+                                <strong>Responsable :</strong> {{ reco.responsable }} | 
+                                <strong>Échéance :</strong> {{ reco.date_echeance|date:"d/m/Y" }}
+                            </small>
+                            
+                            <!-- ========================================================== -->
+                            <!--              DÉBUT DE L'AJOUT DU BOUTON                  -->
+                            <!-- ========================================================== -->
+                            {% if is_national_view %}
+                                <div>
+                                    {# On récupère dynamiquement l'ID du ContentType de l'objet 'reco' #}
+                                    {% get_content_type_id reco as ctype_id %}
+                                    {# On construit le lien vers la vue de diffusion avec les bons paramètres #}
+                                    <a href="{% url 'suivi:lancer-diffusion' content_type_id=ctype_id object_id=reco.id %}" class="btn btn-sm btn-success">
+                                        <i class="bi bi-broadcast"></i> Diffuser
+                                    </a>
+                                </div>
+                            {% endif %}
+                            <!-- ========================================================== -->
+                            <!--                FIN DE L'AJOUT DU BOUTON                  -->
+                            <!-- ========================================================== -->
+
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="list-group-item text-muted">Aucune recommandation n'a été émise pour cette FNE.</div>
+                {% endfor %}
+            </div>
+
 
             <!-- Section des Rapports Externes -->
             <div class="d-flex justify-content-between align-items-center mt-4 mb-2">

@@ -8,7 +8,7 @@ from datetime import timedelta
 # On importe les modèles des autres applications avec lesquels on a des relations
 from core.models import Agent, Centre, Formation
 from documentation.models import Document
-from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 
 
@@ -65,6 +65,15 @@ class FNE(models.Model):
     date_demande_prolongation = models.DateField(null=True, blank=True)
     motif_prolongation = models.TextField(blank=True)
     nouvelle_echeance = models.DateField(null=True, blank=True)
+
+    # ==========================================================
+    #                 DÉBUT DE LA CORRECTION
+    # ==========================================================
+    # On déclare explicitement la relation inverse pour la GenericForeignKey
+    recommendations = GenericRelation('qs.RecommendationQS')
+    # ==========================================================
+    #                   FIN DE LA CORRECTION
+    # ==========================================================
 
     class Meta:
         verbose_name = "Fiche de Notification d'Événement (FNE)"
