@@ -31,7 +31,13 @@
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">{{ fne.titre|default:"Détails de la Fiche de Notification d'Événement" }}</h5>
-                    <span class="badge bg-info">{{ fne.get_statut_fne_display }}</span>
+                    <span class="badge 
+                        {% if fne.statut_fne == 'CLOTUREE' or fne.statut_fne == 'CLOTUREE_PROLONGATION' %}bg-success
+                        {% elif fne.statut_fne == 'PRE_DECLAREE' %}bg-secondary
+                        {% else %}bg-info
+                        {% endif %}">
+                        {{ fne.get_statut_fne_display }}
+                    </span>
                 </div>
                 <div class="card-body">
                     <dl class="row">
@@ -52,6 +58,39 @@
                         
                         <dt class="col-sm-4">Échéance de clôture</dt>
                         <dd class="col-sm-8">{{ fne.echeance_cloture|date:"d/m/Y"|default:"N/A" }}</dd>
+                        
+                        <!-- ========================================================== -->
+                        <!--                 DÉBUT DE LA MODIFICATION                 -->
+                        <!-- ========================================================== -->
+                        
+                        {% if fne.statut_fne == 'CLOTUREE' or fne.statut_fne == 'CLOTUREE_PROLONGATION' %}
+                            <hr class="my-3">
+                            <h5 class="col-12 mb-3">Informations de Clôture</h5>
+                            
+                            <dt class="col-sm-4">Classification Gravité ATM</dt>
+                            <dd class="col-sm-8">{{ fne.classification_gravite_atm|default:"Non renseignée" }}</dd>
+                            
+                            <dt class="col-sm-4">Classification Gravité ATS</dt>
+                            <dd class="col-sm-8">{{ fne.classification_gravite_ats|default:"Non renseignée" }}</dd>
+
+                            <dt class="col-sm-4">Classification Probabilité</dt>
+                            <dd class="col-sm-8">{{ fne.classification_probabilite|default:"Non renseignée" }}</dd>
+
+                            <dt class="col-sm-4">Rapport de clôture</dt>
+                            <dd class="col-sm-8">
+                                {% if fne.rapport_cloture_pdf %}
+                                    <a href="{{ fne.rapport_cloture_pdf.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-file-earmark-pdf-fill"></i> Télécharger le rapport
+                                    </a>
+                                {% else %}
+                                    Aucune pièce jointe.
+                                {% endif %}
+                            </dd>
+                        {% endif %}
+                        
+                        <!-- ========================================================== -->
+                        <!--                   FIN DE LA MODIFICATION                   -->
+                        <!-- ========================================================== -->
                     </dl>
                 </div>
             </div>
@@ -91,7 +130,7 @@
                 </div>
             </div>
             {% endif %}
-            {% if is_national_view and fne.statut_fne != 'CLOTUREE' %}
+            {% if is_national_view and fne.statut_fne != 'CLOTUREE' and fne.statut_fne != 'CLOTUREE_PROLONGATION' %}
             <div class="card mb-4">
                 <div class="card-header">Clôturer la FNE</div>
                 <div class="card-body">

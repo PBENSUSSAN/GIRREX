@@ -73,7 +73,8 @@ def creer_miso_view(request):
 
     context = {
         'form': form,
-        'titre': "Créer un Préavis de Maintenance (MISO)"
+        'titre': "Créer un Préavis de Maintenance (MISO)",
+        'can_edit': True
     }
     return render(request, 'technique/form_miso.html', context)
 
