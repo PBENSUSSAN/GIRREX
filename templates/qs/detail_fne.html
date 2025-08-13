@@ -10,7 +10,6 @@
         <div>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'home' %}">Accueil</a></li>
                     <li class="breadcrumb-item"><a href="{% url 'qs:tableau-bord-qs' %}">Tableau de Bord QS</a></li>
                     <li class="breadcrumb-item active" aria-current="page">Détail FNE</li>
                 </ol>
@@ -18,38 +17,38 @@
             <h1 class="h2">{{ titre }}</h1>
         </div>
         <div>
-            <!-- Liens d'actions contextuelles (ex: retour) -->
             <a href="{% url 'qs:tableau-bord-qs' %}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left me-1"></i> Retour au Tableau de Bord
+                <i class="bi bi-arrow-left me-1"></i> Retour au Tableau de Bord
             </a>
         </div>
     </div>
 
-    <div class="row">
+    <div class="row g-4">
         <!-- Colonne de gauche : Informations et formulaires de la FNE -->
         <div class="col-lg-8">
             
             <!-- Carte des détails de la FNE -->
             <div class="card mb-4">
-                <div class="card-header">
-                    Détails de la Fiche de Notification d'Événement (FNE)
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ fne.titre|default:"Détails de la Fiche de Notification d'Événement" }}</h5>
+                    <span class="badge bg-info">{{ fne.get_statut_fne_display }}</span>
                 </div>
                 <div class="card-body">
                     <dl class="row">
-                        <dt class="col-sm-4">Dossier d'Événement Global</dt>
-                        <dd class="col-sm-8"><a href="{% url 'qs:detail-dossier' fne.dossier.id %}">{{ fne.dossier.id_girrex }}</a></dd>
+                        <dt class="col-sm-4">ID Événement Girrex</dt>
+                        <dd class="col-sm-8">{{ fne.id_girrex|default:"N/A" }}</dd>
 
                         <dt class="col-sm-4">Numéro OASIS</dt>
                         <dd class="col-sm-8">{{ fne.numero_oasis|default:"Non renseigné" }}</dd>
+                        
+                        <dt class="col-sm-4">Date de l'événement</dt>
+                        <dd class="col-sm-8">{{ fne.date_evenement|date:"d/m/Y"|default:"N/A" }}</dd>
 
                         <dt class="col-sm-4">Centre</dt>
                         <dd class="col-sm-8">{{ fne.centre }}</dd>
 
                         <dt class="col-sm-4">Agent Impliqué</dt>
                         <dd class="col-sm-8">{{ fne.agent_implique }}</dd>
-
-                        <dt class="col-sm-4">Statut de la FNE</dt>
-                        <dd class="col-sm-8"><span class="badge bg-info">{{ fne.get_statut_fne_display }}</span></dd>
                         
                         <dt class="col-sm-4">Échéance de clôture</dt>
                         <dd class="col-sm-8">{{ fne.echeance_cloture|date:"d/m/Y"|default:"N/A" }}</dd>
@@ -57,38 +56,46 @@
                 </div>
             </div>
 
-            <!-- Carte pour la mise à jour OASIS (si non renseigné) -->
+            <!-- Section des Rapports Externes -->
+            <div class="d-flex justify-content-between align-items-center mt-4 mb-2">
+                <h4 class="mb-0">Rapports Externes</h4>
+                <a href="{% url 'qs:ajouter-rapport-externe' fne.id %}" class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus-circle-fill"></i> Ajouter un rapport
+                </a>
+            </div>
+            <div class="list-group shadow-sm mb-4">
+                {% for rapport in rapports_externes %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">{{ rapport.organisme_source }} - {{ rapport.reference_externe|default:"(sans référence)" }}</h5>
+                            <small>Reçu le {{ rapport.date_reception|date:"d/m/Y" }}</small>
+                        </div>
+                        <p class="mb-1">{{ rapport.description|linebreaksbr }}</p>
+                        {% if rapport.fichier_joint %}
+                            <a href="{{ rapport.fichier_joint.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-file-earmark-arrow-down"></i> Voir la pièce jointe
+                            </a>
+                        {% endif %}
+                    </div>
+                {% empty %}
+                    <div class="list-group-item text-muted">Aucun rapport externe n'a été ajouté à cette FNE.</div>
+                {% endfor %}
+            </div>
+
+            <!-- Formulaires conditionnels -->
             {% if fne.statut_fne == 'PRE_DECLAREE' %}
             <div class="card mb-4">
-                <div class="card-header bg-warning">
-                    Action Requise : Déclaration OASIS
-                </div>
+                <div class="card-header bg-warning">Action Requise : Déclaration OASIS</div>
                 <div class="card-body">
-                    <form method="post">
-                        {% csrf_token %}
-                        {{ update_oasis_form|crispy }}
-                        <button type="submit" name="submit_oasis" class="btn btn-primary mt-3">
-                            Enregistrer et Démarrer l'Instruction
-                        </button>
-                    </form>
+                    <form method="post">{% csrf_token %}{{ update_oasis_form|crispy }}<button type="submit" name="submit_oasis" class="btn btn-primary mt-3">Enregistrer et Démarrer l'Instruction</button></form>
                 </div>
             </div>
             {% endif %}
-
-            <!-- Carte pour la clôture (si la vue le permet) -->
             {% if is_national_view and fne.statut_fne != 'CLOTUREE' %}
             <div class="card mb-4">
-                <div class="card-header">
-                    Clôturer la FNE
-                </div>
+                <div class="card-header">Clôturer la FNE</div>
                 <div class="card-body">
-                    <form method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        {{ cloture_form|crispy }}
-                        <button type="submit" name="submit_cloture" class="btn btn-success mt-3">
-                            Valider la Clôture
-                        </button>
-                    </form>
+                    <form method="post" enctype="multipart/form-data">{% csrf_token %}{{ cloture_form|crispy }}<button type="submit" name="submit_cloture" class="btn btn-success mt-3">Valider la Clôture</button></form>
                 </div>
             </div>
             {% endif %}
@@ -97,36 +104,22 @@
 
         <!-- Colonne de droite : État de l'instruction et historique -->
         <div class="col-lg-4">
-
-            <!-- Carte pour afficher l'état de l'instruction (lecture seule) -->
             <div class="card mb-4">
-                <div class="card-header">
-                    État de l'Instruction (depuis Suivi)
-                </div>
+                <div class="card-header">État de l'Instruction (depuis Suivi)</div>
                 <div class="card-body">
                     {% if action_principale %}
                         <p><strong>Responsable :</strong> {{ action_principale.responsable }}</p>
                         <p><strong>Statut :</strong> <span class="badge bg-primary">{{ action_principale.get_statut_display }}</span></p>
-                        
                         <label for="progress-bar" class="form-label">Avancement : {{ action_principale.avancement }}%</label>
-                        <div class="progress" id="progress-bar">
-                            <div class="progress-bar" role="progressbar" style="width: {{ action_principale.avancement }}%;" aria-valuenow="{{ action_principale.avancement }}" aria-valuemin="0" aria-valuemax="100"></div>
-                        </div>
-
-                        <a href="{% url 'suivi:detail-action' action_principale.id %}" class="btn btn-outline-primary btn-sm mt-3">
-                            <i class="fas fa-tasks me-1"></i> Voir et Gérer la Tâche dans Suivi
-                        </a>
+                        <div class="progress" id="progress-bar"><div class="progress-bar" role="progressbar" style="width: {{ action_principale.avancement }}%;" aria-valuenow="{{ action_principale.avancement }}" aria-valuemin="0" aria-valuemax="100"></div></div>
+                        <a href="{% url 'suivi:detail-action' action_principale.id %}" class="btn btn-outline-primary btn-sm mt-3"><i class="bi bi-box-arrow-up-right me-1"></i>Gérer la Tâche dans Suivi</a>
                     {% else %}
                         <p class="text-muted">Aucune tâche de suivi associée.</p>
                     {% endif %}
                 </div>
             </div>
-
-            <!-- Carte de l'historique permanent -->
             <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Historique Permanent de l'Instruction</h5>
-                </div>
+                <div class="card-header"><h5 class="mb-0">Historique Permanent de l'Instruction</h5></div>
                 <div class="card-body">
                     {% if historique_permanent %}
                         <ul class="list-group list-group-flush">
@@ -137,30 +130,19 @@
                                         <small class="text-muted">{{ item.timestamp|date:"d/m/Y H:i" }}</small>
                                     </div>
                                     <div class="mb-1">
-                                        {% if item.details.commentaire %}
-                                            <p class="fst-italic mb-0">"{{ item.details.commentaire|linebreaksbr }}"</p>
-                                        {% elif item.details.nouveau_statut %}
-                                            <p class="mb-0">
-                                                De <strong>{{ item.details.ancien_statut }}</strong> ({{ item.details.ancien_avancement }})
-                                                à <strong>{{ item.details.nouveau_statut }}</strong> ({{ item.details.nouvel_avancement }}).
-                                            </p>
-                                            {% if item.details.commentaire %}<p class="fst-italic mb-0 mt-1">"{{ item.details.commentaire }}"</p>{% endif %}
-                                        {% else %}
-                                            <!-- Autres types d'événements si nécessaire -->
-                                        {% endif %}
+                                        {% if item.details.commentaire %}<p class="fst-italic mb-0">"{{ item.details.commentaire|linebreaksbr }}"</p>{% endif %}
+                                        {% if item.details.nouveau_statut %}<p class="mb-0">De <strong>{{ item.details.ancien_statut }}</strong> ({{ item.details.ancien_avancement }}) à <strong>{{ item.details.nouveau_statut }}</strong> ({{ item.details.nouvel_avancement }}).</p>{% if item.details.commentaire %}<p class="fst-italic mb-0 mt-1">"{{ item.details.commentaire }}"</p>{% endif %}{% endif %}
                                     </div>
                                     <small class="text-muted">Par : {{ item.auteur.username }}</small>
                                 </li>
                             {% endfor %}
                         </ul>
                     {% else %}
-                        <p class="text-muted">Aucun événement d'historique pour le moment.</p>
+                        <p class="text-muted">Aucun événement d'historique.</p>
                     {% endif %}
                 </div>
             </div>
-            
         </div>
     </div>
 </div>
-
 {% endblock %}

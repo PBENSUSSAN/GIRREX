@@ -102,9 +102,7 @@
         <ul class="collapse list-unstyled" id="collapseSecu">
             <!-- LOGIQUE CORRIGÉE ET SIMPLIFIÉE -->
             <li><a href="{% url 'qs:tableau-bord-qs' %}" class="ps-4">Tableau des FNE</a></li>
-            {% if user_roles.RESPONSABLE_SMS or user_roles.ADJOINT_QS %}
-                <li><a href="{% url 'qs:tableau-bord-qs-national' %}" class="ps-4">Pilotage par Dossier</a></li>
-            {% endif %}
+           
         </ul>
     </li>
     {% endif %}

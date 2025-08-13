@@ -2,7 +2,7 @@
 
 from django import forms
 from core.models import Agent
-from .models import FNE, DossierEvenement, RapportExterne
+from .models import FNE, RapportExterne
 
 class PreDeclarationFNEForm(forms.Form):
     """
@@ -64,27 +64,6 @@ class FNEClotureForm(forms.ModelForm):
             'presente_en_cdsa_cmsa',
             'type_cloture'
         ]
-        # Ici, nous pourrions ajouter des widgets de type 'Select' pour les classifications
-        # une fois que vous m'aurez donné les choix possibles. Pour l'instant, des champs
-        # textes simples suffiront.
-
-class RegrouperFNEForm(forms.Form):
-    """
-    Formulaire pour sélectionner une ou plusieurs FNE à regrouper.
-    """
-    fne_a_regrouper = forms.ModelMultipleChoiceField(
-        queryset=FNE.objects.filter(dossier__statut_global=DossierEvenement.Statut.OUVERT),
-        widget=forms.CheckboxSelectMultiple,
-        label="Sélectionnez les FNE à regrouper avec la FNE actuelle",
-        required=True
-    )
-
-    def __init__(self, *args, **kwargs):
-        # On retire la FNE de départ de la liste des choix pour éviter de la sélectionner
-        fne_principale = kwargs.pop('fne_principale', None)
-        super().__init__(*args, **kwargs)
-        if fne_principale:
-            self.fields['fne_a_regrouper'].queryset = self.fields['fne_a_regrouper'].queryset.exclude(pk=fne_principale.pk)
 
 class RapportExterneForm(forms.ModelForm):
     class Meta:

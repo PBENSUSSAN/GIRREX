@@ -3,35 +3,35 @@
 from django.utils import timezone
 from datetime import timedelta
 
-from .models import DossierEvenement, FNE
+from .models import FNE  # On importe seulement FNE maintenant
 from core.models import Agent, Centre, Role
 from suivi.models import Action
-# On importe la fonction de numérotation centralisée
 from suivi.services import generer_numero_action
 
 def creer_processus_fne_depuis_pre_declaration(agent_implique, description, centre, createur):
     """
-    Service qui orchestre la création d'un Dossier, d'une FNE et des 
-    deux actions de suivi initiales suite à une pré-déclaration, 
-    en utilisant la catégorisation et la numérotation correctes.
+    Service qui orchestre la création d'une FNE unique et des 
+    deux actions de suivi initiales suite à une pré-déclaration.
     """
     
     now = timezone.now()
+    # On génère l'ID Girrex pour la FNE elle-même
     id_girrex = f"GIRREX-EVT-{now.strftime('%Y%m%d-%H%M%S')}"
     
-    dossier = DossierEvenement.objects.create(
+    # On crée directement la FNE avec toutes les informations nécessaires
+    fne = FNE.objects.create(
+        # Champs anciennement dans DossierEvenement
         id_girrex=id_girrex,
         titre=f"Événement signalé à {centre.code_centre} le {now.strftime('%d/%m/%Y')}",
-        date_evenement=now.date()
-    )
-
-    fne = FNE.objects.create(
-        dossier=dossier,
+        date_evenement=now.date(),
+        
+        # Champs propres à la FNE
         centre=centre,
         agent_implique=agent_implique
+        # Le statut par défaut est déjà 'PRE_DECLAREE'
     )
     
-    # Recherche du responsable de l'instruction (QS Local > Chef > Adjoint)
+    # La logique de recherche du responsable reste la même
     responsable_instruction = Agent.objects.filter(
         roles_assignes__centre=centre,
         roles_assignes__role__nom=Role.RoleName.QS_LOCAL,
@@ -58,18 +58,13 @@ def creer_processus_fne_depuis_pre_declaration(agent_implique, description, cent
     if not responsable_instruction:
         raise ValueError(f"Impossible de créer le processus FNE : aucun responsable (QS Local, Chef ou Adjoint) n'est défini pour le centre {centre.code_centre}.")
 
-    # --- PARTIE CORRIGÉE ---
-    
-    # 1. On définit la catégorie métier correcte pour une instruction FNE
     categorie_action_fne = Action.CategorieAction.INSTRUCTION_FNE
     
-    # 2. On génère le numéro de l'action mère en utilisant la fonction centralisée
     numero_action_mere = generer_numero_action(
         categorie=categorie_action_fne,
         centre=centre
     )
 
-    # 3. On crée l'action mère avec le bon numéro et la bonne catégorie
     action_cloture = Action.objects.create(
         numero_action=numero_action_mere,
         titre=f"Instruire et clôturer FNE ({numero_action_mere})",
@@ -81,7 +76,6 @@ def creer_processus_fne_depuis_pre_declaration(agent_implique, description, cent
     )
     action_cloture.centres.set([centre])
     
-    # 4. On crée la sous-tâche avec le bon numéro et la bonne catégorie
     Action.objects.create(
         parent=action_cloture,
         numero_action=f"{numero_action_mere}.1",
@@ -92,7 +86,5 @@ def creer_processus_fne_depuis_pre_declaration(agent_implique, description, cent
         categorie=categorie_action_fne,
         objet_source=fne
     )
-    
-    # --- FIN DE LA PARTIE CORRIGÉE ---
     
     return fne

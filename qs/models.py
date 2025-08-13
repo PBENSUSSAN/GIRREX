@@ -13,36 +13,12 @@ from django.contrib.contenttypes.models import ContentType
 
 
 # ==============================================================================
-# 1. NOUVEAU MODÈLE : LE DOSSIER D'ÉVÉNEMENT (CHAPEAU)
-# ==============================================================================
-class DossierEvenement(models.Model):
-    """
-    Objet "chapeau" qui regroupe toutes les FNE liées à un même incident.
-    """
-    class Statut(models.TextChoices):
-        OUVERT = 'OUVERT', 'Ouvert'
-        CLOTURE = 'CLOTURE', 'Clôturé'
-
-    id_girrex = models.CharField(max_length=50, unique=True, verbose_name="ID Girrex")
-    titre = models.CharField(max_length=255, verbose_name="Titre de l'événement")
-    date_evenement = models.DateField()
-    statut_global = models.CharField(max_length=20, choices=Statut.choices, default=Statut.OUVERT)
-    description_detaillee = models.TextField(blank=True, verbose_name="Analyse globale (QS National)")
-
-    class Meta:
-        verbose_name = "Dossier d'Événement"
-        verbose_name_plural = "Dossiers d'Événement"
-        ordering = ['-date_evenement']
-
-    def __str__(self):
-        return f"{self.id_girrex} - {self.titre}"
-
-# ==============================================================================
-# 2. MODÈLE ADAPTÉ : LA FICHE DE NOTIFICATION D'ÉVÉNEMENT (FNE)
+# MODÈLE FNE (FINAL)
 # ==============================================================================
 class FNE(models.Model):
     """
-    Représente le dossier d'instruction local pour un centre, lié à une déclaration OASIS.
+    Représente le dossier d'instruction pour un événement de sécurité.
+    C'est maintenant l'objet central.
     """
     class StatutFNE(models.TextChoices):
         PRE_DECLAREE = 'PRE_DECLAREE', 'Pré-déclarée (en attente OASIS)'
@@ -62,7 +38,13 @@ class FNE(models.Model):
         CLS = 'CLS', 'Commission Locale de Sécurité'
         CLM = 'CLM', 'Commission Locale Mixte'
 
-    dossier = models.ForeignKey(DossierEvenement, on_delete=models.CASCADE, related_name='fne_liees')
+    # --- Champs anciennement dans DossierEvenement (maintenant obligatoires) ---
+    id_girrex = models.CharField(max_length=50, unique=True, verbose_name="ID Girrex de l'Événement")
+    titre = models.CharField(max_length=255, verbose_name="Titre de l'événement")
+    date_evenement = models.DateField()
+    description_globale = models.TextField(blank=True, verbose_name="Analyse globale (QS National)")
+    
+    # --- Champs originaux de FNE ---
     numero_oasis = models.CharField(max_length=100, unique=True, null=True, blank=True, verbose_name="Numéro OASIS")
     centre = models.ForeignKey(Centre, on_delete=models.PROTECT, related_name='fne')
     agent_implique = models.ForeignKey(Agent, on_delete=models.PROTECT, related_name='fne_implique')
@@ -95,10 +77,27 @@ class FNE(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return self.numero_oasis or f"FNE non déclarée pour {self.centre.code_centre}"
+        return self.titre or self.numero_oasis or f"FNE #{self.id}"
 
 # ==============================================================================
-# 3. MODÈLE ADAPTÉ : LA RECOMMANDATION QS
+# MODÈLE RAPPORT EXTERNE (FINAL)
+# ==============================================================================
+class RapportExterne(models.Model):
+    fne = models.ForeignKey(FNE, on_delete=models.CASCADE, related_name='rapports_externes')
+    organisme_source = models.CharField(max_length=255, verbose_name="Organisme Source")
+    reference_externe = models.CharField(max_length=255, blank=True, verbose_name="Référence externe")
+    description = models.TextField(verbose_name="Description")
+    fichier_joint = models.FileField(upload_to='qs/rapports_externes/%Y/%m/', blank=True, null=True)
+    date_reception = models.DateField()
+    class Meta:
+        verbose_name = "Rapport Externe"
+        verbose_name_plural = "Rapports Externes"
+        ordering = ['-date_reception']
+    def __str__(self):
+        return f"Rapport de {self.organisme_source} ({self.reference_externe})"
+
+# ==============================================================================
+# MODÈLES RECOMMANDATION ET HISTORIQUE (INCHANGÉS)
 # ==============================================================================
 class RecommendationQS(models.Model):
     class Statut(models.TextChoices):
@@ -129,32 +128,7 @@ class RecommendationQS(models.Model):
     def __str__(self):
         return f"Reco: {self.description[:80]}"
 
-# ==============================================================================
-# 3. MODÈLE ADAPTÉ : RAPPORT EXTERNE
-# ==============================================================================
-
-class RapportExterne(models.Model):
-    dossier = models.ForeignKey(DossierEvenement, on_delete=models.CASCADE, related_name='rapports_externes')
-    organisme_source = models.CharField(max_length=255, verbose_name="Organisme Source")
-    reference_externe = models.CharField(max_length=255, blank=True, verbose_name="Référence externe")
-    description = models.TextField(verbose_name="Description")
-    fichier_joint = models.FileField(upload_to='qs/rapports_externes/%Y/%m/', blank=True, null=True)
-    date_reception = models.DateField()
-    class Meta:
-        verbose_name = "Rapport Externe"
-        verbose_name_plural = "Rapports Externes"
-        ordering = ['-date_reception']
-    def __str__(self):
-        return f"Rapport de {self.organisme_source} ({self.reference_externe})"
-
-# ==============================================================================
-# 4. MODÈLE POUR LE JOURNAL D'AUDIT PERMANENT
-# ==============================================================================
 class HistoriqueFNE(models.Model):
-    """
-    Journal d'audit pérenne des événements importants survenus
-    pendant l'instruction d'une Fiche de Notification d'Événement (FNE).
-    """
     class TypeEvenement(models.TextChoices):
         CREATION = 'CREATION', "Création du processus d'instruction"
         DECLARATION_OASIS = 'DECLARATION_OASIS', "Déclaration OASIS effectuée"
@@ -162,27 +136,11 @@ class HistoriqueFNE(models.Model):
         CHANGEMENT_STATUT_INSTRUCTION = 'CHANGEMENT_STATUT_INSTRUCTION', "Changement d'état de l'instruction"
         CLOTURE = 'CLOTURE', 'Clôture de la FNE'
 
-    fne = models.ForeignKey(
-        FNE, 
-        on_delete=models.CASCADE, 
-        related_name='historique_permanent' # Nom de relation explicite
-    )
-    timestamp = models.DateTimeField(
-        help_text="Date et heure effectives de l'événement."
-    )
-    auteur = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.PROTECT,
-        help_text="Utilisateur à l'origine de l'événement."
-    )
-    type_evenement = models.CharField(
-        max_length=40, # Augmenté pour correspondre à la nouvelle valeur
-        choices=TypeEvenement.choices
-    )
-    details = models.JSONField(
-        default=dict,
-        help_text="Données contextuelles de l'événement (ex: le commentaire, l'ancien/nouveau statut)."
-    )
+    fne = models.ForeignKey(FNE, on_delete=models.CASCADE, related_name='historique_permanent')
+    timestamp = models.DateTimeField(help_text="Date et heure effectives de l'événement.")
+    auteur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, help_text="Utilisateur à l'origine de l'événement.")
+    type_evenement = models.CharField(max_length=40, choices=TypeEvenement.choices)
+    details = models.JSONField(default=dict, help_text="Données contextuelles de l'événement (ex: le commentaire, l'ancien/nouveau statut).")
 
     class Meta:
         verbose_name = "Historique Permanent FNE"
