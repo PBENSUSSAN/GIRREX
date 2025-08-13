@@ -51,6 +51,7 @@ class Action(models.Model):
         PRISE_EN_COMPTE_DOC = 'PRISE_EN_COMPTE_DOC', 'Prise en Compte Documentaire'
         AUDIT = 'AUDIT', 'Audit'
         ETUDE_SECURITE = 'ETUDE_SECURITE', 'Étude de Sécurité'
+        INSTRUCTION_FNE = 'INSTRUCTION_FNE', 'Instruction FNE (QS)'
         # --- NOUVELLES CATÉGORIES ---
         RELECTURE_DOC = 'RELECTURE_DOC', 'Relecture Documentaire'
         VALIDATION_AVENANT = 'VALIDATION_AVENANT', 'Validation d\'Avenant'
