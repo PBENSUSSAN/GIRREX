@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
+{% load diffusion_tags %}
 
 {% block title %}{{ titre }}{% endblock %}
 
@@ -44,7 +45,7 @@
                                 {% endif %}">
                                 {{ etude.changement.get_classification_display }}
                             </span>
-                            {% if etude.changement.classification == 'NON_DEFINI' %}
+                            {% if etude.changement.classification == 'NON_DEFINI' and request.user.agent_profile == etude.changement.correspondant_dircam %}
                                 <a href="{% url 'es:classifier-changement' etude.changement.id %}" class="btn btn-sm btn-outline-primary ms-2">Classifier maintenant</a>
                             {% endif %}
                         </dd>
@@ -57,37 +58,60 @@
                 <div class="card-header"><h5 class="mb-0">Workflow des Étapes</h5></div>
                 <div class="list-group list-group-flush">
                     {% for etape in etapes %}
-                    <div class="list-group-item">
+                    <div class="list-group-item p-3">
                         <div class="row align-items-center">
-                            <div class="col-md-4"><strong>{{ etape.get_nom_display }}</strong></div>
                             <div class="col-md-4">
-                                <!-- Logique pour le ES Local -->
-                                {% if etape.validee_par_local %}
-                                    <span class="text-success"><i class="bi bi-check-circle-fill"></i> Validé (Local) le {{ etape.date_validation_local|date:"d/m/Y" }}</span>
-                                {% else %}
-                                    <span class="text-muted">En attente (Local)</span>
-                                    {# Mettre ici le bouton d'upload/validation pour le ES Local #}
-                                {% endif %}
+                                <strong>{{ etape.get_nom_display }}</strong>
                             </div>
                             <div class="col-md-4">
                                 <!-- ========================================================== -->
-                                <!--          DÉBUT DE LA LOGIQUE DE VALIDATION CORRIGÉE        -->
+                                <!--          DÉBUT DE LA LOGIQUE INTERACTIVE (LOCAL)           -->
                                 <!-- ========================================================== -->
-                                {% if etape.validee_par_national %}
-                                    <span class="text-success"><i class="bi bi-patch-check-fill"></i> Approuvé (National) le {{ etape.date_validation_national|date:"d/m/Y" }}</span>
-                                
-                                {% elif etude.changement.classification == 'SUIVI' and etape.validee_par_local %}
-                                    <span class="text-warning">En attente d'approbation (National)</span>
-                                    {# Mettre ici le bouton de validation pour le ES National #}
-
-                                {% elif etude.changement.classification == 'NON_SUIVI' and etape.validee_par_local %}
-                                    <span class="text-secondary"><i class="bi bi-check-circle"></i> Validé en interne (Non suivi)</span>
-                                
+                                {% if not etape.document_preuve %}
+                                    {% if request.user.agent_profile == etude.changement.initiateur %}
+                                    <a href="{% url 'es:uploader-preuve' etape.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-upload"></i> Uploader la preuve
+                                    </a>
+                                    {% else %}
+                                    <span class="text-muted">En attente de preuve...</span>
+                                    {% endif %}
                                 {% else %}
-                                    <span class="text-muted">Bloqué</span>
+                                    <a href="{{ etape.document_preuve.url }}" target="_blank" class="me-2"><i class="bi bi-file-earmark-text-fill"></i> Voir la preuve</a>
+                                    {% if not etape.validee_par_local and request.user.agent_profile == etude.changement.initiateur %}
+                                    <form method="post" action="{% url 'es:valider-etape' etape.id %}" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir valider cette étape ?');">
+                                        {% csrf_token %}
+                                        <button type="submit" name="valider_local" class="btn btn-sm btn-success">Valider (Local)</button>
+                                    </form>
+                                    {% endif %}
+                                {% endif %}
+                                {% if etape.validee_par_local %}
+                                    <br><small class="text-success mt-1 d-block"><i class="bi bi-check-circle-fill"></i> Validé localement le {{ etape.date_validation_local|date:"d/m/y H:i" }}</small>
                                 {% endif %}
                                 <!-- ========================================================== -->
-                                <!--            FIN DE LA LOGIQUE DE VALIDATION CORRIGÉE        -->
+                                <!--            FIN DE LA LOGIQUE INTERACTIVE (LOCAL)           -->
+                                <!-- ========================================================== -->
+                            </div>
+                            <div class="col-md-4">
+                                <!-- ========================================================== -->
+                                <!--        DÉBUT DE LA LOGIQUE INTERACTIVE (NATIONAL)          -->
+                                <!-- ========================================================== -->
+                                {% if etape.validee_par_national %}
+                                    <span class="text-success"><i class="bi bi-patch-check-fill"></i> Approuvé le {{ etape.date_validation_national|date:"d/m/y H:i" }}</span>
+                                
+                                {% elif etude.changement.classification == 'SUIVI' and etape.validee_par_local and request.user.agent_profile == etude.changement.correspondant_dircam %}
+                                    <form method="post" action="{% url 'es:valider-etape' etape.id %}" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir approuver cette étape ?');">
+                                        {% csrf_token %}
+                                        <button type="submit" name="valider_national" class="btn btn-sm btn-warning">Approuver (National)</button>
+                                    </form>
+                                
+                                {% elif etude.changement.classification == 'NON_SUIVI' and etape.validee_par_local %}
+                                    <small class="text-secondary"><i class="bi bi-check-circle"></i> Validé en interne (Non suivi)</small>
+                                
+                                {% else %}
+                                    <small class="text-muted">Bloqué</small>
+                                {% endif %}
+                                <!-- ========================================================== -->
+                                <!--          FIN DE LA LOGIQUE INTERACTIVE (NATIONAL)          -->
                                 <!-- ========================================================== -->
                             </div>
                         </div>
@@ -112,17 +136,19 @@
         <div class="col-lg-4">
             <div class="card shadow-sm">
                 <div class="card-header"><h5 class="mb-0">Journal des Échanges</h5></div>
-                <div class="card-body" style="max-height: 60vh; overflow-y: auto;">
-                    <!-- Formulaire pour ajouter un commentaire -->
-                    <form method="post" class="mb-3">
+                <div class="card-body" style="max-height: 80vh; overflow-y: auto;">
+                    <form method="post" action="{% url 'es:ajouter-commentaire' etude.id %}" enctype="multipart/form-data" class="mb-3">
                         {% csrf_token %}
+                        <!-- Le formulaire CommentaireForm n'est pas encore défini, nous allons le faire -->
                         <div class="mb-2">
-                            <textarea name="commentaire" class="form-control" rows="3" placeholder="Ajouter un commentaire ou une question..."></textarea>
+                            <textarea name="commentaire" class="form-control" rows="3" placeholder="Ajouter un commentaire ou une question..." required></textarea>
+                        </div>
+                        <div class="mb-2">
+                            <input type="file" name="piece_jointe" class="form-control form-control-sm">
                         </div>
                         <button type="submit" class="btn btn-primary btn-sm">Envoyer</button>
                     </form>
                     <hr>
-                    <!-- Liste des commentaires -->
                     {% for com in commentaires %}
                     <div class="mb-3">
                         <div class="d-flex justify-content-between">

@@ -11,4 +11,7 @@ urlpatterns = [
     path('changement/<int:changement_id>/classifier/', views.classifier_changement_view, name='classifier-changement'),
     path('etude/<int:etude_id>/detail/', views.detail_etude_view, name='detail-etude'),
     path('changements-a-classifier/', views.liste_changements_view, name='liste-changements'),
+    path('etape/<int:etape_id>/uploader-preuve/', views.uploader_preuve_view, name='uploader-preuve'),
+    path('etape/<int:etape_id>/valider/', views.valider_etape_view, name='valider-etape'),
+    path('etude/<int:etude_id>/ajouter-commentaire/', views.ajouter_commentaire_view, name='ajouter-commentaire'),
 ]

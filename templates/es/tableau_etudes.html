@@ -8,13 +8,9 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h3>{{ titre }}</h3>
         <div>
-            <!-- ========================================================== -->
-            <!--                MODIFICATION DE CE BOUTON                   -->
-            <!-- ========================================================== -->
             <a href="{% url 'es:lancer-changement' %}" class="btn btn-primary">
                 <i class="bi bi-plus-circle-fill"></i> Lancer un nouveau processus de changement
             </a>
-            <!-- ========================================================== -->
         </div>
     </div>
 
@@ -27,8 +23,8 @@
                             <th>Référence Étude</th>
                             <th>Titre du Changement</th>
                             <th>ES Local (Pilote)</th>
-                            <th>ES National (Superviseur)</th>
-                            <th>Statut</th>
+                            <th>Étape en Cours</th>
+                            <th style="width: 15%;">Avancement</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -36,30 +32,28 @@
                         {% for etude in etudes_list %}
                         <tr>
                             <td>
-                            <!-- ========================================================== -->
-                            <!--                MODIFICATION DE CE LIEN                     -->
-                            <!-- ========================================================== -->
                                 <a href="{% url 'es:detail-etude' etude.id %}">
                                     <strong>{{ etude.reference_etude }}</strong>
                                 </a>
-                            <!-- ========================================================== -->
                             </td>
                             <td>{{ etude.changement.titre }}</td>
                             <td>{{ etude.changement.initiateur }}</td>
-                            <td>{{ etude.changement.correspondant_dircam }}</td>
-                            <td><span class="badge bg-primary">{{ etude.get_statut_display }}</span></td>
+                            <td>{{ etude.etape_actuelle }}</td>
                             <td>
-                            <!-- ========================================================== -->
-                            <!--                MODIFICATION DE CE BOUTON                   -->
-                            <!-- ========================================================== -->
-                            <a href="{% url 'es:detail-etude' etude.id %}" class="btn btn-sm btn-outline-secondary" title="Voir le détail de l'étude">
-                                <i class="bi bi-folder2-open"></i>
-                            </a>
-                            <!-- ========================================================== -->
+                                <div class="progress" style="height: 20px;" title="{{ etude.avancement_calcule }}%">
+                                    <div class="progress-bar" role="progressbar" style="width: {{ etude.avancement_calcule }}%;" aria-valuenow="{{ etude.avancement_calcule }}" aria-valuemin="0" aria-valuemax="100">
+                                        {{ etude.avancement_calcule }}%
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <a href="{% url 'es:detail-etude' etude.id %}" class="btn btn-sm btn-outline-secondary" title="Voir le détail de l'étude">
+                                    <i class="bi bi-folder2-open"></i>
+                                </a>
                             </td>
                         </tr>
                         {% empty %}
-                        </tr>
+                        <tr>
                             <td colspan="6" class="text-center text-muted">Aucune étude de sécurité n'a été lancée.</td>
                         </tr>
                         {% endfor %}
@@ -69,4 +63,6 @@
         </div>
     </div>
 </div>
-{% endblock %}
+{% endblock %}```
+
+Une fois ces deux fichiers mis à jour, votre tableau de bord sera bien plus dynamique et informatif, reflétant en temps réel l'avancement de chaque étude de sécurité.

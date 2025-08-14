@@ -10,18 +10,64 @@ from .forms import LancerChangementForm, ClassifierChangementForm, UploadPreuveF
 from core.decorators import effective_permission_required
 from core.models import Role
 
+
 @login_required
 def tableau_etudes_view(request):
-    etudes_list = EtudeSecurite.objects.select_related('changement__initiateur', 'changement__correspondant_dircam').order_by('-created_at')
-    context = { 'etudes_list': etudes_list, 'titre': "Tableau de Bord des Études de Sécurité" }
+    """
+    Affiche le tableau de bord principal listant toutes les études de sécurité,
+    enrichi avec des données d'avancement calculées.
+    """
+    etudes_list = EtudeSecurite.objects.select_related(
+        'changement__initiateur', 
+        'changement__correspondant_dircam'
+    ).prefetch_related('etapes').order_by('-created_at') # prefetch_related est crucial pour la performance
+
+    # ==========================================================
+    #                 DÉBUT DE LA LOGIQUE D'ENRICHISSEMENT
+    # ==========================================================
+    for etude in etudes_list:
+        etapes = etude.etapes.all()
+        total_etapes = len(etapes)
+        etapes_completes = 0
+        etude.etape_actuelle = "Terminée" # Valeur par défaut
+
+        if total_etapes > 0:
+            for etape in etapes:
+                est_complete = False
+                # Une étape est considérée comme "complète" différemment selon la classification
+                if etude.changement.classification == Changement.Classification.SUIVI:
+                    if etape.validee_par_national:
+                        est_complete = True
+                else: # Pour "NON_SUIVI" ou "NON_DEFINI", la validation locale suffit
+                    if etape.validee_par_local:
+                        est_complete = True
+
+                if est_complete:
+                    etapes_completes += 1
+                elif etude.etape_actuelle == "Terminée": # Si c'est la 1ère étape non complète
+                    etude.etape_actuelle = etape.get_nom_display()
+            
+            etude.avancement_calcule = int((etapes_completes / total_etapes) * 100)
+        else:
+            etude.avancement_calcule = 100 # S'il n'y a pas d'étapes, c'est considéré comme 100%
+    # ==========================================================
+    #                   FIN DE LA LOGIQUE D'ENRICHISSEMENT
+    # ==========================================================
+
+    context = {
+        'etudes_list': etudes_list,
+        'titre': "Tableau de Bord des Études de Sécurité"
+    }
     return render(request, 'es/tableau_etudes.html', context)
+
+
+# ... (Le reste du fichier views.py reste inchangé) ...
 
 @login_required
 def lancer_changement_view(request):
     if not hasattr(request.user, 'agent_profile'):
         messages.error(request, "Votre compte utilisateur n'est pas lié à un profil Agent.")
         return redirect('es:tableau-etudes')
-
     if request.method == 'POST':
         form = LancerChangementForm(request.POST, request.FILES)
         if form.is_valid():
@@ -32,84 +78,56 @@ def lancer_changement_view(request):
             return redirect('es:liste-changements')
     else:
         form = LancerChangementForm()
-
     context = { 'form': form, 'titre': "Lancer un Nouveau Processus de Changement" }
     return render(request, 'core/form_generique.html', context)
 
-# ==========================================================
-#              VUE DE CLASSIFICATION CORRIGÉE
-# ==========================================================
 @login_required
 def classifier_changement_view(request, changement_id):
     changement = get_object_or_404(Changement, pk=changement_id)
-
     if request.method == 'POST':
         form = ClassifierChangementForm(request.POST, request.FILES, instance=changement)
         if form.is_valid():
             with transaction.atomic():
-                # On sauvegarde juste la classification et le fichier de réponse sur l'objet Changement.
                 updated_changement = form.save()
-                
-                # Maintenant, la vue prend le contrôle de la création de l'étude.
                 if not hasattr(updated_changement, 'etude_securite'):
                     type_etude_choisi = form.cleaned_data['type_etude_requise']
-                    
                     nouvelle_etude = EtudeSecurite.objects.create(
                         changement=updated_changement,
                         reference_etude=f"ES-{updated_changement.centre_principal.code_centre}-{updated_changement.created_at.year}-{updated_changement.id:04d}",
                         type_etude=type_etude_choisi
                     )
-                    
                     if type_etude_choisi == EtudeSecurite.TypeEtude.DOSSIER_SECURITE:
                         etapes_a_creer = [EtapeEtude.NomEtape.PHASE_PREPARATOIRE, EtapeEtude.NomEtape.FHA, EtapeEtude.NomEtape.PSSA, EtapeEtude.NomEtape.SSA]
                     elif type_etude_choisi == EtudeSecurite.TypeEtude.EPIS:
                         etapes_a_creer = [EtapeEtude.NomEtape.PHASE_PREPARATOIRE, EtapeEtude.NomEtape.SSA]
                     else:
                         etapes_a_creer = []
-
                     for nom_etape in etapes_a_creer:
                         EtapeEtude.objects.create(etude=nouvelle_etude, nom=nom_etape)
-
-                # On met à jour le statut du changement pour le faire sortir de la liste "à classifier"
                 updated_changement.statut = Changement.StatutProcessus.ETUDE_REQUISE
                 updated_changement.save()
-
-            messages.success(request, f"Le changement '{changement.titre}' a été classifié. L'étude de sécurité a été créée.")
+            messages.success(request, f"Le changement '{changement.titre}' a été classifié.")
             return redirect('es:detail-etude', etude_id=changement.etude_securite.id)
     else:
         initial_data = {}
         if hasattr(changement, 'etude_securite'):
             initial_data['type_etude_requise'] = changement.etude_securite.type_etude
         form = ClassifierChangementForm(instance=changement, initial=initial_data)
-
     context = { 'form': form, 'changement': changement, 'titre': f"Classifier le changement : {changement.titre}" }
     return render(request, 'core/form_generique.html', context)
 
-# ... (le reste des vues : detail_etude_view, etc. restent les mêmes pour l'instant) ...
-
 @login_required
 def detail_etude_view(request, etude_id):
-    etude = get_object_or_404(EtudeSecurite.objects.select_related('changement__initiateur', 'changement__correspondant_dircam').prefetch_related('etapes', 'commentaires__auteur'), pk=etude_id)
-    context = {'etude': etude, 'etapes': etude.etapes.all(), 'commentaires': etude.commentaires.all(), 'titre': f"Étude de Sécurité : {etude.reference_etude}"}
+    etude = get_object_or_404(EtudeSecurite.objects.select_related('changement__initiateur','changement__correspondant_dircam').prefetch_related('etapes', 'commentaires__auteur'),pk=etude_id)
+    context = {'etude': etude, 'etapes': etude.etapes.all(), 'commentaires': etude.commentaires.all(),'titre': f"Étude de Sécurité : {etude.reference_etude}"}
     return render(request, 'es/detail_etude.html', context)
 
-# ==========================================================
-#         VUE DE LA LISTE DES CHANGEMENTS CORRIGÉE
-# ==========================================================
 @login_required
 def liste_changements_view(request):
-    """
-    Affiche la liste des processus de changement qui n'ont pas encore été classifiés.
-    """
-    # La requête filtre maintenant sur la classification et non plus sur le statut.
-    changements_list = Changement.objects.filter(
-        classification=Changement.Classification.NON_DEFINI
-    ).select_related('initiateur', 'centre_principal', 'correspondant_dircam').order_by('-created_at')
-
+    changements_list = Changement.objects.filter(classification=Changement.Classification.NON_DEFINI).select_related('initiateur', 'centre_principal', 'correspondant_dircam').order_by('-created_at')
     context = { 'changements_list': changements_list, 'titre': "Processus de Changement à Classifier" }
     return render(request, 'es/liste_changements.html', context)
 
-# ... (le reste des vues pour uploader, valider, commenter) ...
 @login_required
 def uploader_preuve_view(request, etape_id):
     etape = get_object_or_404(EtapeEtude, pk=etape_id)
