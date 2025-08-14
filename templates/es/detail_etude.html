@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'es:tableau-etudes' %}">Tableau de Bord ES</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ etude.reference_etude }}</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <!-- Colonne de gauche : Workflow et Actions -->
+        <div class="col-lg-8">
+            <!-- Carte principale d'information -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">{{ etude.changement.titre }}</h4>
+                    <span class="badge bg-primary fs-6">{{ etude.get_statut_display }}</span>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">Référence de l'étude</dt>
+                        <dd class="col-sm-8">{{ etude.reference_etude }}</dd>
+                        
+                        <dt class="col-sm-4">Type d'étude</dt>
+                        <dd class="col-sm-8">{{ etude.get_type_etude_display }}</dd>
+                        
+                        <dt class="col-sm-4">ES Local (Pilote)</dt>
+                        <dd class="col-sm-8">{{ etude.changement.initiateur }}</dd>
+                        
+                        <dt class="col-sm-4">ES National (Superviseur)</dt>
+                        <dd class="col-sm-8">{{ etude.changement.correspondant_dircam }}</dd>
+
+                        <dt class="col-sm-4">Classification par l'Autorité</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge 
+                                {% if etude.changement.classification == 'SUIVI' %}bg-warning text-dark
+                                {% elif etude.changement.classification == 'NON_SUIVI' %}bg-info
+                                {% else %}bg-secondary
+                                {% endif %}">
+                                {{ etude.changement.get_classification_display }}
+                            </span>
+                            {% if etude.changement.classification == 'NON_DEFINI' %}
+                                <a href="{% url 'es:classifier-changement' etude.changement.id %}" class="btn btn-sm btn-outline-primary ms-2">Classifier maintenant</a>
+                            {% endif %}
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Workflow des étapes -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header"><h5 class="mb-0">Workflow des Étapes</h5></div>
+                <div class="list-group list-group-flush">
+                    {% for etape in etapes %}
+                    <div class="list-group-item">
+                        <div class="row align-items-center">
+                            <div class="col-md-4"><strong>{{ etape.get_nom_display }}</strong></div>
+                            <div class="col-md-4">
+                                <!-- Logique pour le ES Local -->
+                                {% if etape.validee_par_local %}
+                                    <span class="text-success"><i class="bi bi-check-circle-fill"></i> Validé (Local) le {{ etape.date_validation_local|date:"d/m/Y" }}</span>
+                                {% else %}
+                                    <span class="text-muted">En attente (Local)</span>
+                                    {# Mettre ici le bouton d'upload/validation pour le ES Local #}
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                <!-- ========================================================== -->
+                                <!--          DÉBUT DE LA LOGIQUE DE VALIDATION CORRIGÉE        -->
+                                <!-- ========================================================== -->
+                                {% if etape.validee_par_national %}
+                                    <span class="text-success"><i class="bi bi-patch-check-fill"></i> Approuvé (National) le {{ etape.date_validation_national|date:"d/m/Y" }}</span>
+                                
+                                {% elif etude.changement.classification == 'SUIVI' and etape.validee_par_local %}
+                                    <span class="text-warning">En attente d'approbation (National)</span>
+                                    {# Mettre ici le bouton de validation pour le ES National #}
+
+                                {% elif etude.changement.classification == 'NON_SUIVI' and etape.validee_par_local %}
+                                    <span class="text-secondary"><i class="bi bi-check-circle"></i> Validé en interne (Non suivi)</span>
+                                
+                                {% else %}
+                                    <span class="text-muted">Bloqué</span>
+                                {% endif %}
+                                <!-- ========================================================== -->
+                                <!--            FIN DE LA LOGIQUE DE VALIDATION CORRIGÉE        -->
+                                <!-- ========================================================== -->
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="list-group-item text-muted">Aucune étape définie pour ce type d'étude.</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+             <!-- Actions contextuelles -->
+            <div class="card shadow-sm">
+                <div class="card-header"><h5 class="mb-0">Actions et Suivi</h5></div>
+                <div class="card-body">
+                    <button class="btn btn-outline-primary disabled"><i class="bi bi-mortarboard"></i> Déclencher une Action de Formation</button>
+                    <button class="btn btn-outline-success disabled"><i class="bi bi-broadcast"></i> Diffuser les Conclusions</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne de droite : Journal des échanges -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header"><h5 class="mb-0">Journal des Échanges</h5></div>
+                <div class="card-body" style="max-height: 60vh; overflow-y: auto;">
+                    <!-- Formulaire pour ajouter un commentaire -->
+                    <form method="post" class="mb-3">
+                        {% csrf_token %}
+                        <div class="mb-2">
+                            <textarea name="commentaire" class="form-control" rows="3" placeholder="Ajouter un commentaire ou une question..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">Envoyer</button>
+                    </form>
+                    <hr>
+                    <!-- Liste des commentaires -->
+                    {% for com in commentaires %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <strong>{{ com.auteur }}</strong>
+                            <small class="text-muted">{{ com.timestamp|date:"d/m/Y H:i" }}</small>
+                        </div>
+                        <p class="mb-1">{{ com.commentaire|linebreaksbr }}</p>
+                        {% if com.piece_jointe %}
+                            <a href="{{ com.piece_jointe.url }}" target="_blank"><i class="bi bi-paperclip"></i> Voir pièce jointe</a>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">Aucun échange pour le moment.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

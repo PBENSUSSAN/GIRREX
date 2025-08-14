@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>{{ titre }}</h3>
+        <a href="{% url 'es:tableau-etudes' %}" class="btn btn-secondary">Retour au tableau de bord des études</a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped align-middle">
+                    <thead>
+                        <tr>
+                            <th>Titre du Changement</th>
+                            <th>Centre Pilote</th>
+                            <th>Initiateur (ES Local)</th>
+                            <th>Date de Notification</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for chg in changements_list %}
+                        <tr>
+                            <td><strong>{{ chg.titre }}</strong></td>
+                            <td>{{ chg.centre_principal.code_centre }}</td>
+                            <td>{{ chg.initiateur }}</td>
+                            <td>{{ chg.created_at|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                <a href="{% url 'es:classifier-changement' chg.id %}" class="btn btn-sm btn-primary" title="Classifier ce changement">
+                                    <i class="bi bi-tags-fill"></i> Classifier
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">Aucun processus de changement en attente de classification.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

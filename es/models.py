@@ -64,10 +64,16 @@ class EtudeSecurite(models.Model):
         INSTRUCTION_EN_COURS = 'INSTRUCTION_COURS', 'Instruction en cours'
         VALIDATION_FINALE = 'VALIDATION_FINALE', 'En attente de validation finale'
         CLOTUREE = 'CLOTUREE', 'Clôturée'
+    
+    class TypeEtude(models.TextChoices):
+        DOSSIER_SECURITE = 'DOSSIER_SECURITE', 'Dossier de Sécurité (Complet)'
+        EPIS = 'EPIS', 'Étude Prestataire d’Impact sur la Sécurité (EPIS)'
+        DSSL = 'DSSL', 'Démonstration de Sécurité Simplifiée Locale (DSSL)'
 
     # --- Identification et Lien ---
     reference_etude = models.CharField(max_length=50, unique=True, verbose_name="Référence de l'étude")
     changement = models.OneToOneField(Changement, on_delete=models.CASCADE, related_name='etude_securite')
+    type_etude = models.CharField(max_length=20, choices=TypeEtude.choices, default=TypeEtude.DOSSIER_SECURITE)
 
     # --- Documents Transverses ---
     plan_securite_pdf = models.FileField(upload_to='es/plans_securite/%Y/%m/', null=True, blank=True, verbose_name="Plan de Sécurité (Annexe 4)")

@@ -89,7 +89,19 @@
         </a>
         <ul class="collapse list-unstyled" id="collapseTechnique">
             <li><a href="{% url 'technique:liste-miso' %}" class="ps-4">MISO</a></li>
-             <li><a href="{% url 'technique:liste-pannes' %}" class="ps-4">Pannes</a></li>
+            <li><a href="{% url 'technique:liste-pannes' %}" class="ps-4">Pannes</a></li>
+        </ul>
+    </li>
+    {% endif %}
+
+    {% if show_technique_menu %}
+    <li class="nav-item">
+        <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#collapseEs" data-bs-toggle="collapse" aria-expanded="false">
+            <div><i class="bi bi-shield-check"></i><span>Études de Sécurité</span></div><i class="bi bi-chevron-right sidebar-chevron"></i>
+        </a>
+        <ul class="collapse list-unstyled" id="collapseEs">
+            <li><a href="{% url 'es:tableau-etudes' %}" class="ps-4">Tableau de Bord ES</a></li>
+            <li><a href="{% url 'es:liste-changements' %}" class="ps-4">Changements à Classifier</a></li>
         </ul>
     </li>
     {% endif %}
