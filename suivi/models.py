@@ -55,6 +55,7 @@ class Action(models.Model):
         # --- NOUVELLES CATÉGORIES ---
         RELECTURE_DOC = 'RELECTURE_DOC', 'Relecture Documentaire'
         VALIDATION_AVENANT = 'VALIDATION_AVENANT', 'Validation d\'Avenant'
+        SUIVI_MRR = 'SUIVI_MRR', 'Suivi de MRR'
     
     class StatutAction(models.TextChoices):
         A_FAIRE = 'A_FAIRE', 'À faire'
