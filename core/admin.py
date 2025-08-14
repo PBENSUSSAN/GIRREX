@@ -10,9 +10,6 @@ from .models import (
     # Section III: Paramétrage
     Parametre, ValeurParametre, Role, AgentRole, Delegation,
     
-    # Section V: Changement & MRR
-    CentreRole, ResponsableSMS, MRR, MRRSignataire, MRRProgression, Changement, Action, 
-    Notification,
     # Section VII : TDS
     PositionJour, TourDeService, TourDeServiceHistorique, VersionTourDeService,
     # SECTION VIII : GESTION DES FEUILLES DE TEMPS
@@ -131,23 +128,6 @@ class DelegationAdmin(admin.ModelAdmin):
     autocomplete_fields = ('delegant', 'delegataire', 'creee_par')
 
 
-# ==============================================================================
-# SECTION V : GESTION DU CHANGEMENT ET MRR
-# ==============================================================================
-
-@admin.register(MRR)
-class MRRAdmin(admin.ModelAdmin):
-    list_display = ('intitule', 'statut', 'date_ouverture', 'date_cloture')
-    list_filter = ('statut',)
-    search_fields = ('intitule',)
-
-admin.site.register(CentreRole)
-admin.site.register(ResponsableSMS)
-admin.site.register(MRRSignataire)
-admin.site.register(MRRProgression)
-admin.site.register(Changement)
-admin.site.register(Action)
-admin.site.register(Notification)
 
 # ==============================================================================
 # SECTION VII : TDS
