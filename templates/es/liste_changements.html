@@ -25,7 +25,11 @@
                     <tbody>
                         {% for chg in changements_list %}
                         <tr>
-                            <td><strong>{{ chg.titre }}</strong></td>
+                            <td>
+                                <a href="{% url 'es:detail-changement' chg.id %}">
+                                    <strong>{{ chg.titre }}</strong>
+                                </a>
+                            </td>
                             <td>{{ chg.centre_principal.code_centre }}</td>
                             <td>{{ chg.initiateur }}</td>
                             <td>{{ chg.created_at|date:"d/m/Y H:i" }}</td>

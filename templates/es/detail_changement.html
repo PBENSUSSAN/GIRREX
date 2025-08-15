@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'es:liste-changements' %}">Changements à Classifier</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Détail</li>
+        </ol>
+    </nav>
+
+    <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">{{ titre }}</h4>
+            <span class="badge bg-secondary fs-6">{{ changement.get_statut_display }}</span>
+        </div>
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-3">Titre / Objet</dt>
+                <dd class="col-sm-9">{{ changement.titre }}</dd>
+
+                <dt class="col-sm-3">Description du besoin</dt>
+                <dd class="col-sm-9">{{ changement.description|linebreaksbr }}</dd>
+
+                <dt class="col-sm-3">Centre Pilote</dt>
+                <dd class="col-sm-9">{{ changement.centre_principal }}</dd>
+                
+                <dt class="col-sm-3">Initiateur (ES Local)</dt>
+                <dd class="col-sm-9">{{ changement.initiateur }}</dd>
+
+                <dt class="col-sm-3">Superviseur (ES National)</dt>
+                <dd class="col-sm-9">{{ changement.correspondant_dircam }}</dd>
+
+                <dt class="col-sm-3">Document de Notification</dt>
+                <dd class="col-sm-9">
+                    {% if changement.fichier_notification_initiale %}
+                        <a href="{{ changement.fichier_notification_initiale.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-file-earmark-pdf-fill"></i> Voir le document de notification
+                        </a>
+                    {% else %}
+                        Aucun document fourni.
+                    {% endif %}
+                </dd>
+            </dl>
+        </div>
+        <div class="card-footer text-end">
+            <a href="{% url 'es:liste-changements' %}" class="btn btn-secondary">Retour à la liste</a>
+            {% if changement.classification == 'NON_DEFINI' and request.user.agent_profile == changement.correspondant_dircam %}
+                <a href="{% url 'es:classifier-changement' changement.id %}" class="btn btn-primary">
+                    <i class="bi bi-tags-fill"></i> Classifier ce changement
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

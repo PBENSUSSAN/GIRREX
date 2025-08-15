@@ -2,6 +2,7 @@
 
 from django.db import models
 from django.conf import settings
+from django.core.validators import MinValueValidator, MaxValueValidator
 from core.models import Agent, Centre
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
@@ -56,14 +57,9 @@ class EtudeSecurite(models.Model):
     plan_securite_pdf = models.FileField(upload_to='es/plans_securite/%Y/%m/', null=True, blank=True, verbose_name="Plan de Sécurité (Annexe 4)")
     fichier_approbation_finale = models.FileField(upload_to='es/approbations/%Y/%m/', null=True, blank=True, verbose_name="Décision d'Approbation Finale (Annexe 5)")
     statut = models.CharField(max_length=30, choices=StatutEtude.choices, default=StatutEtude.INITIALISATION)
+    avancement = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(100)], verbose_name="Avancement")
     created_at = models.DateTimeField(auto_now_add=True)
-    
-    # ==========================================================
-    #                 LA LIGNE MANQUANTE EST ICI
-    # ==========================================================
     actions_suivi = GenericRelation('suivi.Action')
-    # ==========================================================
-
     class Meta:
         verbose_name = "Étude de Sécurité"
         verbose_name_plural = "Études de Sécurité"

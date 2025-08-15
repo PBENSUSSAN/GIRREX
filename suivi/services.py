@@ -6,7 +6,7 @@ from .models import Action, HistoriqueAction
 from core.models import Agent, Role, Centre
 from documentation.models import Document
 from qs.models import RecommendationQS 
-
+from es.models import MRR
 
 def generer_numero_action(categorie, centre=None):
     """
@@ -20,6 +20,8 @@ def generer_numero_action(categorie, centre=None):
         prefix_metier = "QS"
     elif categorie == Action.CategorieAction.ETUDE_SECURITE:
         prefix_metier = "ES"
+    elif categorie == Action.CategorieAction.SUIVI_MRR:
+        prefix_metier = "MRR"
     else: # Pour les autres cas (diffusion doc, etc.)
         prefix_metier = categorie.name.split('_')[0]
     
@@ -110,6 +112,8 @@ def creer_diffusion(objet_source, initiateur, form_data):
         categorie_action_mere = Action.CategorieAction.DIFFUSION_DOC
     elif isinstance(objet_source, RecommendationQS):
         categorie_action_mere = Action.CategorieAction.RECOMMANDATION_QS
+    elif isinstance(objet_source, MRR):
+        categorie_action_mere = Action.CategorieAction.SUIVI_MRR
     else:
         categorie_action_mere = Action.CategorieAction.FONCTIONNEMENT
     
@@ -121,9 +125,16 @@ def creer_diffusion(objet_source, initiateur, form_data):
         centre=tous_les_centres_cibles.first() if tous_les_centres_cibles.count() == 1 else None
     )
 
+    # On prépare une description par défaut
+    description_action = f"Diffusion de l'élément : {objet_source}"
+    # Si l'objet est un MRR, on utilise sa description pour l'action
+    if isinstance(objet_source, MRR):
+        description_action = objet_source.description
+    
     action_mere = Action.objects.create(
         numero_action=numero_mere,
         titre=f"Diffusion de : {objet_source}",
+         description=description_action,
         responsable=initiateur,
         echeance=timezone.now().date() + timedelta(days=14),
         objet_source=objet_source,

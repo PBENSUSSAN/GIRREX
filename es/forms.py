@@ -54,16 +54,13 @@ class ClassifierChangementForm(forms.ModelForm):
             'fichier_reponse_notification': "Fichier de Réponse à Notification (Annexe 2)"
         }
 
-# ==========================================================
-#              DÉBUT DE L'AJOUT DES FORMULAIRES MANQUANTS
-# ==========================================================
 class UploadPreuveForm(forms.ModelForm):
     """
-    Formulaire simple pour que l'ES Local uploade le document de preuve.
+    Formulaire pour que l'ES Local uploade le document de preuve et liste les MRR.
     """
     class Meta:
         model = EtapeEtude
-        fields = ['document_preuve']
+        fields = ['document_preuve', 'mrr_identifies']
         labels = {
             'document_preuve': 'Document de preuve pour cette étape',
             'mrr_identifies': 'Moyens en Réduction de Risque (MRR) identifiés'
@@ -94,7 +91,7 @@ class MRRForm(forms.ModelForm):
             'description': forms.Textarea(attrs={'rows': 2, 'placeholder': 'Décrire le moyen en réduction de risque...'}),
         }
         labels = {
-            'description': "" # On enlève le label pour un affichage plus compact
+            'description': ""
         }
 
 class ActionFormationForm(forms.ModelForm):
@@ -103,13 +100,28 @@ class ActionFormationForm(forms.ModelForm):
     """
     class Meta:
         model = Action
-        # On ne garde que les champs pertinents pour l'utilisateur
         fields = ['titre', 'description', 'responsable', 'echeance', 'priorite']
         widgets = {
             'description': forms.Textarea(attrs={'rows': 4}),
             'echeance': forms.DateInput(attrs={'type': 'date'}),
         }
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['responsable'].queryset = Agent.objects.filter(actif=True).order_by('trigram')
+
+class UpdateEtudeForm(forms.ModelForm):
+    """
+    Formulaire pour permettre aux responsables de piloter une étude de sécurité.
+    """
+    commentaire = forms.CharField(
+        widget=forms.Textarea(attrs={'rows': 3}),
+        label="Commentaire de mise à jour / Justification",
+        required=False
+    )
+    piece_jointe = forms.FileField(
+        label="Pièce jointe (optionnel)",
+        required=False
+    )
+    class Meta:
+        model = EtudeSecurite
+        fields = ['statut', 'avancement']

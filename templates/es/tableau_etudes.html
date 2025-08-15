@@ -14,6 +14,22 @@
         </div>
     </div>
 
+    <!-- ========================================================== -->
+    <!--            CARTE DE FILTRES AJOUTÉE ICI                    -->
+    <!-- ========================================================== -->
+    <div class="card card-body mb-4">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md">{{ filter.form.titre|as_crispy_field }}</div>
+            <div class="col-md">{{ filter.form.statut|as_crispy_field }}</div>
+            <div class="col-md">{{ filter.form.avancement_tranche|as_crispy_field }}</div>
+            <div class="col-md-auto">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> Filtrer
+                </button>
+            </div>
+        </form>
+    </div>
+
     <div class="card shadow-sm">
         <div class="card-body">
             <div class="table-responsive">
@@ -23,38 +39,30 @@
                             <th>Référence Étude</th>
                             <th>Titre du Changement</th>
                             <th>ES Local (Pilote)</th>
-                            <th>Étape en Cours</th>
+                            <th>Statut</th>
                             <th style="width: 15%;">Avancement</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for etude in etudes_list %}
+                        {% for etude in filter.qs %} {# <-- On itère sur filter.qs #}
                         <tr>
-                            <td>
-                                <a href="{% url 'es:detail-etude' etude.id %}">
-                                    <strong>{{ etude.reference_etude }}</strong>
-                                </a>
-                            </td>
+                            <td><a href="{% url 'es:detail-etude' etude.id %}"><strong>{{ etude.reference_etude }}</strong></a></td>
                             <td>{{ etude.changement.titre }}</td>
                             <td>{{ etude.changement.initiateur }}</td>
-                            <td>{{ etude.etape_actuelle }}</td>
+                            <td>{{ etude.get_statut_display }}</td>
                             <td>
-                                <div class="progress" style="height: 20px;" title="{{ etude.avancement_calcule }}%">
-                                    <div class="progress-bar" role="progressbar" style="width: {{ etude.avancement_calcule }}%;" aria-valuenow="{{ etude.avancement_calcule }}" aria-valuemin="0" aria-valuemax="100">
-                                        {{ etude.avancement_calcule }}%
+                                <div class="progress" style="height: 20px;" title="{{ etude.avancement }}%">
+                                    <div class="progress-bar" role="progressbar" style="width: {{ etude.avancement }}%;" aria-valuenow="{{ etude.avancement }}" aria-valuemin="0" aria-valuemax="100">
+                                        {{ etude.avancement }}%
                                     </div>
                                 </div>
                             </td>
-                            <td>
-                                <a href="{% url 'es:detail-etude' etude.id %}" class="btn btn-sm btn-outline-secondary" title="Voir le détail de l'étude">
-                                    <i class="bi bi-folder2-open"></i>
-                                </a>
-                            </td>
+                            <td><a href="{% url 'es:detail-etude' etude.id %}" class="btn btn-sm btn-outline-secondary" title="Voir le détail de l'étude"><i class="bi bi-folder2-open"></i></a></td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="6" class="text-center text-muted">Aucune étude de sécurité n'a été lancée.</td>
+                            <td colspan="6" class="text-center text-muted">Aucune étude de sécurité ne correspond à vos critères.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -63,6 +71,4 @@
         </div>
     </div>
 </div>
-{% endblock %}```
-
-Une fois ces deux fichiers mis à jour, votre tableau de bord sera bien plus dynamique et informatif, reflétant en temps réel l'avancement de chaque étude de sécurité.
+{% endblock %}

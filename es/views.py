@@ -8,12 +8,38 @@ from django.utils import timezone
 from datetime import timedelta
 
 from .models import Changement, EtudeSecurite, EtapeEtude, CommentaireEtude, MRR
-from .forms import LancerChangementForm, ClassifierChangementForm, UploadPreuveForm, CommentaireForm, MRRForm, ActionFormationForm
+from .forms import LancerChangementForm, ClassifierChangementForm, UploadPreuveForm, CommentaireForm, MRRForm, ActionFormationForm, UpdateEtudeForm
+from .filters import EtudeSecuriteFilter
 from core.decorators import effective_permission_required
 from core.models import Role
 
 from suivi.models import Action
 from suivi.services import generer_numero_action
+
+
+@login_required
+def tableau_etudes_view(request):
+    """
+    Affiche le tableau de bord avec filtres contextuels et explicites.
+    """
+    # On commence avec une base de données complète
+    base_queryset = EtudeSecurite.objects.select_related(
+        'changement__initiateur', 
+        'changement__correspondant_dircam'
+    ).order_by('-created_at')
+
+    # Filtre contextuel : un utilisateur local ne voit que les études de son centre.
+    if hasattr(request, 'centre_agent') and request.centre_agent:
+        base_queryset = base_queryset.filter(changement__centre_principal=request.centre_agent)
+    
+    # On applique les filtres explicites soumis par l'utilisateur via le formulaire
+    etude_filter = EtudeSecuriteFilter(request.GET, queryset=base_queryset)
+
+    context = {
+        'filter': etude_filter, # On passe l'objet filtre complet au template
+        'titre': "Tableau de Bord des Études de Sécurité"
+    }
+    return render(request, 'es/tableau_etudes.html', context)
 
 
 @login_required
@@ -26,10 +52,34 @@ def detail_etude_view(request, etude_id):
         pk=etude_id
     )
 
-    # On gère les soumissions de formulaires ici
+    update_form = UpdateEtudeForm(instance=etude)
+
     if request.method == 'POST':
-        # Cas 1 : Ajout d'un MRR
-        if 'submit_mrr' in request.POST:
+        if 'submit_update_etude' in request.POST:
+            form = UpdateEtudeForm(request.POST, instance=etude)
+            if form.has_changed():
+                if not request.POST.get('commentaire'):
+                    form.add_error('commentaire', 'Un commentaire est requis pour toute modification.')
+                
+                if form.is_valid():
+                    ancien_statut = etude.get_statut_display()
+                    ancien_avancement = etude.avancement
+                    updated_etude = form.save()
+                    commentaire_texte = form.cleaned_data['commentaire']
+                    
+                    CommentaireEtude.objects.create(
+                        etude=etude,
+                        auteur=request.user.agent_profile,
+                        commentaire=f"Mise à jour du pilotage : {commentaire_texte}\n(Statut : {ancien_statut} -> {updated_etude.get_statut_display()}, Avancement : {ancien_avancement}% -> {updated_etude.avancement}%)",
+                        piece_jointe=form.cleaned_data.get('piece_jointe')
+                    )
+                    messages.success(request, "L'étude de sécurité a été mise à jour.")
+                    return redirect('es:detail-etude', etude_id=etude.id)
+            else:
+                messages.info(request, "Aucune modification détectée.")
+            update_form = form
+
+        elif 'submit_mrr' in request.POST:
             mrr_form = MRRForm(request.POST)
             if mrr_form.is_valid():
                 mrr = mrr_form.save(commit=False)
@@ -39,7 +89,6 @@ def detail_etude_view(request, etude_id):
                 messages.success(request, "Le MRR a été ajouté à l'étude.")
                 return redirect('es:detail-etude', etude_id=etude.id)
         
-        # Cas 2 : Ajout d'un commentaire
         elif 'submit_commentaire' in request.POST:
             comment_form = CommentaireForm(request.POST, request.FILES)
             if comment_form.is_valid():
@@ -50,13 +99,13 @@ def detail_etude_view(request, etude_id):
                 messages.success(request, "Votre commentaire a été ajouté.")
                 return redirect('es:detail-etude', etude_id=etude.id)
     
-    # Pour une requête GET (affichage normal), on prépare des formulaires vides
     mrr_form = MRRForm()
     comment_form = CommentaireForm()
     forms_etapes = {etape.id: UploadPreuveForm(instance=etape) for etape in etude.etapes.all()}
-
+    
     context = {
         'etude': etude,
+        'update_form': update_form,
         'etapes': etude.etapes.all(),
         'commentaires': etude.commentaires.all(),
         'forms_etapes': forms_etapes,
@@ -68,29 +117,6 @@ def detail_etude_view(request, etude_id):
     
     return render(request, 'es/detail_etude.html', context)
 
-
-@login_required
-def tableau_etudes_view(request):
-    etudes_list = EtudeSecurite.objects.select_related('changement__initiateur', 'changement__correspondant_dircam').prefetch_related('etapes').order_by('-created_at')
-    for etude in etudes_list:
-        etapes = etude.etapes.all()
-        total_etapes = len(etapes)
-        etapes_completes = 0
-        etude.etape_actuelle = "Terminée"
-        if total_etapes > 0:
-            for etape in etapes:
-                est_complete = False
-                if etude.changement.classification == Changement.Classification.SUIVI:
-                    if etape.validee_par_national: est_complete = True
-                else:
-                    if etape.validee_par_local: est_complete = True
-                if est_complete: etapes_completes += 1
-                elif etude.etape_actuelle == "Terminée": etude.etape_actuelle = etape.get_nom_display()
-            etude.avancement_calcule = int((etapes_completes / total_etapes) * 100)
-        else:
-            etude.avancement_calcule = 100
-    context = {'etudes_list': etudes_list, 'titre': "Tableau de Bord des Études de Sécurité"}
-    return render(request, 'es/tableau_etudes.html', context)
 
 @login_required
 def lancer_changement_view(request):
@@ -200,7 +226,7 @@ def valider_etape_view(request, etape_id):
                 messages.success(request, f"L'étape '{etape.get_nom_display()}' a été approuvée.")
         return redirect('es:detail-etude', etude_id=etude.id)
     return redirect('es:detail-etude', etude_id=etude.id)
-
+    
 @login_required
 def creer_action_formation_view(request, etude_id):
     etude = get_object_or_404(EtudeSecurite, pk=etude_id)
@@ -208,8 +234,8 @@ def creer_action_formation_view(request, etude_id):
         form = ActionFormationForm(request.POST)
         if form.is_valid():
             action = form.save(commit=False)
-            action.categorie = Action.CategorieAction.FORMATION # On force la catégorie
-            action.objet_source = etude # On lie l'action à l'étude
+            action.categorie = Action.CategorieAction.FORMATION
+            action.objet_source = etude
             action.numero_action = generer_numero_action(
                 categorie=Action.CategorieAction.FORMATION,
                 centre=etude.changement.centre_principal
@@ -218,14 +244,12 @@ def creer_action_formation_view(request, etude_id):
             messages.success(request, f"L'action de formation '{action.titre}' a été créée avec succès.")
             return redirect('es:detail-etude', etude_id=etude.id)
     else:
-        # On pré-remplit le titre pour donner du contexte à l'utilisateur
-        form = ActionFormationForm(initial={
-            'titre': f"Formation suite à l'étude {etude.reference_etude}"
-        })
-
-    context = {
-        'form': form,
-        'etude': etude,
-        'titre': f"Déclencher une Action de Formation pour l'étude {etude.reference_etude}"
-    }
+        form = ActionFormationForm(initial={'titre': f"Formation suite à l'étude {etude.reference_etude}"})
+    context = {'form': form, 'etude': etude, 'titre': f"Déclencher une Action de Formation pour l'étude {etude.reference_etude}"}
     return render(request, 'core/form_generique.html', context)
+
+@login_required
+def detail_changement_view(request, changement_id):
+    changement = get_object_or_404(Changement, pk=changement_id)
+    context = {'changement': changement, 'titre': f"Détail du Changement : {changement.titre}"}
+    return render(request, 'es/detail_changement.html', context)
