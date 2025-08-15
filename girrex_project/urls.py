@@ -28,6 +28,7 @@ urlpatterns = [
     path('technique/', include('technique.urls')),
     path('qs/', include('qs.urls')),
     path('es/', include('es.urls')),
+    path('cyber/', include('cyber.urls')),
 ]
 
 if settings.DEBUG:

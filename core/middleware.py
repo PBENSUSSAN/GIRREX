@@ -57,6 +57,9 @@ class GirrexContextMiddleware:
         request.show_sms_menu = False
         request.show_formation_menu = False
         request.show_technique_menu = False
+        request.show_cyber_menu = False
+        request.is_smsi_central_view = False
+        request.is_relais_local_view = False
         request.show_security_menu = False
         request.centre_agent = None
         request.service_du_jour = None
@@ -112,16 +115,22 @@ class GirrexContextMiddleware:
             super_roles = [Role.RoleName.CHEF_DE_DIVISION, Role.RoleName.ADJOINT_CHEF_DE_DIVISION]
             manager_roles = [Role.RoleName.CHEF_DE_CENTRE, Role.RoleName.ADJOINT_CHEF_DE_CENTRE]
             roles_ops = [Role.RoleName.CONTROLEUR, Role.RoleName.CHEF_DE_QUART, Role.RoleName.COORDONATEUR] + manager_roles
-
+            cyber_roles_specifiques = [Role.RoleName.ADJOINT_SMSI, Role.RoleName.SMSI_LOCAL]
             if role_nom in super_roles: request.is_supervisor_view = True
             if role_nom in roles_ops: request.show_operational_view = True
+            
             
             if role_nom in super_roles or role_nom in manager_roles or role_nom in [Role.RoleName.ADJOINT_CONFORMITE, Role.RoleName.SMS_LOCAL, Role.RoleName.RESPONSABLE_SMS]: request.show_sms_menu = True
             if role_nom in super_roles or role_nom in manager_roles or role_nom in [Role.RoleName.ADJOINT_FORM, Role.RoleName.FORM_LOCAL]: request.show_formation_menu = True
             #if role_nom in super_roles or role_nom in manager_roles or role_nom in [Role.RoleName.ES_LOCAL, Role.RoleName.ADJOINT_ES]: request.show_technique_menu = True
             if role_nom in super_roles or role_nom in manager_roles or role_nom in [Role.RoleName.ES_LOCAL, Role.RoleName.ADJOINT_ES, Role.RoleName.RESPONSABLE_SMS]: request.show_technique_menu = True
             if role_nom in super_roles or role_nom in manager_roles or role_nom in [Role.RoleName.QS_LOCAL, Role.RoleName.ADJOINT_QS]: request.show_security_menu = True
-        
+            if role_nom in super_roles or role_nom in cyber_roles_specifiques: request.show_cyber_menu = True
+            if role_nom in super_roles or role_nom == Role.RoleName.ADJOINT_SMSI:
+               request.is_smsi_central_view = True
+            elif role_nom == Role.RoleName.SMSI_LOCAL:
+               request.is_relais_local_view = True
+
         # 6. LOGIQUE POUR LE TOOLTIP D'INFORMATIONS UTILISATEUR
         request.user_permission_groups = Group.objects.filter(pk__in=group_ids).order_by('name')
 

@@ -1,0 +1,53 @@
+<!-- Fichier : templates/cyber/detail_risque.html -->
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'cyber:smsi-detail' risque.smsi.centre.id %}">Dossier SMSI {{ risque.smsi.centre.code_centre }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Détail du Risque</li>
+        </ol>
+    </nav>
+    <div class="row g-4">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header"><h4>{{ titre }}</h4></div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        <div class="d-flex justify-content-end mt-4">
+                            <a href="{% url 'cyber:smsi-detail' risque.smsi.centre.id %}" class="btn btn-secondary me-2">Retour</a>
+                            {% if can_edit %}
+                            <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-header"><h5>Historique du Risque</h5></div>
+                <ul class="list-group list-group-flush">
+                    {% for event in historique %}
+                        <li class="list-group-item">
+                            <p class="mb-1"><strong>{{ event.get_type_evenement_display }}</strong> par <strong>{{ event.auteur.username }}</strong></p>
+                            <small class="text-muted">{{ event.timestamp|date:"d/m/Y à H:i" }}</small>
+                            {% if event.details.commentaire %}
+                                <p class="mb-0 mt-1 fst-italic">"{{ event.details.commentaire }}"</p>
+                            {% endif %}
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item text-muted">Aucun événement enregistré.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

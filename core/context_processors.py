@@ -28,6 +28,9 @@ def girrex_global_context(request):
         'show_formation_menu': getattr(request, 'show_formation_menu', False),
         'show_technique_menu': getattr(request, 'show_technique_menu', False),
         'show_security_menu': getattr(request, 'show_security_menu', False),
+        'show_cyber_menu': getattr(request, 'show_cyber_menu', False),
+        'is_smsi_central_view': getattr(request, 'is_smsi_central_view', False),
+        'is_relais_local_view': getattr(request, 'is_relais_local_view', False),
         
         # Objets de contexte pour la sidebar (logique de verrou, etc.)
         'centre_agent': getattr(request, 'centre_agent', None),

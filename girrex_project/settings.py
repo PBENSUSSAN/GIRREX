@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'technique',
     'qs',
     'es',
+    'cyber',
     'crispy_forms',
     'crispy_bootstrap5',
     'django_filters',

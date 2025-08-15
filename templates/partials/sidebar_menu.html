@@ -119,6 +119,27 @@
     </li>
     {% endif %}
 
+    {% if show_cyber_menu %}
+    <li class="nav-item">
+        <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#collapseCyber" data-bs-toggle="collapse" aria-expanded="false">
+            <div><i class="bi bi-shield-lock"></i><span>Cybersécurité SMSI</span></div>
+            <i class="bi bi-chevron-right sidebar-chevron"></i>
+        </a>
+        <ul class="collapse list-unstyled" id="collapseCyber">
+        
+            {# Vue Centrale (Nationale) #}
+            {% if is_smsi_central_view %}
+                <li><a href="{% url 'cyber:dashboard' %}" class="ps-4">Tableau de Bord National</a></li>
+            {% endif %}
+
+            {# Vue Locale (par Centre) - UN SEUL LIEN #}
+            {% if is_relais_local_view and centre_agent %}
+                <li><a href="{% url 'cyber:smsi-detail' centre_agent.id %}" class="ps-4">Pilotage SMSI [{{ centre_agent.code_centre }}]</a></li>
+            {% endif %}
+        </ul>
+    </li>
+    {% endif %}
+
     <!-- BLOC 4 : LIENS UNIVERSELS -->
     <hr>
     

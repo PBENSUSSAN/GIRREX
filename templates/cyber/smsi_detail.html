@@ -1,0 +1,118 @@
+<!-- Fichier : templates/cyber/smsi_detail.html (Version Corrigée avec Colonnes Indépendantes) -->
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            {% if not request.user.agent_profile.centre or request.user.agent_profile.centre.id != smsi.centre.id %}
+                <li class="breadcrumb-item"><a href="{% url 'cyber:dashboard' %}">Tableau de Bord National</a></li>
+            {% endif %}
+            <li class="breadcrumb-item active" aria-current="page">Pilotage SMSI {{ smsi.centre.code_centre }}</li>
+        </ol>
+    </nav>
+    
+    <h3 class="mb-4">{{ titre }}</h3>
+    
+    <!-- CORRECTION ICI : Ajout de "align-items-start" pour rendre les colonnes indépendantes -->
+    <div class="row g-4 align-items-start">
+        
+        <!-- ========================================================== -->
+        <!--            COLONNE DE GAUCHE : GESTION DES RISQUES         -->
+        <!-- ========================================================== -->
+        <!-- CORRECTION ICI : Suppression de "d-flex flex-column" -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-shield-exclamation text-warning me-2"></i>Registre des Risques</h5>
+                    <div>
+                        <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRiskFilters" aria-expanded="false" aria-controls="collapseRiskFilters">
+                            <i class="bi bi-filter"></i> Filtrer
+                        </button>
+                        {% if effective_perms.cyber.add_cyberrisque %}
+                        <a href="{% url 'cyber:creer-risque' smsi.centre.id %}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-plus-circle"></i> Déclarer
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Section des filtres (dépliable) -->
+                <div class="collapse" id="collapseRiskFilters">
+                    <div class="card-body bg-light border-bottom">
+                        <form method="get" class="mb-0">
+                            {{ risque_filter.form|crispy }}
+                            <button type="submit" class="btn btn-primary btn-sm mt-2">Appliquer les filtres</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Liste des résultats -->
+                <div class="list-group list-group-flush">
+                    {% for risque in risque_filter.qs %}
+                    <a href="{% url 'cyber:detail-risque' risque.id %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong class="text-decoration-underline">Risque #{{ risque.id }}</strong>
+                            <p class="mb-0 text-muted small">{{ risque.description|truncatewords:15 }}</p>
+                        </div>
+                        <span class="badge bg-warning text-dark">{{ risque.get_statut_display }}</span>
+                    </a>
+                    {% empty %}
+                    <div class="list-group-item text-center text-muted">Aucun risque ne correspond à vos critères.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================== -->
+        <!--           COLONNE DE DROITE : GESTION DES INCIDENTS        -->
+        <!-- ========================================================== -->
+        <!-- CORRECTION ICI : Suppression de "d-flex flex-column" -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-lightning-charge-fill text-danger me-2"></i>Registre des Incidents</h5>
+                     <div>
+                        <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#collapseIncidentFilters" aria-expanded="false" aria-controls="collapseIncidentFilters">
+                            <i class="bi bi-filter"></i> Filtrer
+                        </button>
+                        {% if effective_perms.cyber.add_cyberincident %}
+                        <a href="{% url 'cyber:creer-incident' smsi.centre.id %}" class="btn btn-danger btn-sm">
+                            <i class="bi bi-plus-circle"></i> Déclarer
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Section des filtres (dépliable) -->
+                <div class="collapse" id="collapseIncidentFilters">
+                     <div class="card-body bg-light border-bottom">
+                        <form method="get" class="mb-0">
+                            {{ incident_filter.form|crispy }}
+                            <button type="submit" class="btn btn-primary btn-sm mt-2">Appliquer les filtres</button>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Liste des résultats -->
+                <div class="list-group list-group-flush">
+                    {% for incident in incident_filter.qs %}
+                    <a href="{% url 'cyber:detail-incident' incident.id %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong class="text-decoration-underline">Incident du {{ incident.date|date:"d/m/Y" }}</strong>
+                            <p class="mb-0 text-muted small">{{ incident.description|truncatewords:15 }}</p>
+                        </div>
+                        <span class="badge bg-danger">{{ incident.get_statut_display }}</span>
+                    </a>
+                    {% empty %}
+                    <div class="list-group-item text-center text-muted">Aucun incident ne correspond à vos critères.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

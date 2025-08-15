@@ -44,6 +44,7 @@ class Role(models.Model):
         ADJOINT_ES               = 'ADJOINT_ES', 'Adjoint ES'
         ADJOINT_FORM             = 'ADJOINT_FORM', 'Adjoint Form'
         ADJOINT_QS               = 'ADJOINT_QS', 'Adjoint QS'
+        ADJOINT_SMSI             = 'ADJOINT_SMSI', 'Adjoint SMSI'
         CHEF_DE_CENTRE           = 'CHEF_DE_CENTRE', 'Chef de Centre'
         CHEF_DE_DIVISION         = 'CHEF_DE_DIVISION', 'Chef de Division'
         CHEF_DE_QUART            = 'CHEF_DE_QUART', 'Chef de Quart'
@@ -53,8 +54,11 @@ class Role(models.Model):
         RESPONSABLE_SMS          = 'RESPONSABLE_SMS', 'Responsable SMS'
         SMS_LOCAL                = 'SMS_LOCAL', 'SMS Local'
         ES_LOCAL                 = 'ES_LOCAL', 'ES Local'
+        SMSI_LOCAL               = 'SMSI_LOCAL', 'SMSI Local'
         ADJOINT_CONFORMITE       = 'ADJOINT_CONFORMITE', 'Adjoint Conformité'
         COORDONATEUR             = 'COORDONATEUR', 'Coordonnateur'
+         
+         
     class RoleScope(models.TextChoices):
         CENTRAL = 'CENTRAL', 'Central'
         LOCAL = 'LOCAL', 'Local'
