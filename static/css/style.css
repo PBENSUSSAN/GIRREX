@@ -3,13 +3,17 @@
 /* Définition des polices et couleurs de base */
 body { 
     font-family: sans-serif; 
-    background-color: #f0f2f5; 
+    background-color: #f0f2f5;
+    /* On empêche le body lui-même d'avoir un ascenseur */
+    overflow-y: hidden;
 }
 
 .wrapper {
     display: flex;
     width: 100%;
     align-items: stretch;
+    /* Le wrapper prend 100% de la hauteur de la fenêtre */
+    height: 100vh;
 }
 
 /* ================== */
@@ -21,10 +25,11 @@ body {
     background: #002346;
     color: #fff;
     transition: all 0.3s;
-    min-height: 100vh;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    /* On s'assure qu'elle ne dépasse jamais de l'écran */
+    height: 100vh;
 }
 
 .sidebar-header {
@@ -43,9 +48,12 @@ body {
     justify-content: center;
 }
 
+/* La liste des menus devient scrollable si elle est trop grande */
 #sidebar ul.components {
     padding: 20px 0;
     border-bottom: 1px solid #47748b;
+    overflow-y: auto; /* Ajoute un ascenseur si nécessaire */
+    flex-grow: 1; /* Permet à cette section de prendre l'espace vertical restant */
 }
 
 #sidebar ul p {
@@ -87,6 +95,7 @@ ul ul a {
 .user-info {
     padding: 20px;
     border-top: 1px solid #47748b;
+    flex-shrink: 0; /* Empêche cette section de rétrécir */
 }
 
 .user-info a {
@@ -103,10 +112,14 @@ ul ul a {
 /* STYLE DU CONTENU     */
 /* ==================== */
 #content {
+    position: relative;
     width: 100%;
     padding: 20px 40px;
-    min-height: 100vh;
     transition: all 0.3s;
+    /* Ajoute un ascenseur vertical au contenu SI NÉCESSAIRE */
+    overflow-y: auto;
+    /* Le contenu prend 100% de la hauteur de la fenêtre */
+    height: 100vh;
 }
 
 table {
@@ -139,11 +152,11 @@ a.nav-link:not(.collapsed) .sidebar-chevron {
 
 /* On cible la "boîte" intérieure du tooltip */
 .tooltip-inner {
-    background-color: #f8f9fa !important; /* Un fond gris très clair */
-    color: #212529 !important;             /* Un texte noir pour le contraste */
-    border: 1px solid #dee2e6;             /* Une bordure subtile */
-    padding: 8px 12px;                     /* Un peu plus d'espace */
-    border-radius: .375rem;                /* Bords arrondis comme les cartes */
+    background-color: #f8f9fa !important;
+    color: #212529 !important;
+    border: 1px solid #dee2e6;
+    padding: 8px 12px;
+    border-radius: .375rem;
 }
 
 /* On cible la petite flèche et on s'assure qu'elle correspond au nouveau fond */
@@ -164,13 +177,10 @@ a.nav-link:not(.collapsed) .sidebar-chevron {
 }
 
 .role-selector-btn {
-    /* Active le mécanisme de troncature de texte */
     display: block;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-
-    /* S'assure que le texte est bien aligné à gauche */
     text-align: left;
 }
 
@@ -180,18 +190,18 @@ a.nav-link:not(.collapsed) .sidebar-chevron {
 .sidebar-clocks {
     padding: 15px 10px;
     border-top: 1px solid #47748b;
-    display: flex; /* Active Flexbox pour aligner les enfants */
-    justify-content: center; /* <<< LA MAGIE EST ICI : Centre les enfants horizontalement */
-    gap: 30px; /* Ajoute un espace propre entre les deux horloges */
+    display: flex;
+    justify-content: center;
+    gap: 30px;
 }
 
 .clock-display {
-    text-align: center; /* Centre le texte (heure et libellé) à l'intérieur de chaque bloc */
+    text-align: center;
 }
 
 .clock-label {
     display: block;
-    font-size: 0.7rem; /* Police du libellé plus petite */
+    font-size: 0.7rem;
     color: rgba(255, 255, 255, 0.7);
     text-transform: uppercase;
 }
@@ -199,7 +209,7 @@ a.nav-link:not(.collapsed) .sidebar-chevron {
 .clock-time {
     display: block;
     font-family: 'Courier New', Courier, monospace;
-    font-size: 1.1rem; /* Police de l'heure légèrement réduite */
+    font-size: 1.1rem;
     font-weight: 600;
     color: #fff;
 }    
@@ -207,8 +217,6 @@ a.nav-link:not(.collapsed) .sidebar-chevron {
 /* ========================================================== */
 /* COULEURS PERSONNALISÉES POUR LES LIENS D'ACTION DE SUIVI   */
 /* ========================================================== */
-
-/* Remplacez les codes #RRGGBB par les couleurs de votre choix */
 
 /* Pour les catégories CYBER */
 .category-cyber-link {
