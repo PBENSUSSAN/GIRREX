@@ -1,8 +1,10 @@
 # Fichier : cyber/models.py (Version Complète et Détaillée)
 
 from django.db import models
+from django.urls import reverse
 from django.utils import timezone
-from django.contrib.contenttypes.fields import GenericRelation
+from django.contrib.contenttypes.fields import GenericRelation, GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.conf import settings
 from core.models import Agent, Centre
 from documentation.models import Document
@@ -61,6 +63,10 @@ class CyberRisque(models.Model):
 
     def __str__(self):
         return f"Risque #{self.id} pour {self.smsi.centre.code_centre}"
+    
+    def get_absolute_url(self):
+        """ Retourne l'URL pour la page de détail de cet objet. """
+        return reverse('cyber:detail-risque', kwargs={'risque_id': self.pk})
 
 # ==============================================================================
 # 3. Le Registre des Incidents Cyber
@@ -88,6 +94,10 @@ class CyberIncident(models.Model):
 
     def __str__(self):
         return f"Incident du {self.date.strftime('%d/%m/%Y')} sur {self.smsi.centre.code_centre}"
+    
+    def get_absolute_url(self):
+        """ Retourne l'URL pour la page de détail de cet objet. """
+        return reverse('cyber:detail-incident', kwargs={'incident_id': self.pk})
 
 # ==============================================================================
 # 4. Historique Permanent des Risques Cyber
@@ -119,6 +129,7 @@ class CyberIncidentHistorique(models.Model):
         QUALIFICATION = 'QUALIFICATION', 'Qualification depuis une panne'
         COMMENTAIRE = 'COMMENTAIRE', 'Commentaire ajouté'
         RESOLUTION = 'RESOLUTION', 'Incident résolu'
+        
 
     incident = models.ForeignKey(CyberIncident, on_delete=models.CASCADE, related_name='historique')
     type_evenement = models.CharField(max_length=30, choices=TypeEvenement.choices)
@@ -129,3 +140,25 @@ class CyberIncidentHistorique(models.Model):
     class Meta:
         verbose_name = "Historique d'Incident Cyber"
         ordering = ['-timestamp']
+
+# ==============================================================================
+# 6. Modèle Générique pour les Pièces Jointes
+# ==============================================================================
+class PieceJointe(models.Model):
+    fichier = models.FileField(upload_to='cyber/pieces_jointes/%Y/%m/')
+    description = models.CharField(max_length=255, blank=True)
+    uploader = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    # Champs pour la relation générique
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+
+    class Meta:
+        verbose_name = "Pièce Jointe"
+        verbose_name_plural = "Pièces Jointes"
+        ordering = ['-uploaded_at']
+
+    def __str__(self):
+        return self.fichier.name.split('/')[-1] # Affiche juste le nom du fichier

@@ -25,7 +25,13 @@
                     <form method="post">
                         {% csrf_token %}
                         {{ form|crispy }}
+                        
+                        <!-- ========================================================== -->
+                        <!--             SECTION DES BOUTONS CORRIGÉE                   -->
+                        <!-- ========================================================== -->
                         <div class="d-flex justify-content-between mt-4">
+                            
+                            <!-- Groupe de boutons de gauche -->
                             <div>
                                 {% if effective_perms.technique.resolve_pannecentre and panne.statut == 'EN_COURS' %}
                                     <a href="{% url 'technique:resoudre-panne' panne.id %}" class="btn btn-success">
@@ -33,15 +39,27 @@
                                     </a>
                                 {% endif %}
                             </div>
-                            <div>
+
+                            <!-- Groupe de boutons de droite -->
+                            <div class="d-flex">
                                 <a href="{% url 'technique:liste-pannes' %}" class="btn btn-secondary me-2">Retour à la liste</a>
+                                
                                 {% if can_edit %}
                                 <button type="submit" class="btn btn-primary">
                                     <i class="bi bi-save-fill"></i> Enregistrer les modifications
                                 </button>
                                 {% endif %}
+
+                                {% if effective_perms.cyber.add_cyberincident %}
+                                <a href="{% url 'cyber:creer-incident-depuis-panne' panne.id %}" class="btn btn-warning ms-2">
+                                    <i class="bi bi-shield-lock"></i> Qualifier en Incident Cyber
+                                </a>
+                                {% endif %}
                             </div>
+
                         </div>
+                        <!-- ========================================================== -->
+
                     </form>
                 </div>
             </div>

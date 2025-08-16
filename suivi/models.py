@@ -56,6 +56,9 @@ class Action(models.Model):
         RELECTURE_DOC = 'RELECTURE_DOC', 'Relecture Documentaire'
         VALIDATION_AVENANT = 'VALIDATION_AVENANT', 'Validation d\'Avenant'
         SUIVI_MRR = 'SUIVI_MRR', 'Suivi de MRR'
+
+        TRAITEMENT_RISQUE_CYBER = 'TRAITEMENT_RISQUE_CYBER', 'Traitement de Risque Cyber'
+        REMEDIATION_INCIDENT_CYBER = 'REMEDIATION_INCIDENT_CYBER', 'Remédiation d\'Incident Cyber'
     
     class StatutAction(models.TextChoices):
         A_FAIRE = 'A_FAIRE', 'À faire'

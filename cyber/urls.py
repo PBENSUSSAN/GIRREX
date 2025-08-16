@@ -19,6 +19,10 @@ urlpatterns = [
     # Vues pour les Incidents
     path('smsi/<int:centre_id>/incidents/creer/', views.creer_incident_view, name='creer-incident'),
     path('incident/<int:incident_id>/', views.detail_incident_view, name='detail-incident'),
+    
+    # --- LIGNE MANQUANTE À AJOUTER ---
+    path('incident/<int:incident_id>/cloturer/', views.cloturer_incident_view, name='cloturer-incident'),
+    # --- FIN DE L'AJOUT ---
 
     # Pont depuis le module Technique
     path('incident/creer-depuis-panne/<int:panne_id>/', views.creer_incident_depuis_panne_view, name='creer-incident-depuis-panne'),

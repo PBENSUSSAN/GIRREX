@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
 from django.http import Http404
+from core.decorators import effective_permission_required
 
 from .models import Action, HistoriqueAction, PriseEnCompte
 from .forms import CreateActionForm, UpdateActionForm, AddActionCommentForm, DiffusionForm
@@ -280,3 +281,43 @@ def archives_actions_view(request):
         'titre': "Archives des Actions"
     }
     return render(request, 'suivi/archives_actions.html', context)
+
+# ==============================================================================
+#                 VUE POUR LE PONT DEPUIS LES AUTRES MODULES
+# ==============================================================================
+@login_required
+@effective_permission_required('suivi.add_action')
+def creer_action_depuis_source_view(request, content_type_id, object_id):
+    """
+    Crée une action de suivi en la liant à un objet source (ex: un CyberRisque).
+    """
+    try:
+        content_type = get_object_or_404(ContentType, pk=content_type_id)
+        source_object = content_type.get_object_for_this_type(pk=object_id)
+    except Http404:
+        messages.error(request, "L'objet source pour cette action est introuvable.")
+        return redirect('suivi:tableau-actions')
+
+    if request.method == 'POST':
+        form = CreateActionForm(request.POST, request.FILES, user=request.user)
+        if form.is_valid():
+            action = form.save(commit=False)
+            action.objet_source = source_object # On établit le lien générique
+            action.save()
+            form.save_m2m() # Important pour les champs ManyToMany comme 'centres'
+            messages.success(request, f"L'action '{action.numero_action}' a été créée et liée à '{source_object}'.")
+            return redirect('suivi:detail-action', action_id=action.id)
+    else:
+        # Pré-remplir le formulaire avec des informations contextuelles
+        initial_data = {
+            'titre': f"Action suite à : {source_object}",
+            'description': f"Suite à l'identification de l'élément '{source_object}', veuillez effectuer les actions suivantes :"
+        }
+        form = CreateActionForm(user=request.user, initial=initial_data)
+
+    context = {
+        'form': form,
+        'titre': f"Créer une Action liée à '{source_object}'",
+        'objet_source': source_object
+    }
+    return render(request, 'suivi/create_action.html', context)

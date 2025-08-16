@@ -2,13 +2,18 @@
 {% comment %}
     Ce petit template réutilisable génère un lien coloré pour une action.
     Il attend qu'une variable "action" lui soit passée.
+    La couleur est déterminée par la CATEGORIE de l'action.
 {% endcomment %}
-<a href="{% url 'suivi:detail-action' action.id %}" class="
-    {% if action.categorie == 'DIFFUSION_DOC' %}text-success fw-bold
-    {% elif action.categorie == 'RECOMMANDATION_QS' %}text-danger fw-bold
-    {% elif action.categorie == 'PRISE_EN_COMPTE_DOC' %}text-secondary
-    {% elif action.categorie == 'AUDIT' %}text-warning fw-bold
-    {% elif action.categorie == 'FONCTIONNEMENT' %}text-info
-    {% else %}text-primary{% endif %}">
+
+<a href="{% url 'suivi:detail-action' action.id %}" class="text-decoration-underline fw-bold
+    {% if action.categorie == 'TRAITEMENT_RISQUE_CYBER' or action.categorie == 'REMEDIATION_INCIDENT_CYBER' %}category-cyber-link
+    {% elif action.categorie == 'RECOMMANDATION_QS' %}category-qs-reco-link
+    {% elif action.categorie == 'DIFFUSION_DOC' %}category-doc-link
+    {% elif action.categorie == 'AUDIT' %}category-audit-link
+    {% elif action.categorie == 'FONCTIONNEMENT' %}category-fonctionnement-link
+    {% elif action.categorie == 'PRISE_EN_COMPTE_DOC' %}category-secondary-link
+    {% else %}
+        category-default-link
+    {% endif %}">
     <strong>{{ action.numero_action }}</strong>
 </a>

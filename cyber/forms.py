@@ -1,15 +1,15 @@
 # Fichier : cyber/forms.py
 
 from django import forms
-from .models import CyberRisque, CyberIncident
+from .models import CyberRisque, CyberIncident, PieceJointe
 
 class CyberRisqueForm(forms.ModelForm):
-    """ Formulaire pour la création et la modification d'un risque cyber. """
+    """ Formulaire pour la modification d'un risque cyber. """
     commentaire = forms.CharField(
         widget=forms.Textarea(attrs={'rows': 3}),
         label="Commentaire/Justification du changement",
         required=True,
-        help_text="Expliquez la raison de la création ou de la modification de ce risque."
+        help_text="Expliquez la raison de la modification de ce risque."
     )
 
     class Meta:
@@ -20,7 +20,7 @@ class CyberRisqueForm(forms.ModelForm):
         }
 
 class CyberIncidentForm(forms.ModelForm):
-    """ Formulaire pour la création et la modification d'un incident cyber. """
+    """ Formulaire pour la modification d'un incident cyber. """
     commentaire = forms.CharField(
         widget=forms.Textarea(attrs={'rows': 3}),
         label="Commentaire/Justification du changement",
@@ -34,4 +34,13 @@ class CyberIncidentForm(forms.ModelForm):
         widgets = {
             'date': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
             'description': forms.Textarea(attrs={'rows': 5}),
+        }
+
+class PieceJointeForm(forms.ModelForm):
+    """ Formulaire DÉDIÉ à l'ajout d'une nouvelle pièce jointe. """
+    class Meta:
+        model = PieceJointe
+        fields = ['fichier', 'description']
+        widgets = {
+            'description': forms.TextInput(attrs={'placeholder': 'Description courte du fichier (optionnel)'}),
         }

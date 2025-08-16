@@ -4,13 +4,16 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Count, Q
+from django.contrib.contenttypes.models import ContentType
+from django.http import Http404
 
 from core.decorators import effective_permission_required
-from .models import SMSI, CyberRisque, CyberIncident, CyberRisqueHistorique, CyberIncidentHistorique
-from .forms import CyberRisqueForm, CyberIncidentForm
+from .models import SMSI, CyberRisque, CyberIncident, CyberRisqueHistorique, CyberIncidentHistorique, PieceJointe
+from .forms import CyberRisqueForm, CyberIncidentForm, PieceJointeForm
 from .audit import log_audit_risque, log_audit_incident
 from technique.models import PanneCentre
-from .filters import CyberRisqueFilter, CyberIncidentFilter # <-- CORRECTION : CET IMPORT ÉTAIT MANQUANT
+from .filters import CyberRisqueFilter, CyberIncidentFilter
+from suivi.models import Action
 
 # ==============================================================================
 # VUE NATIONALE
@@ -89,35 +92,43 @@ def detail_risque_view(request, risque_id):
     historique = risque.historique.all()
     can_edit = request.user.has_perm('cyber.change_cyberrisque')
     
-    if request.method == 'POST' and can_edit:
-        form = CyberRisqueForm(request.POST, instance=risque)
-        if form.is_valid():
-            ancien_statut = risque.get_statut_display()
-            risque_modifie = form.save()
-            log_audit_risque(
-                risque=risque_modifie,
-                type_evenement=CyberRisqueHistorique.TypeEvenement.MODIFICATION,
-                auteur=request.user,
-                details={
-                    'ancien_statut': ancien_statut,
-                    'nouveau_statut': risque_modifie.get_statut_display(),
-                    'commentaire': form.cleaned_data['commentaire']
-                }
-            )
-            messages.success(request, "Le risque a été mis à jour.")
-            return redirect('cyber:detail-risque', risque_id=risque.id)
+    if request.method == 'POST':
+        if 'submit_main' in request.POST and can_edit:
+            form = CyberRisqueForm(request.POST, instance=risque)
+            if form.is_valid():
+                ancien_statut = risque.get_statut_display()
+                risque_modifie = form.save()
+                log_audit_risque(
+                    risque=risque_modifie, type_evenement=CyberRisqueHistorique.TypeEvenement.MODIFICATION, auteur=request.user,
+                    details={'ancien_statut': ancien_statut, 'nouveau_statut': risque_modifie.get_statut_display(), 'commentaire': form.cleaned_data['commentaire']}
+                )
+                messages.success(request, "Le risque a été mis à jour.")
+                return redirect('cyber:detail-risque', risque_id=risque.id)
+        elif 'submit_pj' in request.POST:
+            piece_jointe_form = PieceJointeForm(request.POST, request.FILES)
+            if piece_jointe_form.is_valid():
+                pj = piece_jointe_form.save(commit=False)
+                pj.content_object = risque
+                pj.uploader = request.user
+                pj.save()
+                messages.success(request, "La pièce jointe a été ajoutée.")
+                return redirect('cyber:detail-risque', risque_id=risque.id)
+            else:
+                messages.error(request, "Erreur lors de l'envoi de la pièce jointe. Le champ Fichier est obligatoire.")
+                form = CyberRisqueForm(instance=risque) # Re-préparer le form principal pour l'affichage
     else:
         form = CyberRisqueForm(instance=risque)
-        if not can_edit:
-            for field in form.fields.values():
-                field.disabled = True
+        piece_jointe_form = PieceJointeForm()
+    
+    if not can_edit:
+        for field in form.fields.values():
+            field.disabled = True
 
+    pieces_jointes = PieceJointe.objects.filter(content_type=ContentType.objects.get_for_model(risque), object_id=risque.id)
     context = {
-        'form': form,
-        'risque': risque,
-        'historique': historique,
-        'titre': f"Détail du Risque #{risque.id}",
-        'can_edit': can_edit
+        'form': form, 'risque': risque, 'historique': historique,
+        'titre': f"Détail du Risque #{risque.id}", 'can_edit': can_edit,
+        'pieces_jointes': pieces_jointes, 'piece_jointe_form': piece_jointe_form
     }
     return render(request, 'cyber/detail_risque.html', context)
 
@@ -155,38 +166,70 @@ def detail_incident_view(request, incident_id):
     historique = incident.historique.all()
     can_edit = request.user.has_perm('cyber.change_cyberincident')
 
-    if request.method == 'POST' and can_edit:
-        form = CyberIncidentForm(request.POST, instance=incident)
-        if form.is_valid():
-            ancien_statut = incident.get_statut_display()
-            incident_modifie = form.save()
-            log_audit_incident(
-                incident=incident_modifie,
-                type_evenement=CyberIncidentHistorique.TypeEvenement.MODIFICATION,
-                auteur=request.user,
-                details={
-                    'ancien_statut': ancien_statut,
-                    'nouveau_statut': incident_modifie.get_statut_display(),
-                    'commentaire': form.cleaned_data['commentaire']
-                }
-            )
-            messages.success(request, "L'incident a été mis à jour.")
-            return redirect('cyber:detail-incident', incident_id=incident.id)
+    if request.method == 'POST':
+        if 'submit_main' in request.POST and can_edit:
+            form = CyberIncidentForm(request.POST, instance=incident)
+            if form.is_valid():
+                ancien_statut = incident.get_statut_display()
+                incident_modifie = form.save()
+                log_audit_incident(
+                    incident=incident_modifie, type_evenement=CyberIncidentHistorique.TypeEvenement.CHANGEMENT_STATUT, auteur=request.user,
+                    details={'ancien_statut': ancien_statut, 'nouveau_statut': incident_modifie.get_statut_display(), 'commentaire': form.cleaned_data['commentaire']}
+                )
+                messages.success(request, "L'incident a été mis à jour.")
+                return redirect('cyber:detail-incident', incident_id=incident.id)
+        elif 'submit_pj' in request.POST:
+            piece_jointe_form = PieceJointeForm(request.POST, request.FILES)
+            if piece_jointe_form.is_valid():
+                pj = piece_jointe_form.save(commit=False)
+                pj.content_object = incident
+                pj.uploader = request.user
+                pj.save()
+                messages.success(request, "La pièce jointe a été ajoutée.")
+                return redirect('cyber:detail-incident', incident_id=incident.id)
+            else:
+                 messages.error(request, "Erreur lors de l'envoi de la pièce jointe. Le champ Fichier est obligatoire.")
+                 form = CyberIncidentForm(instance=incident)
     else:
         form = CyberIncidentForm(instance=incident)
-        if not can_edit:
-            for field in form.fields.values():
-                field.disabled = True
+        piece_jointe_form = PieceJointeForm()
 
+    if not can_edit:
+        for field in form.fields.values():
+            field.disabled = True
+    
+    pieces_jointes = PieceJointe.objects.filter(content_type=ContentType.objects.get_for_model(incident), object_id=incident.id)
     context = {
-        'form': form,
-        'incident': incident,
-        'historique': historique,
-        'titre': f"Détail de l'Incident #{incident.id}",
-        'can_edit': can_edit
+        'form': form, 'incident': incident, 'historique': historique,
+        'titre': f"Détail de l'Incident #{incident.id}", 'can_edit': can_edit,
+        'pieces_jointes': pieces_jointes, 'piece_jointe_form': piece_jointe_form
     }
     return render(request, 'cyber/detail_incident.html', context)
 
+# ==============================================================================
+# VUE DE WORKFLOW : CLÔTURE D'INCIDENT
+# ==============================================================================
+@login_required
+@effective_permission_required('cyber.change_cyberincident')
+def cloturer_incident_view(request, incident_id):
+    incident = get_object_or_404(CyberIncident, pk=incident_id)
+    if request.method == 'POST':
+        actions_ouvertes = incident.actions.exclude(statut__in=[Action.StatutAction.VALIDEE, Action.StatutAction.ARCHIVEE])
+        if actions_ouvertes.exists():
+            messages.error(request, f"Impossible de clôturer : {actions_ouvertes.count()} action(s) de suivi sont encore en cours.")
+            return redirect('cyber:detail-incident', incident_id=incident.id)
+        incident.statut = CyberIncident.Statut.CLOTURE
+        incident.save()
+        log_audit_incident(
+            incident=incident,
+            type_evenement=CyberIncidentHistorique.TypeEvenement.CLOTURE,
+            auteur=request.user,
+            details={'message': f"L'incident a été formellement clôturé par {request.user.username}."}
+        )
+        messages.success(request, "L'incident a été clôturé avec succès.")
+        return redirect('cyber:detail-incident', incident_id=incident.id)
+    return redirect('cyber:detail-incident', incident_id=incident.id)
+    
 # ==============================================================================
 # PONT DEPUIS LE MODULE TECHNIQUE
 # ==============================================================================
@@ -211,11 +254,7 @@ def creer_incident_depuis_panne_view(request, panne_id):
                 incident=incident,
                 type_evenement=CyberIncidentHistorique.TypeEvenement.QUALIFICATION,
                 auteur=request.user,
-                details={
-                    'commentaire': form.cleaned_data['commentaire'],
-                    'source_panne_id': panne.id,
-                    'source_panne_desc': str(panne)
-                }
+                details={'commentaire': form.cleaned_data['commentaire'], 'source_panne_id': panne.id, 'source_panne_desc': str(panne)}
             )
             messages.success(request, f"L'incident cyber a été créé et lié à la panne #{panne.id}.")
             return redirect('cyber:detail-incident', incident_id=incident.id)

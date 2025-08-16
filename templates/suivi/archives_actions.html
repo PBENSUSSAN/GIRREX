@@ -1,4 +1,4 @@
-<!-- Fichier : templates/suivi/archives_actions.html (Version corrigée et finale) -->
+<!-- Fichier : templates/suivi/archives_actions.html -->
 {% extends "base.html" %}
 {% load crispy_forms_tags static %}
 
@@ -31,7 +31,6 @@
 
     <div class="card card-body mb-4">
         <form method="get" class="row g-3 align-items-end">
-            <!-- Formulaire de filtre adapté à ArchiveFilter -->
             <div class="col-md-4">{{ filter.form.recherche|as_crispy_field }}</div>
             <div class="col-md-3">{{ filter.form.categorie|as_crispy_field }}</div>
             <div class="col-md-3">{{ filter.form.centres|as_crispy_field }}</div>

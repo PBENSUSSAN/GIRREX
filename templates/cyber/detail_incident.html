@@ -1,31 +1,80 @@
 <!-- Fichier : templates/cyber/detail_incident.html -->
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
+{% load diffusion_tags %}
 
 {% block title %}{{ titre }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid mt-4">
     <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'cyber:smsi-detail' incident.smsi.centre.id %}">Dossier SMSI {{ incident.smsi.centre.code_centre }}</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Détail de l'Incident</li>
-        </ol>
+        <!-- ... (inchangé) ... -->
     </nav>
     <div class="row g-4">
         <div class="col-md-8">
             <div class="card shadow-sm">
-                <div class="card-header"><h4>{{ titre }}</h4></div>
+                <!-- ... (Card header) ... -->
                 <div class="card-body">
-                    <form method="post">
+                    <form method="post" enctype="multipart/form-data" action="{% url 'cyber:detail-incident' incident.id %}">
                         {% csrf_token %}
                         {{ form|crispy }}
-                        <div class="d-flex justify-content-end mt-4">
-                            <a href="{% url 'cyber:smsi-detail' incident.smsi.centre.id %}" class="btn btn-secondary me-2">Retour</a>
-                            {% if can_edit %}
-                            <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
-                            {% endif %}
+                        <div class="d-flex justify-content-between mt-4">
+                            <!-- Groupe de boutons de gauche (workflow) -->
+                            <div>
+                                {% if incident.statut != 'CLOTURE' and effective_perms.cyber.change_cyberincident %}
+                                <form method="post" action="{% url 'cyber:cloturer-incident' incident.id %}" onsubmit="return confirm('Êtes-vous sûr de vouloir clôturer cet incident ? Toutes les actions de suivi doivent être terminées.');" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="bi bi-check2-circle"></i> Clôturer l'incident
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                            <!-- Groupe de boutons de droite (navigation/sauvegarde) -->
+                            <div class="d-flex">
+                                <a href="{% url 'cyber:smsi-detail' incident.smsi.centre.id %}" class="btn btn-secondary me-2">Retour</a>
+                                {% if can_edit and incident.statut != 'CLOTURE' %}
+                                <button type="submit" name="submit_main" class="btn btn-primary">
+                                    <i class="bi bi-save-fill"></i> Enregistrer les modifications
+                                </button>
+                                {% endif %}
+                                {% if effective_perms.suivi.add_action %}
+                                    {% get_content_type_id incident as ctype_id %}
+                                    <!-- Bouton pour créer UNE SEULE action -->
+                                    <a href="{% url 'suivi:creer-action-depuis-source' ctype_id incident.id %}" class="btn btn-info ms-2" title="Créer une action de remédiation manuelle et ciblée pour cet incident">
+                                        <i class="bi bi-plus-circle"></i> Créer Action
+                                    </a>
+                                    <!-- Bouton pour lancer le SCÉNARIO de diffusion -->
+                                    <a href="{% url 'suivi:lancer-diffusion' content_type_id=ctype_id object_id=incident.id %}" class="btn btn-success ms-2" title="Lancer un scénario de diffusion pour notifier plusieurs personnes ou centres">
+                                        <i class="bi bi-broadcast"></i> Diffuser
+                                    </a>
+                                {% endif %}
+                            </div>
                         </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mt-4">
+                <div class="card-header"><h5>Pièces Jointes</h5></div>
+                <ul class="list-group list-group-flush">
+                     {% for pj in pieces_jointes %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <a href="{{ pj.fichier.url }}" target="_blank" class="text-decoration-underline"><i class="bi bi-paperclip"></i> {{ pj }}</a>
+                            {% if pj.description %}<p class="mb-0 text-muted small">{{ pj.description }}</p>{% endif %}
+                        </div>
+                        <small class="text-muted">Ajouté par {{ pj.uploader.username }} le {{ pj.uploaded_at|date:"d/m/Y" }}</small>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item text-muted">Aucune pièce jointe pour cet incident.</li>
+                    {% endfor %}
+                </ul>
+                <div class="card-footer">
+                    <form action="{% url 'cyber:detail-incident' incident.id %}" method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {{ piece_jointe_form|crispy }}
+                        <button type="submit" name="submit_pj" class="btn btn-primary btn-sm mt-2">Ajouter la pièce jointe</button>
                     </form>
                 </div>
             </div>
@@ -33,7 +82,7 @@
         <div class="col-md-4">
             <div class="card shadow-sm">
                 <div class="card-header"><h5>Historique de l'Incident</h5></div>
-                <ul class="list-group list-group-flush">
+                <ul class="list-group list-group-flush" style="max-height: 500px; overflow-y: auto;">
                     {% for event in historique %}
                         <li class="list-group-item">
                             <p class="mb-1"><strong>{{ event.get_type_evenement_display }}</strong> par <strong>{{ event.auteur.username }}</strong></p>

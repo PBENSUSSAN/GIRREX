@@ -1,4 +1,4 @@
-# Fichier : suivi/services.py (Version Corrigée et Finalisée)
+# Fichier : suivi/services.py
 
 from django.utils import timezone
 from datetime import timedelta
@@ -7,6 +7,7 @@ from core.models import Agent, Role, Centre
 from documentation.models import Document
 from qs.models import RecommendationQS 
 from es.models import MRR
+from cyber.models import CyberRisque, CyberIncident
 
 def generer_numero_action(categorie, centre=None):
     """
@@ -22,6 +23,10 @@ def generer_numero_action(categorie, centre=None):
         prefix_metier = "ES"
     elif categorie == Action.CategorieAction.SUIVI_MRR:
         prefix_metier = "MRR"
+    # --- AJOUT DE LA CONDITION POUR LES NOUVELLES CATÉGORIES ---
+    elif categorie in [Action.CategorieAction.TRAITEMENT_RISQUE_CYBER, Action.CategorieAction.REMEDIATION_INCIDENT_CYBER]:
+        prefix_metier = "CYBER"
+    # --- FIN DE L'AJOUT ---
     else: # Pour les autres cas (diffusion doc, etc.)
         prefix_metier = categorie.name.split('_')[0]
     
@@ -114,27 +119,31 @@ def creer_diffusion(objet_source, initiateur, form_data):
         categorie_action_mere = Action.CategorieAction.RECOMMANDATION_QS
     elif isinstance(objet_source, MRR):
         categorie_action_mere = Action.CategorieAction.SUIVI_MRR
+    # --- AJOUT DE LA CONDITION POUR LES NOUVEAUX OBJETS ---
+    elif isinstance(objet_source, CyberRisque):
+        categorie_action_mere = Action.CategorieAction.TRAITEMENT_RISQUE_CYBER
+    elif isinstance(objet_source, CyberIncident):
+        categorie_action_mere = Action.CategorieAction.REMEDIATION_INCIDENT_CYBER
+    # --- FIN DE L'AJOUT ---
     else:
         categorie_action_mere = Action.CategorieAction.FONCTIONNEMENT
     
-    # --- ON UTILISE LA NOUVELLE FONCTION DE NUMÉROTATION ---
-    # On passe None pour le centre car la logique de portée (LOC/NAT) n'est pas pertinente ici.
-    # La fonction déterminera la portée en fonction de l'existence de centres.
+    # On appelle la fonction de numérotation en lui passant la catégorie, comme à l'origine
     numero_mere = generer_numero_action(
         categorie=categorie_action_mere,
         centre=tous_les_centres_cibles.first() if tous_les_centres_cibles.count() == 1 else None
     )
 
-    # On prépare une description par défaut
     description_action = f"Diffusion de l'élément : {objet_source}"
-    # Si l'objet est un MRR, on utilise sa description pour l'action
-    if isinstance(objet_source, MRR):
+    #if isinstance(objet_source, MRR):
+     #   description_action = objet_source.description
+    if hasattr(objet_source, 'description') and objet_source.description:
         description_action = objet_source.description
     
     action_mere = Action.objects.create(
         numero_action=numero_mere,
         titre=f"Diffusion de : {objet_source}",
-         description=description_action,
+        description=description_action,
         responsable=initiateur,
         echeance=timezone.now().date() + timedelta(days=14),
         objet_source=objet_source,
@@ -146,22 +155,20 @@ def creer_diffusion(objet_source, initiateur, form_data):
 
     destinataires_finaux = set(agents_specifiques)
     
-    if centres_a_traiter: # .exists() n'est pas nécessaire sur un QuerySet dans un if
+    if centres_a_traiter:
         if diffusion_directe:
-            agents_concernes = Agent.objects.filter(
-                centre__in=centres_a_traiter,
-                actif=True
-            ).distinct()
+            agents_concernes = Agent.objects.filter(centre__in=centres_a_traiter, actif=True).distinct()
             destinataires_finaux.update(agents_concernes)
         else:
-            # Logique pour trouver les responsables locaux (Chef de Centre, QS Local, etc.)
             ROLE_MAPPING = {
                 Document: Role.RoleName.SMS_LOCAL,
                 RecommendationQS: Role.RoleName.QS_LOCAL,
+                # --- AJOUT DE LA CONDITION POUR LES NOUVEAUX RÔLES ---
+                CyberRisque: Role.RoleName.SMSI_LOCAL,
+                CyberIncident: Role.RoleName.SMSI_LOCAL,
             }
             objet_type = type(objet_source)
             role_cible = ROLE_MAPPING.get(objet_type)
-
             for centre in centres_a_traiter:
                 responsable_a_assigner = None
                 if role_cible:
@@ -171,16 +178,13 @@ def creer_diffusion(objet_source, initiateur, form_data):
                         roles_assignes__date_fin__isnull=True,
                         actif=True
                     ).first()
-                
                 if not responsable_a_assigner:
-                    # Logique de fallback vers Chef de Centre / Adjoint
                     responsable_a_assigner = Agent.objects.filter(
                         roles_assignes__centre=centre,
                         roles_assignes__role__nom__in=[Role.RoleName.CHEF_DE_CENTRE, Role.RoleName.ADJOINT_CHEF_DE_CENTRE],
                         roles_assignes__date_fin__isnull=True,
                         actif=True
                     ).order_by('roles_assignes__role__nom').first()
-
                 if responsable_a_assigner:
                     numero_intermediaire = f"{numero_mere}.{centre.code_centre}"
                     Action.objects.create(
@@ -193,7 +197,6 @@ def creer_diffusion(objet_source, initiateur, form_data):
                         categorie=categorie_action_mere
                     )
 
-    # Création des sous-tâches pour les destinataires finaux
     index_depart = action_mere.sous_taches.count()
     for i, agent in enumerate(destinataires_finaux):
         numero_final = f"{numero_mere}.{index_depart + i + 1}"
@@ -201,10 +204,10 @@ def creer_diffusion(objet_source, initiateur, form_data):
             parent=action_mere,
             numero_action=numero_final,
             titre=f"Prise en compte : {objet_source}",
+            description=description_action,
             responsable=agent,
             echeance=action_mere.echeance,
             objet_source=objet_source,
-            # La catégorie de la sous-tâche peut être plus spécifique
             categorie=Action.CategorieAction.PRISE_EN_COMPTE_DOC if isinstance(objet_source, Document) else categorie_action_mere
         )
         
