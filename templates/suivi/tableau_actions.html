@@ -1,4 +1,4 @@
-<!-- Fichier : templates/suivi/tableau_actions.html (Version Corrigée et Finale) -->
+<!-- Fichier : templates/suivi/tableau_actions.html -->
 {% extends "base.html" %}
 {% load crispy_forms_tags static %}
 
@@ -53,7 +53,7 @@
                         <th>Responsable</th>
                         <th>Échéance</th>
                         <th>Statut</th>
-                        <th class="text-center">Prise en compte le</th>
+                        <th class="text-center">Prise en compte / Clôture</th>
                         <th class="text-center">Avancement</th>
                     </tr>
                 </thead>
@@ -86,17 +86,19 @@
                         <td>
                             <span class="badge {% if action.statut == 'VALIDEE' %}bg-success{% else %}bg-primary{% endif %}">{{ action.get_statut_display }}</span>
                         </td>
-                        <td></td>
                         <td class="text-center align-middle">
+                            {% if action.date_cloture %}
+                                <small>{{ action.date_cloture|date:"d/m/Y H:i" }}</small>
+                            {% endif %}
+                        </td>
+                        <td class="text-center align-middle">
+                            {# CORRECTION ICI : %% remplacé par % #}
                             <div class="progress" style="height: 20px;"><div class="progress-bar" role="progressbar" style="width: {{ action.avancement }}%;" aria-valuenow="{{ action.avancement }}" aria-valuemin="0" aria-valuemax="100">{{ action.avancement }}%</div></div>
                         </td>
                     </tr>
                     
-                    {# ========================================================== #}
-                    {#                 LA CORRECTION EST ICI                      #}
-                    {# ========================================================== #}
-                    {% for sub_task in action.sous_taches.all %} {# On garde .all ici pour la condition du if précédent #}
-                        {% if sub_task.responsable == user.agent_profile or action.responsable == user.agent_profile %}
+                    {% for sub_task in action.sous_taches.all %}
+                        {% if sub_task.responsable == user.agent_profile or action.responsable == user.agent_profile or user_roles.RESPONSABLE_SMS %}
                             <tr class="collapse sub-task-row subtasks-of-{{ action.id }}">
                                 <td class="text-center align-middle">
                                     {% if sub_task.statut == 'VALIDEE' %}
@@ -126,12 +128,12 @@
                                     {% endif %}
                                 </td>
                                 <td class="text-center align-middle">
+                                    {# CORRECTION ICI : %% remplacé par % #}
                                     <div class="progress" style="height: 20px;"><div class="progress-bar" role="progressbar" style="width: {{ sub_task.avancement }}%;" aria-valuenow="{{ sub_task.avancement }}" aria-valuemin="0" aria-valuemax="100">{{ sub_task.avancement }}%</div></div>
                                 </td>
                             </tr>
                         {% endif %}
                     {% endfor %}
-                    {# ========================================================== #}
 
                     {% empty %}
                     <tr>

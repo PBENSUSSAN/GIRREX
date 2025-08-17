@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
-from core.models import Agent, Centre
+from core.models import Agent, Centre, Role, AgentRole
 
 # ==============================================================================
 # QUERYSET ET MANAGERS
@@ -15,9 +15,23 @@ class ActionQuerySet(models.QuerySet):
         if not hasattr(user, 'agent_profile'):
             return self.none()
         agent = user.agent_profile
+        
+        # Règle 1 : Le super-utilisateur voit tout
         if user.is_superuser:
             return self.all()
         
+                   
+        # Règle 2 : Le RESPONSABLE_SMS voit tout
+        is_responsable_sms = AgentRole.objects.filter(
+            agent=agent,
+            role__nom=Role.RoleName.RESPONSABLE_SMS,
+            date_fin__isnull=True
+        ).exists()
+
+        if is_responsable_sms:
+            return self.all()
+        
+
         q_responsable = models.Q(responsable=agent)
         q_responsable_parent = models.Q(parent__responsable=agent)
         q_a_une_sous_tache_assignee = models.Q(sous_taches__responsable=agent)
