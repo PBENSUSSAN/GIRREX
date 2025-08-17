@@ -1,4 +1,4 @@
-<!-- Fichier : templates/suivi/tableau_actions.html -->
+<!-- Fichier : templates/suivi/tableau_actions.html (Version Corrigée et Finale) -->
 {% extends "base.html" %}
 {% load crispy_forms_tags static %}
 
@@ -6,17 +6,9 @@
 
 {% block page_specific_styles %}
 <style>
-    .sub-task-row {
-        background-color: #f8f9fa;
-    }
-    .sub-task-row td:nth-child(3) {
-        padding-left: 2.5rem !important;
-    }
-    .toggle-subtasks {
-        cursor: pointer;
-        width: 25px;
-        text-align: center;
-    }
+    .sub-task-row { background-color: #f8f9fa; }
+    .sub-task-row td:nth-child(3) { padding-left: 2.5rem !important; }
+    .toggle-subtasks { cursor: pointer; width: 25px; text-align: center; }
 </style>
 {% endblock %}
 
@@ -79,7 +71,13 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% include "suivi/partials/action_colored_link.html" with action=action %}
+                            {% if action.categorie == 'TRAITEMENT_FEEDBACK' and action.objet_source %}
+                                <a href="{% url 'feedback:detail' action.object_id %}" class="text-decoration-underline fw-bold category-default-link" title="Voir le feedback d'origine">
+                                    <strong>{{ action.numero_action }}</strong>
+                                </a>
+                            {% else %}
+                                {% include "suivi/partials/action_colored_link.html" with action=action %}
+                            {% endif %}
                         </td>
                         <td>{{ action.titre }}</td>
                         <td>{{ action.get_categorie_display }}</td>
@@ -94,7 +92,10 @@
                         </td>
                     </tr>
                     
-                    {% for sub_task in action.sous_taches.all %}
+                    {# ========================================================== #}
+                    {#                 LA CORRECTION EST ICI                      #}
+                    {# ========================================================== #}
+                    {% for sub_task in action.sous_taches.all %} {# On garde .all ici pour la condition du if précédent #}
                         {% if sub_task.responsable == user.agent_profile or action.responsable == user.agent_profile %}
                             <tr class="collapse sub-task-row subtasks-of-{{ action.id }}">
                                 <td class="text-center align-middle">
@@ -104,7 +105,13 @@
                                 </td>
                                 <td></td>
                                 <td>
-                                    {% include "suivi/partials/action_colored_link.html" with action=sub_task %}
+                                    {% if sub_task.categorie == 'TRAITEMENT_FEEDBACK' and sub_task.objet_source %}
+                                        <a href="{% url 'feedback:detail' sub_task.object_id %}" class="text-decoration-underline fw-bold category-default-link" title="Voir le feedback d'origine">
+                                            <strong>{{ sub_task.numero_action }}</strong>
+                                        </a>
+                                    {% else %}
+                                        {% include "suivi/partials/action_colored_link.html" with action=sub_task %}
+                                    {% endif %}
                                 </td>
                                 <td>{{ sub_task.titre }}</td>
                                 <td>{{ sub_task.get_categorie_display }}</td>
@@ -124,6 +131,7 @@
                             </tr>
                         {% endif %}
                     {% endfor %}
+                    {# ========================================================== #}
 
                     {% empty %}
                     <tr>

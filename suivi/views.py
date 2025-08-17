@@ -1,17 +1,19 @@
-# Fichier : suivi/views.py
+# Fichier : suivi/views.py (Version Nettoyée et Finale)
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
+from datetime import timedelta
 from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
 from django.http import Http404
+from django import forms
 from core.decorators import effective_permission_required
 
 from .models import Action, HistoriqueAction, PriseEnCompte
 from .forms import CreateActionForm, UpdateActionForm, AddActionCommentForm, DiffusionForm
-from .services import update_parent_progress, final_close_action_cascade, creer_diffusion
+from .services import update_parent_progress, final_close_action_cascade, generer_numero_action, creer_diffusion
 from core.models import AgentRole, Role
 from documentation.models import Document, DocumentPriseEnCompte
 from .filters import ActionFilter, ArchiveFilter
@@ -19,7 +21,6 @@ from qs.models import FNE, HistoriqueFNE
 from qs.audit import log_audit_fne
 
 def user_has_role(user, role_name):
-    """ Vérifie si un utilisateur a un rôle métier spécifique et actif. """
     if not hasattr(user, 'agent_profile'):
         return False
     return AgentRole.objects.filter(
@@ -30,9 +31,6 @@ def user_has_role(user, role_name):
 
 @login_required
 def tableau_actions_view(request):
-    """
-    Affiche le tableau de suivi de manière hiérarchique.
-    """
     base_queryset = Action.objects.for_user(request.user).select_related(
         'responsable', 'parent'
     ).prefetch_related(
@@ -53,14 +51,22 @@ def tableau_actions_view(request):
 
 @login_required
 def create_action_view(request):
-    """
-    Gère la création d'une nouvelle action générique (non-documentaire).
-    """
     if request.method == 'POST':
         form = CreateActionForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
-            action = form.save()
-            # La méthode save() du formulaire ModelForm gère les ManyToMany si commit=True
+            action = form.save(commit=False)
+            action.save()
+            form.save_m2m()
+            
+            centres_selectionnes = action.centres.all()
+            centre_pour_numero = centres_selectionnes.first() if centres_selectionnes.count() == 1 else None
+            
+            action.numero_action = generer_numero_action(
+                categorie=action.categorie,
+                centre=centre_pour_numero
+            )
+            action.save()
+            
             messages.success(request, f"L'action '{action.numero_action}' a été créée.")
             return redirect('suivi:tableau-actions')
     else:
@@ -71,9 +77,6 @@ def create_action_view(request):
 
 @login_required
 def detail_action_view(request, action_id):
-    """
-    Affiche le détail d'une action, son historique et les formulaires d'interaction.
-    """
     action = get_object_or_404(Action.archives.select_related('responsable', 'parent'), pk=action_id)
     historique = action.historique.all().order_by('-timestamp')
     update_form = UpdateActionForm(instance=action)
@@ -89,13 +92,11 @@ def detail_action_view(request, action_id):
                 if updated_action.parent:
                     update_parent_progress(updated_action)
                 
-                # Étape 1 : On enregistre l'historique dans suivi (comportement normal)
                 HistoriqueAction.objects.create(
                     action=updated_action, type_evenement=HistoriqueAction.TypeEvenement.CHANGEMENT_AVANCEMENT, auteur=request.user,
                     details={ 'ancien_statut': ancien_statut, 'nouveau_statut': updated_action.get_statut_display(), 'ancien_avancement': f"{ancien_avancement}%", 'nouvel_avancement': f"{updated_action.avancement}%", 'commentaire': update_form.cleaned_data.get('update_comment') }
                 )
 
-                # Étape 2 : On vérifie la nature de la tâche et on envoie à l'audit si nécessaire
                 if isinstance(updated_action.objet_source, FNE):
                     log_audit_fne(
                         fne=updated_action.objet_source,
@@ -118,10 +119,8 @@ def detail_action_view(request, action_id):
             if comment_form.is_valid():
                 commentaire_texte = comment_form.cleaned_data['commentaire']
                 
-                # Étape 1 : On enregistre l'historique dans suivi
                 HistoriqueAction.objects.create(action=action, type_evenement=HistoriqueAction.TypeEvenement.COMMENTAIRE, auteur=request.user, details={'commentaire': commentaire_texte})
 
-                # Étape 2 : On vérifie la nature de la tâche et on envoie à l'audit
                 if isinstance(action.objet_source, FNE):
                     log_audit_fne(
                         fne=action.objet_source,
@@ -149,9 +148,6 @@ def detail_action_view(request, action_id):
 
 @login_required
 def lancer_diffusion_view(request, content_type_id, object_id):
-    """
-    Affiche le formulaire de paramétrage de la diffusion et appelle le service métier.
-    """
     try:
         content_type = get_object_or_404(ContentType, pk=content_type_id)
         objet_source = content_type.get_object_for_this_type(pk=object_id)
@@ -191,20 +187,14 @@ def valider_prise_en_compte_view(request, action_id):
         return redirect('suivi:detail-action', action_id=action_agent.id)
     try:
         with transaction.atomic():
-            # La logique existante pour le suivi de la tâche est conservée
             PriseEnCompte.objects.get_or_create(action_agent=action_agent, defaults={'agent': request.user.agent_profile})
             action_agent.statut = Action.StatutAction.VALIDEE
             action_agent.avancement = 100
             action_agent.save()
             update_parent_progress(action_agent)
 
-            # On vérifie si l'objet source de l'action est bien un Document
-            # C'est cette vérification qui garantit la généricité de votre module de suivi.
             if isinstance(action_agent.objet_source, Document):
                 document_concerne = action_agent.objet_source
-                # On crée l'enregistrement d'audit dans notre nouveau modèle.
-                # get_or_create est parfait car il évite les doublons si l'action est
-                # validée plusieurs fois par erreur.
                 DocumentPriseEnCompte.objects.get_or_create(
                     document=document_concerne,
                     agent=request.user.agent_profile
@@ -282,15 +272,9 @@ def archives_actions_view(request):
     }
     return render(request, 'suivi/archives_actions.html', context)
 
-# ==============================================================================
-#                 VUE POUR LE PONT DEPUIS LES AUTRES MODULES
-# ==============================================================================
 @login_required
 @effective_permission_required('suivi.add_action')
 def creer_action_depuis_source_view(request, content_type_id, object_id):
-    """
-    Crée une action de suivi en la liant à un objet source (ex: un CyberRisque).
-    """
     try:
         content_type = get_object_or_404(ContentType, pk=content_type_id)
         source_object = content_type.get_object_for_this_type(pk=object_id)
@@ -302,13 +286,12 @@ def creer_action_depuis_source_view(request, content_type_id, object_id):
         form = CreateActionForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
             action = form.save(commit=False)
-            action.objet_source = source_object # On établit le lien générique
+            action.objet_source = source_object
             action.save()
-            form.save_m2m() # Important pour les champs ManyToMany comme 'centres'
+            form.save_m2m()
             messages.success(request, f"L'action '{action.numero_action}' a été créée et liée à '{source_object}'.")
             return redirect('suivi:detail-action', action_id=action.id)
     else:
-        # Pré-remplir le formulaire avec des informations contextuelles
         initial_data = {
             'titre': f"Action suite à : {source_object}",
             'description': f"Suite à l'identification de l'élément '{source_object}', veuillez effectuer les actions suivantes :"

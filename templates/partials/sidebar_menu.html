@@ -1,14 +1,18 @@
-<!-- Fichier : templates/partials/sidebar_menu.html (Version Finale Complète et Corrigée) -->
+<!-- Fichier : templates/partials/sidebar_menu.html (Version Corrigée et Optimisée) -->
 
 <ul class="list-unstyled components">
     
-    <!-- BLOC 1 : VUE SUPERVISION NATIONALE -->
+    <!-- ========================================================== -->
+    <!--            BLOC 1 : VUES SPÉCIFIQUES AU RÔLE               -->
+    <!-- ========================================================== -->
+
+    <!-- Vue Supervision Nationale -->
     {% if is_supervisor_view %}
         <li><a href="{% url 'selecteur-centre' %}?next_view=tour-de-service-centre"><i class="bi bi-calendar-week"></i>Tour de Service (Supervision)</a></li>
         <li><a href="{% url 'selecteur-centre' %}?next_view=cahier-de-marche"><i class="bi bi-book"></i>Cahier de Marche (Supervision)</a></li>
     {% endif %}
 
-    <!-- BLOC 2 : VUE OPÉRATIONNELLE DE CENTRE -->
+    <!-- Vue Opérationnelle de Centre -->
     {% if show_operational_view and centre_agent %}
         <li><a href="{% url 'tour-de-service-centre' centre_agent.id %}"><i class="bi bi-calendar-week"></i>Tour de Service</a></li>
         <li class="nav-item">
@@ -48,14 +52,12 @@
                     <li><a href="{% url 'feuille-temps-specific-jour' centre_agent.id today|date:'Y-m-d' %}" class="ps-4">Feuille d'heure</a></li>
                     <li><a href="{% url 'ajouter-panne' centre_agent.id %}" class="ps-4">Signaler une Panne</a></li>
                     <li><a href="{% url 'ajouter-evenement' centre_agent.id %}" class="ps-4">Consigner un Événement</a></li>
-                    <!-- RÉINTÉGRATION DU LIEN CONTEXTUEL POUR LE CDQ -->
                     <li><a href="{% url 'qs:pre-declarer-fne' centre_agent.id %}" class="ps-4 text-warning fw-bold">Signaler un Événement QS</a></li>
                     <li><a href="{% url 'gestion-zone' centre_agent.id %}" class="ps-4">Gestion Zone</a></li>
                 {% else %}
                     <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle.">Feuille d'heure</span></li>
                     <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle.">Signaler une Panne</span></li>
                     <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle.">Consigner un Événement</span></li>
-                    <!-- RÉINTÉGRATION DU LIEN CONTEXTUEL (désactivé) -->
                     <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle.">Signaler un Événement QS</span></li>
                     <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle.">Gestion Zone</span></li>
                 {% endif %}
@@ -65,7 +67,10 @@
         </li>
     {% endif %}
 
-    <!-- BLOC 3 : MENUS DE GESTION DE DOMAINE -->
+    <!-- ========================================================== -->
+    <!--            BLOC 2 : MENUS DE GESTION DE DOMAINE            -->
+    <!-- ========================================================== -->
+    
     {% if show_sms_menu %}
     <li class="nav-item">
         <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#collapseSms" data-bs-toggle="collapse" aria-expanded="false">
@@ -112,9 +117,7 @@
             <div><i class="bi bi-shield-check"></i><span>Sécurité aérienne</span></div><i class="bi bi-chevron-right sidebar-chevron"></i>
         </a>
         <ul class="collapse list-unstyled" id="collapseSecu">
-            <!-- LOGIQUE CORRIGÉE ET SIMPLIFIÉE -->
             <li><a href="{% url 'qs:tableau-bord-qs' %}" class="ps-4">Tableau des FNE</a></li>
-           
         </ul>
     </li>
     {% endif %}
@@ -126,13 +129,9 @@
             <i class="bi bi-chevron-right sidebar-chevron"></i>
         </a>
         <ul class="collapse list-unstyled" id="collapseCyber">
-        
-            {# Vue Centrale (Nationale) #}
             {% if is_smsi_central_view %}
                 <li><a href="{% url 'cyber:dashboard' %}" class="ps-4">Tableau de Bord National</a></li>
             {% endif %}
-
-            {# Vue Locale (par Centre) - UN SEUL LIEN #}
             {% if is_relais_local_view and centre_agent %}
                 <li><a href="{% url 'cyber:smsi-detail' centre_agent.id %}" class="ps-4">Pilotage SMSI [{{ centre_agent.code_centre }}]</a></li>
             {% endif %}
@@ -140,10 +139,12 @@
     </li>
     {% endif %}
 
-    <!-- BLOC 4 : LIENS UNIVERSELS -->
+    <!-- ========================================================== -->
+    <!--               BLOC 3 : LIENS UNIVERSELS                  -->
+    <!-- ========================================================== -->
     <hr>
     
-    <!-- AJOUT DU LIEN UNIVERSEL POUR TOUS LES AGENTS -->
+    <!-- Lien pour déclarer un événement QS (pour les utilisateurs locaux) -->
     {% if user.is_authenticated and user.agent_profile.centre %}
         <li>
             <a href="{% url 'qs:pre-declarer-fne' user.agent_profile.centre.id %}" class="text-warning">
@@ -152,15 +153,41 @@
         </li>
     {% endif %}
 
+    <!-- Lien pour soumettre un feedback (pour tous les utilisateurs) -->
+    {% if user.is_authenticated and user.agent_profile %}
+    <li>
+        <a href="{% url 'feedback:soumettre' %}" class="text-info">
+            <i class="bi bi-chat-left-text-fill"></i>Faire une suggestion
+        </a>
+    </li>
+    {% endif %}
+
+    <!-- Lien vers le tableau de suivi (pour tous les utilisateurs) -->
     <li><a href="{% url 'suivi:tableau-actions' %}"><i class="bi bi-clipboard2-data-fill"></i>Tableau de Suivi</a></li>
+    
     <hr>
-    {% if user.is_staff %}
+    
+    <!-- ========================================================== -->
+    <!--               BLOC 4 : MENU ADMINISTRATION                 -->
+    <!-- ========================================================== -->
+    {% if user.is_staff or is_supervisor_view %}
     <li>
         <a href="#adminSubmenu" data-bs-toggle="collapse" aria-expanded="false" class="dropdown-toggle"><i class="bi bi-gear-fill"></i>Administration</a>
         <ul class="collapse list-unstyled" id="adminSubmenu">
             <li><a href="#" class="ps-4">Gestion Utilisateurs</a></li>
+            
+            <!-- Lien pour le tableau de bord des feedbacks (pour les admins/superviseurs) -->
+            {% if effective_perms.feedback.view_feedback_dashboard %}
+            <li>
+                <a href="{% url 'feedback:tableau-de-bord' %}" class="ps-4">
+                    <i class="bi bi-mailbox"></i> Retours Utilisateurs
+                </a>
+            </li>
+            {% endif %}
+            
             <li><a href="#" class="ps-4">Paramètres</a></li>
         </ul>
     </li>
-    {% endif %}
+    {% endif %} <!-- Fin du bloc Administration -->
+
 </ul>

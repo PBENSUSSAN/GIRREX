@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'feedback:tableau-de-bord' %}">Tableau de Bord Feedback</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Détail du Feedback #{{ feedback.id }}</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <div class="col-md-7">
+            <div class="card shadow-sm">
+                <div class="card-header"><h4>Détails de la demande</h4></div>
+                <div class="card-body">
+                    <h5>{{ feedback.titre }}</h5>
+                    <p><small class="text-muted">Soumis par {{ feedback.auteur }} le {{ feedback.created_at|date:"d/m/Y à H:i" }}</small></p>
+                    <hr>
+                    <p><strong>Catégorie :</strong> {{ feedback.get_categorie_display }}</p>
+                    <p><strong>Module concerné :</strong> {{ feedback.get_module_concerne_display }}</p>
+                    <hr>
+                    <h6>Description complète :</h6>
+                    <p>{{ feedback.description|linebreaksbr }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <div class="card shadow-sm">
+                <div class="card-header"><h4>Suivi de la demande</h4></div>
+                <div class="card-body">
+                    {% if action_suivi %}
+                        <p>Cette demande est suivie via l'action <strong>{{ action_suivi.numero_action }}</strong>.</p>
+                        <ul>
+                            <li><strong>Statut :</strong> {{ action_suivi.get_statut_display }}</li>
+                            <li><strong>Responsable du traitement :</strong> {{ action_suivi.responsable }}</li>
+                            <li><strong>Échéance :</strong> {{ action_suivi.echeance|date:"d/m/Y" }}</li>
+                        </ul>
+                        <a href="{% url 'suivi:detail-action' action_suivi.id %}" class="btn btn-primary">
+                            <i class="bi bi-box-arrow-up-right me-1"></i> Voir l'action dans le module de suivi
+                        </a>
+                    {% else %}
+                        <div class="alert alert-warning">Cette demande n'a pas encore généré d'action de suivi.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

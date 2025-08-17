@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h3>{{ titre }}</h3>
+    <div class="card shadow-sm mt-3">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped">
+                    <thead>
+                        <tr>
+                            <th>Titre</th>
+                            <th>Auteur</th>
+                            <th>Catégorie</th>
+                            <th>Module</th>
+                            <th>Date de soumission</th>
+                            <th>Statut du Suivi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in feedback_list %}
+                        <tr>
+                            <td><a href="{% url 'feedback:detail' item.id %}"><strong>{{ item.titre }}</strong></a></td>
+                            <td>{{ item.auteur }}</td>
+                            <td>{{ item.get_categorie_display }}</td>
+                            <td>{{ item.get_module_concerne_display }}</td>
+                            <td>{{ item.created_at|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                {% with action=item.action_suivi.first %}
+                                    {% if action %}
+                                        <span class="badge bg-primary">{{ action.get_statut_display }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Non pris en charge</span>
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">Aucun retour utilisateur pour le moment.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

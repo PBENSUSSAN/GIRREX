@@ -29,6 +29,7 @@ urlpatterns = [
     path('qs/', include('qs.urls')),
     path('es/', include('es.urls')),
     path('cyber/', include('cyber.urls')),
+    path('feedback/', include('feedback.urls')),
 ]
 
 if settings.DEBUG:

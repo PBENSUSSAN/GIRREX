@@ -148,3 +148,13 @@ class AddActionCommentForm(forms.Form):
         label="Ajouter un commentaire",
         help_text="Décrivez l'avancement ou l'action réalisée."
     )
+
+class FeedbackForm(forms.Form):
+    TYPE_CHOICES = [
+        ('CORRECTION', 'Demande de Correction (Bug)'),
+        ('AMELIORATION', 'Demande d\'Amélioration'),
+        ('QUESTION', 'Question'),
+    ]
+    type_demande = forms.ChoiceField(choices=TYPE_CHOICES, label="Type de demande")
+    titre = forms.CharField(label="Objet de votre demande", max_length=255)
+    description = forms.CharField(label="Description détaillée", widget=forms.Textarea(attrs={'rows': 6}))

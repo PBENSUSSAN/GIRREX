@@ -25,4 +25,6 @@ urlpatterns = [
     path('archives/', views.archives_actions_view, name='archives-actions'),
 
     path('creer-depuis-source/<int:content_type_id>/<int:object_id>/', views.creer_action_depuis_source_view, name='creer-action-depuis-source'),
+
+    
 ]

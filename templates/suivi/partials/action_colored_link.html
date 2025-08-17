@@ -1,19 +1,34 @@
-<!-- Fichier : templates/suivi/partials/action_colored_link.html -->
+<!-- Fichier : templates/suivi/partials/action_colored_link.html (Version Complète) -->
 {% comment %}
-    Ce petit template réutilisable génère un lien coloré pour une action.
-    Il attend qu'une variable "action" lui soit passée.
-    La couleur est déterminée par la CATEGORIE de l'action.
+    Ce template génère un lien vers le détail d'un objet.
+    - Par défaut, il pointe vers le détail de l'action dans le module 'suivi'.
+    - CAS SPÉCIAL : Si l'action est un 'TRAITEMENT_FEEDBACK', il pointe directement
+      vers la page de détail du feedback lui-même pour un accès plus rapide.
 {% endcomment %}
 
-<a href="{% url 'suivi:detail-action' action.id %}" class="text-decoration-underline fw-bold
-    {% if action.categorie == 'TRAITEMENT_RISQUE_CYBER' or action.categorie == 'REMEDIATION_INCIDENT_CYBER' %}category-cyber-link
-    {% elif action.categorie == 'RECOMMANDATION_QS' %}category-qs-reco-link
-    {% elif action.categorie == 'DIFFUSION_DOC' %}category-doc-link
-    {% elif action.categorie == 'AUDIT' %}category-audit-link
-    {% elif action.categorie == 'FONCTIONNEMENT' %}category-fonctionnement-link
-    {% elif action.categorie == 'PRISE_EN_COMPTE_DOC' %}category-secondary-link
-    {% else %}
-        category-default-link
-    {% endif %}">
-    <strong>{{ action.numero_action }}</strong>
-</a>
+{% if action.categorie == 'TRAITEMENT_FEEDBACK' and action.objet_source %}
+    {# Si c'est un feedback, on pointe vers feedback:detail #}
+    <a href="{% url 'feedback:detail' action.object_id %}" class="text-decoration-underline fw-bold category-default-link" title="Voir le feedback d'origine">
+        <strong>{{ action.numero_action }}</strong>
+    </a>
+{% else %}
+    {# Pour toutes les autres actions, on pointe vers le détail de l'action #}
+    <a href="{% url 'suivi:detail-action' action.id %}" class="text-decoration-underline fw-bold
+        {% if action.categorie == 'TRAITEMENT_RISQUE_CYBER' or action.categorie == 'REMEDIATION_INCIDENT_CYBER' %}category-cyber-link
+        
+        {% elif action.categorie == 'RECOMMANDATION_QS' or action.categorie == 'INSTRUCTION_FNE' %}category-qs-reco-link
+        
+        {% elif action.categorie == 'DIFFUSION_DOC' or action.categorie == 'RELECTURE_DOC' or action.categorie == 'VALIDATION_AVENANT' %}category-doc-link
+        
+        {% elif action.categorie == 'ETUDE_SECURITE' or action.categorie == 'SUIVI_MRR' %}category-es-link
+
+        {% elif action.categorie == 'AUDIT' %}category-audit-link
+        
+        {% elif action.categorie == 'FONCTIONNEMENT' %}category-fonctionnement-link
+        
+        {% elif action.categorie == 'PRISE_EN_COMPTE_DOC' %}category-secondary-link
+        
+        {% else %}category-default-link{% endif %}">
+        <strong>{{ action.numero_action }}</strong>
+    </a>
+{% endif %}

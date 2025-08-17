@@ -3,17 +3,13 @@
 /* Définition des polices et couleurs de base */
 body { 
     font-family: sans-serif; 
-    background-color: #f0f2f5;
-    /* On empêche le body lui-même d'avoir un ascenseur */
-    overflow-y: hidden;
+    background-color: #f0f2f5; 
 }
 
 .wrapper {
     display: flex;
     width: 100%;
     align-items: stretch;
-    /* Le wrapper prend 100% de la hauteur de la fenêtre */
-    height: 100vh;
 }
 
 /* ================== */
@@ -25,11 +21,15 @@ body {
     background: #002346;
     color: #fff;
     transition: all 0.3s;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    /* On s'assure qu'elle ne dépasse jamais de l'écran */
-    height: 100vh;
+    
+    /* --- CORRECTION POUR LE SCROLL --- */
+    /* On fixe la hauteur à 100% de la fenêtre */
+    height: 100vh; 
+    /* On la positionne de manière fixe pour qu'elle ne bouge pas */
+    position: sticky;
+    top: 0;
+    /* On lui dit d'afficher un ascenseur si son contenu dépasse */
+    overflow-y: auto;
 }
 
 .sidebar-header {
@@ -48,12 +48,9 @@ body {
     justify-content: center;
 }
 
-/* La liste des menus devient scrollable si elle est trop grande */
 #sidebar ul.components {
     padding: 20px 0;
     border-bottom: 1px solid #47748b;
-    overflow-y: auto; /* Ajoute un ascenseur si nécessaire */
-    flex-grow: 1; /* Permet à cette section de prendre l'espace vertical restant */
 }
 
 #sidebar ul p {
@@ -95,7 +92,6 @@ ul ul a {
 .user-info {
     padding: 20px;
     border-top: 1px solid #47748b;
-    flex-shrink: 0; /* Empêche cette section de rétrécir */
 }
 
 .user-info a {
@@ -116,10 +112,8 @@ ul ul a {
     width: 100%;
     padding: 20px 40px;
     transition: all 0.3s;
-    /* Ajoute un ascenseur vertical au contenu SI NÉCESSAIRE */
-    overflow-y: auto;
-    /* Le contenu prend 100% de la hauteur de la fenêtre */
-    height: 100vh;
+    /* On retire la hauteur fixe pour que le contenu puisse s'étirer */
+    min-height: 100vh;
 }
 
 table {
@@ -218,37 +212,27 @@ a.nav-link:not(.collapsed) .sidebar-chevron {
 /* COULEURS PERSONNALISÉES POUR LES LIENS D'ACTION DE SUIVI   */
 /* ========================================================== */
 
-/* Pour les catégories CYBER */
 .category-cyber-link {
-    color: #980c21 !important; /* Rouge foncé */
+    color: #980c21 !important;
 }
-
-/* Pour la catégorie RECOMMANDATION_QS */
 .category-qs-reco-link {
-    color: #b1d60d !important; /* Jaune doré */
+    color: #b1d60d !important;
 }
-
-/* Pour la catégorie DIFFUSION_DOC */
 .category-doc-link {
-    color: #2ECC71 !important; /* Vert clair */
+    color: #2ECC71 !important;
 }
-
-/* Pour la catégorie AUDIT */
 .category-audit-link {
-    color: #5DADE2 !important; /* Bleu clair */
+    color: #5DADE2 !important;
 }
-
-/* Pour la catégorie FONCTIONNEMENT */
 .category-fonctionnement-link {
-    color: #3498DB !important; /* Bleu standard */
+    color: #3498DB !important;
 }
-
-/* Pour les catégories de second rang comme PRISE_EN_COMPTE */
 .category-secondary-link {
-    color: #808B96 !important; /* Gris */
+    color: #808B96 !important;
 }
-
-/* Pour tout le reste (fallback) */
+.category-es-link {
+    color: #6f42c1 !important; /* Violet Bootstrap */
+}
 .category-default-link {
-    color: #2C3E50 !important; /* Gris/Bleu très foncé */
+    color: #2C3E50 !important;
 }

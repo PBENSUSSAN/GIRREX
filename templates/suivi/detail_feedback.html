@@ -1,0 +1,83 @@
+<!-- Fichier : templates/suivi/detail_feedback.html -->
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ titre }} - GIRREX{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'suivi:feedback-dashboard' %}">Tableau des Demandes</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ action.numero_action }}</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <!-- Colonne de gauche : Informations et Formulaires -->
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">{{ titre }}</h4>
+                    <span class="badge bg-info fs-6">{{ action.get_statut_display }}</span>
+                </div>
+                <div class="card-body">
+                    {% if createur %}
+                    <div class="alert alert-light">
+                        <strong>Demandeur :</strong> {{ createur.agent_profile }} ({{ createur.username }})
+                    </div>
+                    {% endif %}
+
+                    <!-- Formulaire pour modifier le statut/responsable (uniquement pour l'admin) -->
+                    <form method="post" action="{% url 'suivi:detail-feedback' action.id %}">
+                        {% csrf_token %}
+                        <div id="update-form-wrapper">
+                             {{ update_form|crispy }}
+                        </div>
+                        <div class="d-flex justify-content-end mt-4">
+                             <a href="{% url 'suivi:feedback-dashboard' %}" class="btn btn-secondary me-2">Retour au tableau</a>
+                            {% if can_edit %}
+                            <button type="submit" name="update_action" class="btn btn-primary">
+                                <i class="bi bi-save-fill"></i> Mettre à jour la demande
+                            </button>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm mt-4">
+                <div class="card-header"><h5>Ajouter un Commentaire</h5></div>
+                 <div class="card-body">
+                     <!-- Formulaire pour ajouter un commentaire -->
+                     <form method="post" action="{% url 'suivi:detail-feedback' action.id %}">
+                         {% csrf_token %}
+                         {{ comment_form|crispy }}
+                         <button type="submit" name="add_comment" class="btn btn-secondary mt-3">Ajouter le commentaire</button>
+                     </form>
+                 </div>
+            </div>
+        </div>
+
+        <!-- Colonne de droite : Historique -->
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-header"><h5>Historique de la Demande</h5></div>
+                <ul class="list-group list-group-flush" style="max-height: 500px; overflow-y: auto;">
+                    {% for event in historique %}
+                        <li class="list-group-item">
+                            <p class="mb-1"><strong>{{ event.get_type_evenement_display }}</strong> par <strong>{{ event.auteur.username }}</strong></p>
+                            <small class="text-muted">{{ event.timestamp|date:"d/m/Y à H:i" }}</small>
+                            {% if event.details.commentaire %}
+                                <p class="mb-0 mt-1 fst-italic">"{{ event.details.commentaire }}"</p>
+                            {% endif %}
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item text-muted">Aucun événement enregistré.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

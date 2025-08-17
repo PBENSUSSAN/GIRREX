@@ -21,8 +21,23 @@ class ActionQuerySet(models.QuerySet):
         q_responsable = models.Q(responsable=agent)
         q_responsable_parent = models.Q(parent__responsable=agent)
         q_a_une_sous_tache_assignee = models.Q(sous_taches__responsable=agent)
+
+        from feedback.models import Feedback
         
-        final_query = q_responsable | q_responsable_parent | q_a_une_sous_tache_assignee
+        try:
+            feedback_content_type = ContentType.objects.get_for_model(Feedback)
+            feedback_crees_par_agent_ids = Feedback.objects.filter(auteur=agent).values_list('pk', flat=True)
+            
+            # Condition pour voir les actions si on est l'auteur du feedback source
+            q_est_auteur_du_feedback = models.Q(
+                content_type=feedback_content_type,
+                object_id__in=list(feedback_crees_par_agent_ids)
+            )
+        except ContentType.DoesNotExist:
+            q_est_auteur_du_feedback = models.Q()
+
+        # On combine TOUTES les conditions de visibilité
+        final_query = q_responsable | q_responsable_parent | q_a_une_sous_tache_assignee | q_est_auteur_du_feedback
         
         return self.filter(final_query).distinct()
 
@@ -52,13 +67,13 @@ class Action(models.Model):
         AUDIT = 'AUDIT', 'Audit'
         ETUDE_SECURITE = 'ETUDE_SECURITE', 'Étude de Sécurité'
         INSTRUCTION_FNE = 'INSTRUCTION_FNE', 'Instruction FNE (QS)'
-        # --- NOUVELLES CATÉGORIES ---
         RELECTURE_DOC = 'RELECTURE_DOC', 'Relecture Documentaire'
         VALIDATION_AVENANT = 'VALIDATION_AVENANT', 'Validation d\'Avenant'
         SUIVI_MRR = 'SUIVI_MRR', 'Suivi de MRR'
-
         TRAITEMENT_RISQUE_CYBER = 'TRAITEMENT_RISQUE_CYBER', 'Traitement de Risque Cyber'
         REMEDIATION_INCIDENT_CYBER = 'REMEDIATION_INCIDENT_CYBER', 'Remédiation d\'Incident Cyber'
+        FEEDBACK_UTILISATEUR = 'FEEDBACK_UTILISATEUR', 'Feedback Utilisateur'
+        TRAITEMENT_FEEDBACK = 'TRAITEMENT_FEEDBACK', 'Traitement Retour Utilisateur'
     
     class StatutAction(models.TextChoices):
         A_FAIRE = 'A_FAIRE', 'À faire'

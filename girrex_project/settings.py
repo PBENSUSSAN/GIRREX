@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'qs',
     'es',
     'cyber',
+    'feedback',
     'crispy_forms',
     'crispy_bootstrap5',
     'django_filters',
