@@ -97,3 +97,51 @@ def resoudre_panne_view(request, panne_id):
         messages.warning(request, "Cette panne est déjà résolue.")
 
     return redirect('technique:liste-pannes')
+
+@login_required
+@effective_permission_required('technique.add_pannecentre', raise_exception=True)
+def creer_panne_administrative_view(request):
+    """
+    Vue DÉDIÉE à la création d'une panne par un utilisateur habilité
+    (ex: ES Local) DEPUIS LA BIBLIOTHÈQUE.
+    Cette vue ne vérifie PAS le verrou du CDQ.
+    """
+    if not hasattr(request.user, 'agent_profile'):
+        messages.error(request, "Votre compte n'est pas lié à un profil Agent.")
+        return redirect('technique:liste-pannes')
+        
+    centre_utilisateur = getattr(request, 'centre_agent', None)
+    if not centre_utilisateur:
+        messages.error(request, "Impossible de déterminer votre centre de travail. Veuillez sélectionner un rôle local.")
+        return redirect('technique:liste-pannes')
+
+    if request.method == 'POST':
+        # Le formulaire n'inclut pas le champ 'centre', on le passe en initial
+        form = PanneCentreForm(request.POST, initial={'centre': centre_utilisateur})
+        if form.is_valid():
+            panne = form.save(commit=False)
+            panne.centre = centre_utilisateur # Assignation explicite du centre depuis le contexte
+            panne.auteur = request.user.agent_profile
+            panne.save()
+
+            PanneHistorique.objects.create(
+                panne=panne,
+                type_evenement=PanneHistorique.TypeEvenement.CREATION,
+                auteur=request.user,
+                details={'message': f'Création (administrative) par {request.user.username} depuis la bibliothèque.'}
+            )
+            messages.success(request, f"La panne pour le centre {panne.centre.code_centre} a été enregistrée.")
+            return redirect('technique:liste-pannes')
+    else:
+        form = PanneCentreForm()
+    
+    # On s'assure que le formulaire n'affiche pas le champ 'centre'
+    if 'centre' in form.fields:
+        form.fields.pop('centre')
+    
+    context = {
+        'form': form,
+        'titre': f"Signaler une panne pour le centre {centre_utilisateur.code_centre}",
+        'centre': centre_utilisateur,
+    }
+    return render(request, 'core/form_generique.html', context)

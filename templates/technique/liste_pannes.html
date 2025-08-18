@@ -17,8 +17,9 @@
                     <i class="bi bi-book"></i> Aller au Cahier de Marche
                 </a>
             {% endif %}
-            {% if request.centre_agent and effective_perms.technique.add_pannecentre %}
-                <a href="{% url 'ajouter-panne' request.centre_agent.id %}?next={% url 'technique:liste-pannes' %}" class="btn btn-primary">
+            {% if effective_perms.technique.add_pannecentre %}
+                {# Le lien pointe vers la nouvelle vue dédiée 'creer-panne-administrative'. #}
+                <a href="{% url 'technique:creer-panne-administrative' %}" class="btn btn-primary">
                     <i class="bi bi-plus-circle-fill"></i> Créer une panne
                 </a>
             {% endif %}

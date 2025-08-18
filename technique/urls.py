@@ -15,6 +15,7 @@ urlpatterns = [
     path('miso/archives/', miso.archives_miso_view, name='archives-miso'),
 
     path('pannes/liste/', pannes.liste_pannes_view, name='liste-pannes'),
+    path('pannes/creer-administrative/', pannes.creer_panne_administrative_view, name='creer-panne-administrative'),
     path('pannes/<int:panne_id>/detail/', pannes.detail_panne_view, name='detail-panne'),
 
     path('pannes/<int:panne_id>/resoudre/', pannes.resoudre_panne_view, name='resoudre-panne'),

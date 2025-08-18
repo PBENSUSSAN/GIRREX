@@ -26,6 +26,8 @@ def generer_numero_action(categorie, centre=None):
     # --- AJOUT DE LA CONDITION POUR LES NOUVELLES CATÉGORIES ---
     elif categorie in [Action.CategorieAction.TRAITEMENT_RISQUE_CYBER, Action.CategorieAction.REMEDIATION_INCIDENT_CYBER]:
         prefix_metier = "CYBER"
+    elif categorie in [Action.CategorieAction.TRAITEMENT_FEEDBACK, Action.CategorieAction.FEEDBACK_UTILISATEUR]:
+        prefix_metier = "FEEDBACK"
     # --- FIN DE L'AJOUT ---
     else: # Pour les autres cas (diffusion doc, etc.)
         prefix_metier = categorie.name.split('_')[0]
