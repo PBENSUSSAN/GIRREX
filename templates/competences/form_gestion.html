@@ -1,0 +1,44 @@
+<!-- Fichier : templates/competences/form_gestion.html -->
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ titre }} - GIRREX{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'competences:tableau_bord' %}">Tableau de Bord</a></li>
+                    
+                    {# ### CORRECTION ### : On utilise agent_concerne.id_agent #}
+                    <li class="breadcrumb-item"><a href="{% url 'competences:dossier_competence' agent_concerne.id_agent %}">Dossier {{ agent_concerne.trigram }}</a></li>
+                    
+                    <li class="breadcrumb-item active" aria-current="page">{{ titre }}</li>
+                </ol>
+            </nav>
+
+            <div class="card shadow-sm mt-3">
+                <div class="card-header"><h4>{{ titre }}</h4></div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        <div class="d-flex justify-content-end mt-4">
+                            {# ### CORRECTION ### : On utilise agent_concerne.id_agent #}
+                            <a href="{% url 'competences:dossier_competence' agent_concerne.id_agent %}" class="btn btn-secondary me-2">Annuler</a>
+                            
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-2"></i>Enregistrer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

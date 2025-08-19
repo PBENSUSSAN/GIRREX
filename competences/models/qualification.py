@@ -34,7 +34,7 @@ class Qualification(models.Model):
 
 class MentionUnite(models.Model):
     """
-    Représente le privilège d'exercer une qualification dans un centre donné.
+    Représente le privilège d'exercer dans un centre donné pour un type de trafic (CAM/CAG).
     C'est le contrat d'objectifs pour le maintien de compétences.
     """
     class TypeFlux(models.TextChoices):
@@ -46,7 +46,12 @@ class MentionUnite(models.Model):
         INACTIVE_MUTATION = 'INACTIVE_MUTATION', 'Inactive (suite à mutation)'
         EXPIREE = 'EXPIREE', 'Expirée'
 
-    qualification = models.ForeignKey(Qualification, on_delete=models.CASCADE, related_name='mentions_unite')
+    # ### CORRECTION MAJEURE : La mention est maintenant liée à la Licence directement.
+    licence = models.ForeignKey(Licence, on_delete=models.CASCADE, related_name='mentions_unite')
+    
+    # La qualification devient une information contextuelle (Quel diplôme est utilisé pour cette mention ?)
+    qualification_source = models.ForeignKey(Qualification, on_delete=models.PROTECT, related_name='mentions_associees')
+
     centre = models.ForeignKey(Centre, on_delete=models.CASCADE, related_name='mentions_delivrees')
     type_flux = models.CharField(max_length=3, choices=TypeFlux.choices, verbose_name="Type de Mention")
     mention_particuliere = models.CharField(max_length=100, blank=True, verbose_name="Position/Secteur (ex: TOUR)")
@@ -60,15 +65,12 @@ class MentionUnite(models.Model):
     date_debut_cycle = models.DateField()
 
     class Meta:
-        unique_together = ('qualification', 'centre', 'type_flux')
+        unique_together = ('licence', 'centre', 'type_flux', 'mention_particuliere')
         verbose_name = "Mention d'Unité"
         verbose_name_plural = "Mentions d'Unité"
-        # La section "permissions" est supprimée car Django crée déjà
-        # 'add_mentionunite', 'change_mentionunite', 'delete_mentionunite', 'view_mentionunite'
-        # automatiquement.
 
     @property
     def is_valide(self):
         return (self.statut == self.StatutMention.ACTIVE and 
                 self.date_echeance >= timezone.now().date() and
-                self.qualification.licence.statut == Licence.Statut.VALIDE)
+                self.licence.statut == Licence.Statut.VALIDE)

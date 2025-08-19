@@ -1,0 +1,40 @@
+<!-- Fichier : templates/competences/journal_audit.html -->
+{% extends "base.html" %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h3>{{ titre }}</h3>
+    <p class="text-muted">Cette page liste les actions automatiques effectuées par le système de surveillance nocturne.</p>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <table class="table table-sm table-striped">
+                <thead>
+                    <tr>
+                        <th>Date & Heure</th>
+                        <th>Agent Concerné</th>
+                        <th>Événement Détecté</th>
+                        <th>Détails</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in historique_list %}
+                    <tr>
+                        <td>{{ item.timestamp|date:"d/m/Y H:i:s" }}</td>
+                        <td>{{ item.licence.agent.trigram }}</td>
+                        <td>{{ item.get_type_evenement_display }}</td>
+                        <td><pre class="mb-0"><small>{{ item.details.message }}</small></pre></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center">Aucun événement dans le journal d'audit.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

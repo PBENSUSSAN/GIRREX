@@ -25,7 +25,7 @@ def girrex_global_context(request):
         'is_supervisor_view': getattr(request, 'is_supervisor_view', False),
         'show_operational_view': getattr(request, 'show_operational_view', False),
         'show_sms_menu': getattr(request, 'show_sms_menu', False),
-        'show_formation_menu': getattr(request, 'show_formation_menu', False),
+        'show_aptitudes_menu': getattr(request, 'show_aptitudes_menu', False), 
         'show_technique_menu': getattr(request, 'show_technique_menu', False),
         'show_security_menu': getattr(request, 'show_security_menu', False),
         'show_cyber_menu': getattr(request, 'show_cyber_menu', False),

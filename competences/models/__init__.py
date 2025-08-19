@@ -2,3 +2,4 @@
 
 from .licence import Licence, MentionLinguistique, FormationReglementaire, SuiviFormationReglementaire
 from .qualification import Qualification, MentionUnite
+from .historique import HistoriqueCompetence

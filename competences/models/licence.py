@@ -1,12 +1,12 @@
 # Fichier : competences/models/licence.py
 
 from django.db import models
-from core.models import Agent, CertificatMed
+from core.models import Agent
 
 class Licence(models.Model):
     """
     Modèle central représentant l'autorisation globale d'un contrôleur.
-    Il est le pivot pour l'aptitude médicale et linguistique.
+    Il est le pivot pour l'aptitude médicale (via l'Agent) et linguistique.
     """
     class Statut(models.TextChoices):
         VALIDE = 'VALIDE', 'Valide'
@@ -21,14 +21,10 @@ class Licence(models.Model):
     
     motif_inaptitude = models.TextField(blank=True, null=True, help_text="Raison de l'inaptitude ou de la suspension.")
     date_debut_inaptitude = models.DateField(blank=True, null=True)
-
-    # Liens vers les aptitudes transversales
-    certificat_medical = models.OneToOneField(CertificatMed, on_delete=models.SET_NULL, null=True, blank=True)
     
     class Meta:
         verbose_name = "Licence de contrôleur"
         verbose_name_plural = "Licences des contrôleurs"
-        # On définit ici les permissions qui ne sont PAS créées automatiquement par Django
         permissions = [
             ('view_all_licences', 'Peut voir les dossiers de compétences de tous les agents'),
             ('view_centre_licences', 'Peut voir les dossiers de compétences des agents de son centre'),

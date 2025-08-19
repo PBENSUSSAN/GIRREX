@@ -79,11 +79,42 @@
     </li>
     {% endif %}
 
-    {% if show_formation_menu %}
+    {% if show_aptitudes_menu %}
     <li class="nav-item">
-        <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#collapseFormation" data-bs-toggle="collapse" aria-expanded="false">
-            <div><i class="bi bi-mortarboard-fill"></i><span>Formation</span></div><i class="bi bi-chevron-right sidebar-chevron"></i>
-        </a><ul class="collapse list-unstyled" id="collapseFormation"><li><a href="#" class="ps-4">Agents</a></li></ul>
+        {# On renomme le menu en "Aptitudes" et on change la cible du collapse #}
+        <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#collapseAptitudes" data-bs-toggle="collapse" aria-expanded="false">
+            <div><i class="bi bi-person-check-fill"></i><span>Aptitudes</span></div>
+            <i class="bi bi-chevron-right sidebar-chevron"></i>
+        </a>
+        {# On crée la nouvelle structure de sous-menus #}
+        <ul class="collapse list-unstyled" id="collapseAptitudes">
+            <li class="sidebar-submenu-header">Suivi des Compétences</li>
+            <li>
+                <a href="{% url 'competences:tableau_bord' %}" class="ps-4">Tableau de Bord de Suivi</a>
+            </li>
+            {% if request.user.agent_profile.centre %}
+            <li>
+                <a href="{% url 'competences:dossier_competence' request.user.agent_profile.id_agent %}" class="ps-4">Mon Dossier Personnel</a>
+            </li>
+            {% endif %}
+
+            {% if effective_perms.competences.view_all_licences %}
+            <li class="sidebar-submenu-header">Supervision & Audit</li>
+            <li>
+                <a href="{% url 'competences:journal_audit' %}" class="ps-4">
+                    <i class="bi bi-clipboard2-pulse-fill"></i> Journal d'Audit Système
+                </a>
+            </li>
+            {% endif %}
+
+            <li class="sidebar-submenu-header">Gestion de la Formation</li>
+            <li>
+                <a href="#" class="ps-4 disabled">Catalogue des Formations</a>
+            </li>
+            <li>
+                <a href="#" class="ps-4 disabled">Plan de Formation</a>
+            </li>
+        </ul>
     </li>
     {% endif %}
 

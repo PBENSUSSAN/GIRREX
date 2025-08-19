@@ -55,7 +55,8 @@ class GirrexContextMiddleware:
         request.is_supervisor_view = False
         request.show_operational_view = False
         request.show_sms_menu = False
-        request.show_formation_menu = False
+        #request.show_formation_menu = False
+        request.show_aptitudes_menu = False 
         request.show_technique_menu = False
         request.show_cyber_menu = False
         request.is_smsi_central_view = False
@@ -116,13 +117,17 @@ class GirrexContextMiddleware:
             manager_roles = [Role.RoleName.CHEF_DE_CENTRE, Role.RoleName.ADJOINT_CHEF_DE_CENTRE]
             roles_ops = [Role.RoleName.CONTROLEUR, Role.RoleName.CHEF_DE_QUART, Role.RoleName.COORDONATEUR] + manager_roles
             cyber_roles_specifiques = [Role.RoleName.ADJOINT_SMSI, Role.RoleName.SMSI_LOCAL]
+            roles_aptitudes = [Role.RoleName.ADJOINT_FORM, Role.RoleName.FORM_LOCAL]
+            
+            
+            
+            
             if role_nom in super_roles: request.is_supervisor_view = True
             if role_nom in roles_ops: request.show_operational_view = True
             
             
+            if role_nom in super_roles or role_nom in manager_roles or role_nom in roles_aptitudes:request.show_aptitudes_menu = True
             if role_nom in super_roles or role_nom in manager_roles or role_nom in [Role.RoleName.ADJOINT_CONFORMITE, Role.RoleName.SMS_LOCAL, Role.RoleName.RESPONSABLE_SMS]: request.show_sms_menu = True
-            if role_nom in super_roles or role_nom in manager_roles or role_nom in [Role.RoleName.ADJOINT_FORM, Role.RoleName.FORM_LOCAL]: request.show_formation_menu = True
-            #if role_nom in super_roles or role_nom in manager_roles or role_nom in [Role.RoleName.ES_LOCAL, Role.RoleName.ADJOINT_ES]: request.show_technique_menu = True
             if role_nom in super_roles or role_nom in manager_roles or role_nom in [Role.RoleName.ES_LOCAL, Role.RoleName.ADJOINT_ES, Role.RoleName.RESPONSABLE_SMS]: request.show_technique_menu = True
             if role_nom in super_roles or role_nom in manager_roles or role_nom in [Role.RoleName.QS_LOCAL, Role.RoleName.ADJOINT_QS]: request.show_security_menu = True
             if role_nom in super_roles or role_nom in cyber_roles_specifiques: request.show_cyber_menu = True

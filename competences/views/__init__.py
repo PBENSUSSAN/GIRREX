@@ -1,0 +1,2 @@
+from .dossier import dossier_competence_view, tableau_bord_competences_view
+from .gestion import gerer_licence_view, ajouter_qualification_view, gerer_mention_unite_view

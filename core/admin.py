@@ -72,9 +72,14 @@ class ModuleAdmin(admin.ModelAdmin):
     list_filter = ('module_type', 'module')
     search_fields = ('sujet', 'item', 'precisions')
 
+@admin.register(CertificatMed)
+class CertificatMedAdmin(admin.ModelAdmin):
+    list_display = ('agent', 'classe', 'date_visite', 'validite')
+    search_fields = ('agent__trigram', 'agent__reference', 'agent__nom', 'classe') # Indique à Django comment chercher un certificat
+    autocomplete_fields = ('agent',)
+
 admin.site.register(Qualification)
 admin.site.register(Mention)
-admin.site.register(CertificatMed)
 admin.site.register(Organisme)
 admin.site.register(Evaluation)
 admin.site.register(Habilitation)

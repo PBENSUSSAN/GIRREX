@@ -30,6 +30,7 @@ urlpatterns = [
     path('es/', include('es.urls')),
     path('cyber/', include('cyber.urls')),
     path('feedback/', include('feedback.urls')),
+    path('competences/', include('competences.urls')),
 ]
 
 if settings.DEBUG:
