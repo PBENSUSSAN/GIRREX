@@ -66,6 +66,31 @@ def ajouter_qualification_view(request, licence_id):
     }
     return render(request, 'competences/form_gestion.html', context)
 
+@login_required
+@effective_permission_required('competences.change_qualification', raise_exception=True)
+def modifier_qualification_view(request, qualification_id):
+    """
+    Permet de modifier une qualification existante, notamment pour activer/désactiver
+    les privilèges pour les rôles optionnels comme ISP ou EXA.
+    """
+    qualification = get_object_or_404(Qualification, pk=qualification_id)
+    licence = qualification.licence
+    
+    if request.method == 'POST':
+        form = QualificationForm(request.POST, instance=qualification)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"La qualification '{qualification.get_type_qualification_display()}' a été mise à jour.")
+            return redirect('competences:dossier_competence', agent_id=licence.agent.id_agent)
+    else:
+        form = QualificationForm(instance=qualification)
+
+    context = {
+        'form': form,
+        'agent_concerne': licence.agent,
+        'titre': f"Modifier la Qualification '{qualification.get_type_qualification_display()}'"
+    }
+    return render(request, 'competences/form_gestion.html', context)
 
 @login_required
 @effective_permission_required('competences.change_mentionunite', raise_exception=True)

@@ -83,21 +83,55 @@
 
             <!-- COLONNE DE DROITE : QUALIFICATIONS ET MENTIONS -->
             <div class="col-lg-8">
-                <!-- Section Qualifications -->
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="bi bi-award-fill me-2"></i>Qualifications Acquises</h5>
-                        {% if can_edit_licence %}
-                            <a href="{% url 'competences:ajouter_qualification' licence.id %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus-circle"></i> Ajouter</a>
-                        {% endif %}
-                    </div>
-                    <ul class="list-group list-group-flush">
-                        {% for qualif in licence.qualifications.all %}
-                            <li class="list-group-item">{{ qualif.get_type_qualification_display }} - Obtenue le {{ qualif.date_obtention|date:"d/m/Y" }}</li>
-                        {% empty %}
-                            <li class="list-group-item text-muted">Aucune qualification enregistrée.</li>
-                        {% endfor %}
-                    </ul>
+                 <!-- Section Qualifications -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-award-fill me-2"></i>Qualifications Acquises</h5>
+                    {% if can_edit_licence %}
+                        <a href="{% url 'competences:ajouter_qualification' licence.id %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus-circle"></i> Ajouter</a>
+                    {% endif %}
+                </div>
+
+                {# ### DÉBUT DE LA MODIFICATION ### #}
+                {# On remplace la liste <ul> par une table pour plus de clarté #}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Qualification</th>
+                                <th>Date d'Obtention</th>
+                                <th>Exerce ISP</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for qualif in licence.qualifications.all %}
+                                <tr>
+                                    <td>{{ qualif.get_type_qualification_display }}</td>
+                                    <td>{{ qualif.date_obtention|date:"d/m/Y" }}</td>
+                                    <td>
+                                        {% if qualif.privileges_actifs %}
+                                            <i class="bi bi-check-circle-fill text-success"></i> Oui
+                                        {% else %}
+                                            <i class="bi bi-x-circle-fill text-danger"></i> Non
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {# Ce lien permet de modifier la qualification #}
+                                        <a href="{% url 'competences:modifier_qualification' qualif.id %}" class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">Aucune qualification enregistrée.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {# ### FIN DE LA MODIFICATION ### #}
                 </div>
 
                 <!-- Section Mentions d'Unité -->

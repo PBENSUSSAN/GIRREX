@@ -24,7 +24,10 @@ class QualificationForm(forms.ModelForm):
         model = Qualification
         fields = ['type_qualification', 'date_obtention', 'privileges_actifs']
         widgets = {
-            'date_obtention': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'date_obtention': forms.DateInput(
+                attrs={'type': 'date', 'class': 'form-control'},
+                format='%Y-%m-%d'  # On spécifie le format attendu par l'input HTML5
+            ),
         }
         labels = {
             'privileges_actifs': "L'agent exercera les privilèges liés à cette qualification (ISP/EXA)"

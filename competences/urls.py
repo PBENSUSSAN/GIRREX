@@ -16,6 +16,7 @@ urlpatterns = [
     # Vues de gestion depuis le module 'gestion'
     path('agent/<int:agent_id>/gerer-licence/', gestion.gerer_licence_view, name='gerer_licence'),
     path('licence/<int:licence_id>/ajouter-qualification/', gestion.ajouter_qualification_view, name='ajouter_qualification'),
+     path('qualification/<int:qualification_id>/modifier/', gestion.modifier_qualification_view, name='modifier_qualification'),
     
     # URL pour la création d'une mention
     path('licence/<int:licence_id>/ajouter-mention/', gestion.gerer_mention_unite_view, name='ajouter_mention'),
