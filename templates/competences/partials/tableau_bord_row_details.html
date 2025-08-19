@@ -1,0 +1,38 @@
+<!-- Fichier : templates/competences/partials/tableau_bord_row_details.html -->
+
+{# --- Mention CAM --- #}
+{% if agent.cam_mention %}
+    <td><span class="badge {% if agent.cam_mention.is_valide %}bg-success{% else %}bg-danger{% endif %}">{{ agent.cam_mention.get_statut_display }}</span></td>
+    <td class="text-center echeance-{{ agent.cam_mention.alert_level }}">{{ agent.cam_mention.date_echeance|date:"d/m/Y" }}</td>
+{% else %}
+    <td colspan="2" class="text-center text-muted small">N/A</td>
+{% endif %}
+
+{# --- Mention CAG (ACS) --- #}
+{% if agent.cag_mention %}
+    <td><span class="badge {% if agent.cag_mention.is_valide %}bg-success{% else %}bg-danger{% endif %}">{{ agent.cag_mention.get_statut_display }}</span></td>
+    <td class="text-center echeance-{{ agent.cag_mention.alert_level }}">{{ agent.cag_mention.date_echeance|date:"d/m/Y" }}</td>
+{% else %}
+    <td colspan="2" class="text-center text-muted small">N/A</td>
+{% endif %}
+
+{# --- Aptitude Médicale --- #}
+{% if agent.certificat_medical %}
+    <td class="text-center echeance-{{ agent.certificat_medical.alert_level }}">{{ agent.certificat_medical.date_expiration_aptitude|date:"d/m/Y" }}</td>
+{% else %}
+    <td class="text-center echeance-critique">Manquant</td>
+{% endif %}
+
+{# --- Aptitude Linguistique Anglais --- #}
+{% if agent.eng_mention %}
+    <td class="text-center echeance-{{ agent.eng_mention.alert_level }}">{{ agent.eng_mention.date_echeance|date:"d/m/Y" }}</td>
+{% else %}
+    <td class="text-center echeance-critique">Manquante</td>
+{% endif %}
+
+{# --- Formation FH --- #}
+{% if agent.fh_formation %}
+    <td class="text-center echeance-{{ agent.fh_formation.alert_level }}">{{ agent.fh_formation.date_echeance|date:"d/m/Y" }}</td>
+{% else %}
+    <td class="text-center echeance-critique">Manquant</td>
+{% endif %}

@@ -3,7 +3,7 @@
 from django.contrib import admin
 from .models import (
     # Section I: RH
-    Centre, Agent, Licence, Qualification, Mention, CertificatMed, Module, Organisme, 
+    Centre, Agent, Licence, Qualification, Mention, CertificatMed, RendezVousMedical, Module, Organisme, 
     Formation, Evaluation, Habilitation, Affectation,
     # Section II: Vols
     Client, Vol, ControleVol, AuditHeuresControle,
@@ -74,9 +74,17 @@ class ModuleAdmin(admin.ModelAdmin):
 
 @admin.register(CertificatMed)
 class CertificatMedAdmin(admin.ModelAdmin):
-    list_display = ('agent', 'classe', 'date_visite', 'validite')
-    search_fields = ('agent__trigram', 'agent__reference', 'agent__nom', 'classe') # Indique à Django comment chercher un certificat
+    list_display = ('agent', 'classe_aptitude', 'date_visite', 'date_expiration_aptitude', 'resultat')
+    search_fields = ('agent__trigram', 'agent__reference', 'agent__nom', 'classe_aptitude')
     autocomplete_fields = ('agent',)
+    list_filter = ('resultat', 'classe_aptitude')
+
+@admin.register(RendezVousMedical)
+class RendezVousMedicalAdmin(admin.ModelAdmin):
+    list_display = ('agent', 'date_heure_rdv', 'organisme_medical', 'statut')
+    list_filter = ('statut', 'organisme_medical')
+    search_fields = ('agent__trigram',)
+    autocomplete_fields = ('agent', 'certificat_genere')
 
 admin.site.register(Qualification)
 admin.site.register(Mention)

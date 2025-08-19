@@ -47,9 +47,27 @@ class MentionLinguistique(models.Model):
         unique_together = ('licence', 'langue')
 
 class FormationReglementaire(models.Model):
-    """ Catalogue des formations réglementaires obligatoires. """
-    nom = models.CharField(max_length=100, unique=True) # Ex: "Facteurs Humains RAF Aéro"
-    periodicite_ans = models.PositiveIntegerField(default=3, verbose_name="Périodicité (en années)")
+    """ 
+    Catalogue des formations réglementaires obligatoires.
+    Chaque formation est identifiée par un 'slug' unique et immuable.
+    """
+    nom = models.CharField(
+        max_length=100, 
+        unique=True,
+        verbose_name="Nom complet de la formation"
+    )
+    
+    slug = models.SlugField(
+        max_length=100, 
+        unique=True, 
+        verbose_name="Identifiant unique (ne pas modifier)",
+        help_text="Identifiant court utilisé par le système, ex: 'fh-raf-aero'. Ne doit pas être changé une fois créé."
+    )
+    
+    periodicite_ans = models.PositiveIntegerField(
+        default=3, 
+        verbose_name="Périodicité (en années)"
+    )
 
     class Meta:
         verbose_name = "Formation Réglementaire"

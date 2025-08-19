@@ -23,5 +23,5 @@ urlpatterns = [
     # URL pour la modification d'une mention
     path('mention/<int:mention_id>/modifier/', gestion.gerer_mention_unite_view, name='modifier_mention'),
 
-    
+    path('licence/<int:licence_id>/reactiver/', gestion.reactiver_licence_view, name='reactiver_licence'),
 ]

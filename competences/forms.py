@@ -64,3 +64,16 @@ class MentionUniteForm(forms.ModelForm):
             # ### CORRECTION ICI ###
             # On filtre le champ 'qualification_source'
             self.fields['qualification_source'].queryset = Qualification.objects.filter(licence=licence)
+
+class ReactiverLicenceForm(forms.Form):
+    commentaire = forms.CharField(
+        label="Justification de la réactivation",
+        widget=forms.Textarea(attrs={'rows': 4}),
+        required=True,
+        help_text="Veuillez décrire brièvement les actions qui justifient la réactivation de cette licence (ex: 'Visite médicale effectuée le JJ/MM/AAAA', 'Stage FH suivi')."
+    )
+    
+    confirmation = forms.BooleanField(
+        label="Je confirme que toutes les aptitudes requises sont de nouveau valides.",
+        required=True
+    )

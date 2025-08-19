@@ -18,6 +18,7 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h3>{{ titre }}</h3>
         <div>
+            {# Ce bouton sera activé dans les prochaines étapes #}
             <a href="#" class="btn btn-primary disabled"><i class="bi bi-plus-circle-fill"></i> Ajouter une Licence</a>
         </div>
     </div>
@@ -33,8 +34,10 @@
             <div class="table-responsive">
                 <table class="table table-sm table-bordered table-hover">
                     <thead class="table-light text-center">
+                        {# ### CORRECTION : L'en-tête est modifié pour inclure la nouvelle colonne ### #}
                         <tr>
                             <th rowspan="2" class="align-middle">Agent</th>
+                            <th rowspan="2" class="align-middle">Statut Général</th>
                             <th colspan="2">Mention d'Unité CAM</th>
                             <th colspan="2">Mention d'Unité CAG (ACS)</th>
                             <th rowspan="2" class="align-middle">Aptitude Médicale</th>
@@ -55,6 +58,28 @@
                                 <a href="{% url 'competences:dossier_competence' agent.id_agent %}">
                                     <strong>{{ agent.trigram|default:agent.reference }}</strong>
                                 </a>
+                            </td>
+                            
+                            {# ### NOUVELLE CELLULE POUR LE STATUT DE SYNTHÈSE ### #}
+                            <td class="text-center">
+                                {% with statut=agent.statut_synthese %}
+                                    {% if not statut.apte_socle %}
+                                        <span class="badge bg-danger">INAPTE</span>
+                                        <small class="d-block text-danger">({{ statut.motif_inaptitude_socle }})</small>
+                                    {% else %}
+                                        {% if statut.apte_cam %}
+                                            <span class="badge bg-success">APTE CAM</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Non Apte CAM</span>
+                                        {% endif %}
+                                        <br>
+                                        {% if statut.apte_cag %}
+                                            <span class="badge bg-info text-dark">APTE CAG</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Non Apte CAG</span>
+                                        {% endif %}
+                                    {% endif %}
+                                {% endwith %}
                             </td>
                             
                             {# --- Colonnes pour la Mention CAM --- #}
@@ -79,8 +104,9 @@
 
                             {# --- Colonne Aptitude Médicale --- #}
                             {% if agent.certificat_medical %}
+                                {# On utilise le nouveau nom de champ corrigé #}
                                 <td class="text-center echeance-{{ agent.certificat_medical.alert_level }}">
-                                    {{ agent.certificat_medical.validite|date:"d/m/Y" }}
+                                    {{ agent.certificat_medical.date_expiration_aptitude|date:"d/m/Y" }}
                                 </td>
                             {% else %}
                                 <td class="text-center echeance-critique">Manquant</td>
@@ -106,7 +132,8 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="8" class="text-center text-muted">Aucun agent à afficher.</td>
+                            {# On met à jour le colspan pour inclure la nouvelle colonne #}
+                            <td colspan="9" class="text-center text-muted">Aucun agent à afficher.</td>
                         </tr>
                         {% endfor %}
                     </tbody>

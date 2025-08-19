@@ -1,22 +1,8 @@
 # Fichier : core/forms.py
 
 from django import forms
-from .models import EvenementCentre, CategorieEvenement
+from .models import EvenementCentre, CategorieEvenement, RendezVousMedical, CertificatMed
 
-#class PanneCentreForm(forms.ModelForm):
- #   class Meta:
-  #      model = PanneCentre
-   #     fields = [
-    #        'equipement_concerne', 
-     ##       'date_heure_debut', 
-       #     'criticite', 
-        #    'description', 
-         #   'notification_generale'
-        #]
-        #widgets = {
-        #    'date_heure_debut': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
-        #    'description': forms.Textarea(attrs={'rows': 4}),
-        #}
 
 class EvenementCentreForm(forms.ModelForm):
     categorie = forms.ModelChoiceField(
@@ -44,3 +30,50 @@ class EvenementCentreForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if centre:
             self.fields['categorie'].queryset = CategorieEvenement.objects.filter(centre=centre)
+
+class RendezVousMedicalForm(forms.ModelForm):
+    class Meta:
+        model = RendezVousMedical
+        fields = [
+            'date_heure_rdv', 
+            'organisme_medical', 
+            'type_visite', 
+            'statut'
+        ]
+        widgets = {
+            'date_heure_rdv': forms.DateTimeInput(
+                attrs={'type': 'datetime-local', 'class': 'form-control'},
+                format='%Y-%m-%dT%H:%M'
+            ),
+        }
+
+class CertificatMedForm(forms.ModelForm):
+    class Meta:
+        model = CertificatMed
+        fields = [
+            'date_visite',
+            'organisme_medical',
+            'resultat',
+            'classe_aptitude',
+            'date_expiration_aptitude',
+            'restrictions',
+            'commentaire',
+            'piece_jointe'
+        ]
+        widgets = {
+            'date_visite': forms.DateInput(attrs={'type': 'date'}),
+            'date_expiration_aptitude': forms.DateInput(attrs={'type': 'date'}),
+            'restrictions': forms.Textarea(attrs={'rows': 2}),
+            'commentaire': forms.Textarea(attrs={'rows': 2}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        resultat = cleaned_data.get('resultat')
+        date_expiration = cleaned_data.get('date_expiration_aptitude')
+
+        # On s'assure que si l'agent est "Apte", une date d'expiration est fournie.
+        if resultat == 'APTE' and not date_expiration:
+            self.add_error('date_expiration_aptitude', "Une date d'expiration est requise si l'agent est déclaré apte.")
+        
+        return cleaned_data

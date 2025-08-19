@@ -7,8 +7,8 @@ from django.urls import reverse
 
 from core.decorators import effective_permission_required
 from core.models import Agent
-from ..models import Licence, Qualification, MentionUnite
-from ..forms import LicenceForm, QualificationForm, MentionUniteForm
+from ..models import Licence, Qualification, MentionUnite, HistoriqueCompetence
+from ..forms import LicenceForm, QualificationForm, MentionUniteForm, ReactiverLicenceForm
 
 
 @login_required
@@ -132,3 +132,40 @@ def gerer_mention_unite_view(request, mention_id=None, licence_id=None):
         'titre': titre
     }
     return render(request, 'competences/form_gestion.html', context)
+
+def reactiver_licence_view(request, licence_id):
+    """
+    Permet à un responsable de repasser une licence au statut 'Valide'.
+    """
+    licence = get_object_or_404(Licence, pk=licence_id)
+    
+    if request.method == 'POST':
+        form = ReactiverLicenceForm(request.POST)
+        if form.is_valid():
+            # Mise à jour de la licence
+            licence.statut = Licence.Statut.VALIDE
+            licence.motif_inaptitude = None
+            licence.date_debut_inaptitude = None
+            licence.save()
+            
+            # Création de l'entrée dans le journal d'audit
+            HistoriqueCompetence.objects.create(
+                licence=licence,
+                type_evenement=HistoriqueCompetence.TypeEvenement.STATUT_LICENCE_CHANGE,
+                details={
+                    'message': f"Licence réactivée par {request.user.username}. Justification : {form.cleaned_data['commentaire']}"
+                }
+            )
+            
+            messages.success(request, f"La licence de {licence.agent.trigram} a été réactivée avec succès.")
+            return redirect('competences:dossier_competence', agent_id=licence.agent.id_agent)
+    else:
+        form = ReactiverLicenceForm()
+
+    context = {
+        'form': form,
+        'agent_concerne': licence.agent,
+        'licence': licence,
+        'titre': f"Réactiver la Licence de {licence.agent.trigram}"
+    }
+    return render(request, 'competences/form_gestion.html', context) # On réutilise le même template de formulaire

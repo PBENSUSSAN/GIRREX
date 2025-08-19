@@ -84,19 +84,7 @@ class Mention(models.Model):
     def __str__(self):
         return f"Mention {self.type_mention} (Licence: {self.licence.num_licence or self.licence.id_licence})"
 
-class CertificatMed(models.Model):
-    agent = models.ForeignKey(Agent, on_delete=models.CASCADE, related_name='certificats_medicaux')
-    date_visite = models.DateField()
-    validite = models.DateField(help_text="Date de fin de validité du certificat")
-    classe = models.CharField(max_length=50, help_text="Ex: Classe 1, Classe 2")
-    restriction = models.TextField(blank=True)
-    suspension = models.DateField(null=True, blank=True, help_text="Date de début de la suspension de l'aptitude")
-    class Meta:
-        verbose_name = "Certificat Médical"
-        verbose_name_plural = "Certificats Médicaux"
-        ordering = ['-validite']
-    def __str__(self):
-        return f"Certificat médical classe {self.classe} pour {self.agent} (valide jusqu'au {self.validite})"
+
 
 class Module(models.Model):
     id_module = models.IntegerField(primary_key=True, help_text="ID legacy du module provenant du CSV")

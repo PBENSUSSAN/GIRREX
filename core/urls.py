@@ -1,7 +1,7 @@
 # Fichier : core/urls.py (Corrigé pour la sélection par Rôle)
 
 from django.urls import path
-from .views import general, planning, feuille_temps, cahier_de_marche, zone
+from .views import general, planning, feuille_temps, cahier_de_marche, zone, medical
 
 urlpatterns = [
     # --- Vues Générales ---
@@ -66,4 +66,16 @@ urlpatterns = [
     path('api/zones/add/<int:centre_id>/', zone.api_add_zone, name='api-zone-add'),
     path('api/zones/update/<int:zone_id>/', zone.api_update_zone, name='api-zone-update'),
     path('api/zones/delete/<int:zone_id>/', zone.api_delete_zone, name='api-zone-delete'),
+
+    # ### DÉBUT DES NOUVELLES URLS MÉDICALES ###
+    path(
+        'agent/<int:agent_id>/rdv-medical/planifier/', 
+        medical.gerer_rdv_medical_view, 
+        name='planifier_rdv_medical'
+    ),
+    path(
+        'rdv-medical/<int:rdv_id>/modifier/', 
+        medical.gerer_rdv_medical_view, 
+        name='modifier_rdv_medical'),
+    path('rdv-medical/<int:rdv_id>/saisir-resultat/', medical.enregistrer_resultat_visite_view, name='saisir_resultat_visite'),
 ]
