@@ -1,0 +1,107 @@
+<!-- Fichier : templates/competences/releve_mensuel.html -->
+{% extends "base.html" %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+
+{% block content %}
+<div class="container-fluid mt-4">
+
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'competences:tableau_bord' %}">Tableau de Bord</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'competences:dossier_agent' agent_concerne.id_agent %}">Dossier {{ agent_concerne.trigram }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'competences:dossier_mua' mua.id %}">Dossier MUA {{ mua.get_type_flux_display }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Relevé Mensuel</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <h3>{{ titre }}</h3>
+        <span class="text-muted">Cycle du {{ mua.date_debut_cycle|date:"d/m/Y" }} au {{ mua.date_fin_cycle|date:"d/m/Y" }}</span>
+    </div>
+    <hr>
+
+    <div class="card shadow-sm mt-4">
+        <div class="table-responsive">
+            <table class="table table-bordered table-sm text-center mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th rowspan="2" class="align-middle">Période</th>
+                        <th colspan="4">CAM</th>
+                        <th colspan="4">CAG ACS</th>
+                        {% if centre.gere_aps %}<th colspan="4">CAG APS</th>{% endif %}
+                        {% if centre.gere_tour %}<th colspan="4">TOUR</th>{% endif %}
+                    </tr>
+                    <tr>
+                        <th title="Contrôle Actif">Ctl</th><th title="Instructeur">ISP</th><th title="Chef de Quart">CDQ</th><th title="Superviseur">Sup</th>
+                        <th title="Contrôle Actif">Ctl</th><th title="Instructeur">ISP</th><th title="Chef de Quart">CDQ</th><th title="Superviseur">Sup</th>
+                        {% if centre.gere_aps %}<th>Ctl</th><th>ISP</th><th>CDQ</th><th>Sup</th>{% endif %}
+                        {% if centre.gere_tour %}<th>Ctl</th><th>ISP</th><th>CDQ</th><th>Sup</th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for month in monthly_breakdown %}
+                    <tr>
+                        <td class="text-start ps-2"><strong>{{ month.label }}</strong></td>
+                        <!-- CAM -->
+                        <td>{{ month.heures.cam.controleur|add:month.heures.cam.stagiaire|floatformat:1|default:"0.0" }}</td>
+                        <td>{{ month.heures.cam.isp|floatformat:1|default:"0.0" }}</td>
+                        <td>{{ month.heures.cam.cdq|floatformat:1|default:"0.0" }}</td>
+                        <td>{{ month.heures.cam.superviseur|floatformat:1|default:"0.0" }}</td>
+                        <!-- CAG ACS -->
+                        <td>{{ month.heures.cag_acs.controleur|add:month.heures.cag_acs.stagiaire|floatformat:1|default:"0.0" }}</td>
+                        <td>{{ month.heures.cag_acs.isp|floatformat:1|default:"0.0" }}</td>
+                        <td>{{ month.heures.cag_acs.cdq|floatformat:1|default:"0.0" }}</td>
+                        <td>{{ month.heures.cag_acs.superviseur|floatformat:1|default:"0.0" }}</td>
+                        <!-- CAG APS (si applicable) -->
+                        {% if centre.gere_aps %}
+                            <td>{{ month.heures.cag_aps.controleur|add:month.heures.cag_aps.stagiaire|floatformat:1|default:"0.0" }}</td>
+                            <td>{{ month.heures.cag_aps.isp|floatformat:1|default:"0.0" }}</td>
+                            <td>{{ month.heures.cag_aps.cdq|floatformat:1|default:"0.0" }}</td>
+                            <td>{{ month.heures.cag_aps.superviseur|floatformat:1|default:"0.0" }}</td>
+                        {% endif %}
+                        <!-- TOUR (si applicable) -->
+                        {% if centre.gere_tour %}
+                            <td>{{ month.heures.tour.controleur|add:month.heures.tour.stagiaire|floatformat:1|default:"0.0" }}</td>
+                            <td>{{ month.heures.tour.isp|floatformat:1|default:"0.0" }}</td>
+                            <td>{{ month.heures.tour.cdq|floatformat:1|default:"0.0" }}</td>
+                            <td>{{ month.heures.tour.superviseur|floatformat:1|default:"0.0" }}</td>
+                        {% endif %}
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="100%" class="text-center text-muted fst-italic py-3">Aucune activité enregistrée pour cette MUA.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                {% if monthly_breakdown %}
+                <tfoot class="table-group-divider fw-bold">
+                    <tr>
+                        <td class="text-start ps-2">TOTAL BRUT</td>
+                        <!-- CAM -->
+                        <td>{{ heures_brutes_totales.cam|floatformat:2 }}</td>
+                        <td>{{ heures_brutes_totales.isp|floatformat:2 }}</td>
+                        <td>{{ heures_brutes_totales.cdq|floatformat:2 }}</td>
+                        <td>{{ heures_brutes_totales.superviseur|floatformat:2 }}</td>
+                        <!-- CAG ACS -->
+                        <td>{{ heures_brutes_totales.cag_acs|floatformat:2 }}</td>
+                        <td colspan="3">...</td>
+                         <!-- CAG APS (si applicable) -->
+                        {% if centre.gere_aps %}
+                           <td>{{ heures_brutes_totales.cag_aps|floatformat:2 }}</td>
+                           <td colspan="3">...</td>
+                        {% endif %}
+                        <!-- TOUR (si applicable) -->
+                        {% if centre.gere_tour %}
+                            <td>{{ heures_brutes_totales.tour|floatformat:2 }}</td>
+                            <td colspan="3">...</td>
+                        {% endif %}
+                    </tr>
+                </tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -12,7 +12,8 @@ urlpatterns = [
     path('journal-audit/', dossier.journal_audit_view, name='journal_audit'),
     path('agent/<int:agent_id>/', dossier.dossier_agent_view, name='dossier_agent'),
 
-     path('mua/<int:mua_id>/', mua.dossier_mua_view, name='dossier_mua'),
+    path('mua/<int:mua_id>/', mua.dossier_mua_view, name='dossier_mua'),
+    path('mua/<int:mua_id>/releve-mensuel/', mua.releve_mensuel_view, name='releve_mensuel_mua'),
 
     # Vues de gestion
     path('agent/<int:agent_id>/gerer-brevet/', gestion.gerer_brevet_view, name='gerer_brevet'),

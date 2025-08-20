@@ -2,6 +2,7 @@
 
 from django.db import models
 from .qualification import Qualification
+from activites.models import SaisieActivite
 
 class MentionUniteAnnuelle(models.Model):
     """
@@ -52,6 +53,10 @@ class MentionUniteAnnuelle(models.Model):
     heures_tour_effectuees = models.FloatField(default=0.0)
     heures_en_cdq = models.FloatField(default=0.0)
     heures_en_supervision = models.FloatField(default=0.0)
+    heures_en_isp = models.FloatField(
+        default=0.0, 
+        verbose_name="Heures en tant qu'ISP"
+    )
 
     class Meta:
         verbose_name = "Mention d'Unité Annuelle (MUA)"

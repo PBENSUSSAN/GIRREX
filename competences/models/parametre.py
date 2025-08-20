@@ -5,52 +5,47 @@ from core.models import Centre
 
 class RegleDeRenouvellement(models.Model):
     """
-    Définit une condition à vérifier pour le renouvellement d'une MUA.
-    Permet une grande flexibilité dans la configuration des exigences.
+    Définit un jeu de conditions d'heures requises pour le renouvellement
+    des MUA dans un ou plusieurs centres.
     """
-    class SourceHeures(models.TextChoices):
-        HEURES_CAM = 'heures_cam_effectuees', 'Heures CAM'
-        HEURES_CAG_ACS = 'heures_cag_acs_effectuees', 'Heures CAG ACS'
-        HEURES_CAG_APS = 'heures_cag_aps_effectuees', 'Heures CAG APS'
-        HEURES_TOUR = 'heures_tour_effectuees', 'Heures TOUR'
-
-    nom_regle = models.CharField(
-        max_length=255, 
-        help_text="Description claire de la règle (ex: 'Quota annuel CAM pour Istres')"
+    nom = models.CharField(
+        max_length=100,
+        unique=True,
+        help_text="Nom unique de ce jeu de règles (ex: 'Standard National 2025')"
     )
-    centre = models.ForeignKey(
-        Centre, 
-        on_delete=models.CASCADE,
-        help_text="Centre auquel cette règle s'applique."
+    centres = models.ManyToManyField(
+        Centre,
+        related_name='regles_renouvellement',
+        help_text="Sélectionnez le(s) centre(s) auquel/auxquels cette règle s'applique."
     )
-    type_flux_mua = models.CharField(
-        max_length=3,
-        choices=[('CAM', 'CAM'), ('CAG', 'CAG')],
-        help_text="Type de MUA concernée par cette règle."
+    
+    # --- LES SEUILS REQUIS ---
+    # Laisser un champ à 0 si non applicable pour ce jeu de règles.
+    
+    seuil_heures_total = models.PositiveIntegerField(
+        default=90,
+        verbose_name="Objectif d'heures TOTALES (activité globale)",
     )
-    source_heures_1 = models.CharField(
-        max_length=30, 
-        choices=SourceHeures.choices,
-        verbose_name="Source principale d'heures"
+    seuil_heures_cam = models.PositiveIntegerField(
+        default=40,
+        verbose_name="Objectif d'heures spécifiques CAM",
     )
-    seuil_heures_1 = models.PositiveIntegerField(
-        verbose_name="Seuil requis pour la source principale"
+    seuil_heures_cag_acs = models.PositiveIntegerField(
+        default=50,
+        verbose_name="Objectif d'heures spécifiques CAG ACS",
     )
-    source_heures_2 = models.CharField(
-        max_length=30, 
-        choices=SourceHeures.choices,
-        verbose_name="Source secondaire d'heures (optionnel)",
-        blank=True, null=True
+    seuil_heures_cag_aps = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Objectif d'heures spécifiques CAG APS (si applicable)",
     )
-    seuil_heures_2 = models.PositiveIntegerField(
-        verbose_name="Seuil requis pour la source secondaire",
-        blank=True, null=True
+    seuil_heures_tour = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Objectif d'heures spécifiques TOUR (si applicable)",
     )
 
     class Meta:
-        verbose_name = "Règle de renouvellement"
-        verbose_name_plural = "Règles de renouvellement"
-        unique_together = ('centre', 'type_flux_mua', 'nom_regle')
+        verbose_name = "Jeu de Règles de Renouvellement"
+        verbose_name_plural = "Jeux de Règles de Renouvellement"
 
     def __str__(self):
-        return self.nom_regle
+        return self.nom

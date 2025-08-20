@@ -2,7 +2,7 @@
 
 # On importe explicitement chaque modèle depuis les fichiers dédiés.
 from .rh import Centre, Agent, Licence, Qualification, Mention, Module, Organisme, Formation, Evaluation, Habilitation, Affectation
-from .vols import Client, Vol, ControleVol, AuditHeuresControle
+
 from .parametrage import Parametre, ValeurParametre, Role, AgentRole, Delegation
 #from .documentaire import DocumentType, Document, DocumentVersion, SignatureCircuit
 

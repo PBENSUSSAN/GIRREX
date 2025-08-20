@@ -72,7 +72,29 @@ class EvenementCarriereAdmin(admin.ModelAdmin):
 
 @admin.register(RegleDeRenouvellement)
 class RegleDeRenouvellementAdmin(admin.ModelAdmin):
-    list_display = ('nom_regle', 'centre', 'type_flux_mua')
-    list_filter = ('centre', 'type_flux_mua')
-    search_fields = ('nom_regle',)
-    autocomplete_fields = ('centre',)
+    list_display = (
+        'nom', 
+        'seuil_heures_total', 
+        'seuil_heures_cam', 
+        'seuil_heures_cag_acs',
+        'seuil_heures_cag_aps',
+        'seuil_heures_tour'
+    )
+    search_fields = ('nom',)
+    filter_horizontal = ('centres',)
+    
+    fieldsets = (
+        (None, {
+            'fields': ('nom', 'centres')
+        }),
+        ('Seuils Requis (en heures)', {
+            'description': "Définissez les objectifs d'heures. Laissez un champ à 0 si non applicable.",
+            'fields': (
+                'seuil_heures_total', 
+                'seuil_heures_cam', 
+                'seuil_heures_cag_acs',
+                'seuil_heures_cag_aps',
+                'seuil_heures_tour'
+            )
+        }),
+    )

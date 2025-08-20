@@ -5,8 +5,7 @@ from .models import (
     # Section I: RH
     Centre, Agent, Licence, Qualification, Mention, CertificatMed, RendezVousMedical, Module, Organisme, 
     Formation, Evaluation, Habilitation, Affectation,
-    # Section II: Vols
-    Client, Vol, ControleVol, AuditHeuresControle,
+   
     # Section III: Paramétrage
     Parametre, ValeurParametre, Role, AgentRole, Delegation,
     
@@ -34,7 +33,8 @@ from .models import (
 
 @admin.register(Centre)
 class CentreAdmin(admin.ModelAdmin):
-    list_display = ('nom_centre', 'code_centre')
+    # On ajoute les nouveaux champs pour les voir dans l'admin
+    list_display = ('nom_centre', 'code_centre', 'gere_aps', 'gere_tour', 'nombre_cabines')
     search_fields = ('nom_centre', 'code_centre')
 
 @admin.register(Agent)
@@ -93,24 +93,6 @@ admin.site.register(Evaluation)
 admin.site.register(Habilitation)
 admin.site.register(Affectation)
 
-# ==============================================================================
-# SECTION II : GESTION DES VOLS
-# ==============================================================================
-
-@admin.register(Vol)
-class VolAdmin(admin.ModelAdmin):
-    list_display = ('__str__', 'date_vol', 'type_vol', 'etat', 'centre', 'client')
-    list_filter = ('etat', 'type_vol', 'centre', 'date_vol')
-    search_fields = ('client__nom', 'centre__nom_centre', 'cca__trigram', 'cca__reference')
-    autocomplete_fields = ['client', 'centre', 'cca']
-
-@admin.register(Client)
-class ClientAdmin(admin.ModelAdmin):
-    list_display = ('nom', 'contact', 'email')
-    search_fields = ('nom', 'contact', 'email')
-
-admin.site.register(ControleVol)
-admin.site.register(AuditHeuresControle)
 
 # ==============================================================================
 # SECTION III : PARAMETRAGE DYNAMIQUE ET GESTION DES ROLES
