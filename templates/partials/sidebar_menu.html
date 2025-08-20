@@ -94,7 +94,7 @@
             </li>
             {% if request.user.agent_profile.centre %}
             <li>
-                <a href="{% url 'competences:dossier_competence' request.user.agent_profile.id_agent %}" class="ps-4">Mon Dossier Personnel</a>
+              <a href="{% url 'competences:dossier_agent' request.user.agent_profile.id_agent %}" class="ps-4">Mon Dossier Personnel</a>
             </li>
             {% endif %}
 

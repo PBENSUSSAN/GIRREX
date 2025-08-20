@@ -1,2 +1,4 @@
-from .dossier import dossier_competence_view, tableau_bord_competences_view
-from .gestion import gerer_licence_view, ajouter_qualification_view, gerer_mention_unite_view
+# Fichier : competences/views/__init__.py
+
+# Ce fichier peut rester vide pour le moment.
+# Les imports se font directement depuis les modules dossier et gestion.

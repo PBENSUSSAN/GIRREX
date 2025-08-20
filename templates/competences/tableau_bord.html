@@ -1,139 +1,125 @@
+<!-- Fichier : templates/competences/tableau_bord.html -->
 {% extends "base.html" %}
-{% load static crispy_forms_tags %}
+{% load static %}
 
 {% block title %}{{ titre }}{% endblock %}
 
 {% block page_specific_styles %}
-{# Ce bloc de style est spécifique à cette page pour colorer les cellules #}
 <style>
-    .echeance-ok { background-color: #d1e7dd !important; } /* Vert */
-    .echeance-alerte { background-color: #fff3cd !important; } /* Jaune */
-    .echeance-critique { background-color: #f8d7da !important; } /* Rouge */
-    .table th, .table td { vertical-align: middle; }
+    /* On garde le curseur cliquable sur la ligne pour le look & feel */
+    .row-parent {
+        cursor: pointer;
+    }
+    .row-child td {
+        background-color: #f8f9fa;
+        border-top: 0;
+    }
+    .toggle-arrow {
+        transition: transform 0.2s ease-in-out;
+    }
+    .collapsed .toggle-arrow {
+        transform: rotate(0deg);
+    }
+    [aria-expanded="true"] .toggle-arrow {
+        transform: rotate(90deg);
+    }
 </style>
 {% endblock %}
+
 
 {% block content %}
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h3>{{ titre }}</h3>
-        <div>
-            {# Ce bouton sera activé dans les prochaines étapes #}
-            <a href="#" class="btn btn-primary disabled"><i class="bi bi-plus-circle-fill"></i> Ajouter une Licence</a>
-        </div>
-    </div>
-
-    <div class="card card-body mb-4">
-        <form method="get">
-            {% crispy filter.form %}
-        </form>
     </div>
 
     <div class="card shadow-sm">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-sm table-bordered table-hover">
-                    <thead class="table-light text-center">
-                        {# ### CORRECTION : L'en-tête est modifié pour inclure la nouvelle colonne ### #}
+                <table class="table table-sm table-hover">
+                    <thead class="table-light">
                         <tr>
-                            <th rowspan="2" class="align-middle">Agent</th>
-                            <th rowspan="2" class="align-middle">Statut Général</th>
-                            <th colspan="2">Mention d'Unité CAM</th>
-                            <th colspan="2">Mention d'Unité CAG (ACS)</th>
-                            <th rowspan="2" class="align-middle">Aptitude Médicale</th>
-                            <th rowspan="2" class="align-middle">Aptitude Linguistique</th>
-                            <th rowspan="2" class="align-middle">Formation FH</th>
-                        </tr>
-                        <tr>
-                            <th>Statut</th>
-                            <th>Échéance</th>
-                            <th>Statut</th>
-                            <th>Échéance</th>
+                            <th style="width: 5%;"></th> {# Colonne pour la flèche #}
+                            <th>Agent</th>
+                            <th>Centre</th>
+                            <th>Statut Général du Socle</th>
+                            <th class="text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for agent in agents_list %}
-                        <tr>
-                            <td>
-                                <a href="{% url 'competences:dossier_competence' agent.id_agent %}">
-                                    <strong>{{ agent.trigram|default:agent.reference }}</strong>
+                        {% for data in agents_list %}
+                        {% with agent=data.agent_obj %}
+                        
+                        {# ========================================================== #}
+                        {#                DÉBUT DE LA CORRECTION MAJEURE            #}
+                        {# ========================================================== #}
+                        
+                        {# La ligne TR n'a plus l'attribut data-bs-toggle #}
+                        <tr class="row-parent"> 
+                            
+                            {# Les cellules de données déclenchent maintenant le collapse #}
+                            <td data-bs-toggle="collapse" data-bs-target="#collapse-agent-{{ agent.id_agent }}">
+                                <i class="bi bi-chevron-right toggle-arrow"></i>
+                            </td>
+                            <td data-bs-toggle="collapse" data-bs-target="#collapse-agent-{{ agent.id_agent }}">
+                                <strong>{{ agent.trigram }}</strong>
+                            </td>
+                            <td data-bs-toggle="collapse" data-bs-target="#collapse-agent-{{ agent.id_agent }}">
+                                {{ agent.centre.code_centre }}
+                            </td>
+                            <td data-bs-toggle="collapse" data-bs-target="#collapse-agent-{{ agent.id_agent }}">
+                                {% if data.statut_socle.est_valide %}
+                                    <span class="badge bg-success">Valide</span>
+                                {% else %}
+                                    <span class="badge bg-danger" title="{{ data.statut_socle.motifs|join:', ' }}">INVALIDE</span>
+                                {% endif %}
+                            </td>
+                            
+                            {# CETTE CELLULE NE DÉCLENCHE PAS LE COLLAPSE #}
+                            <td class="text-end">
+                                {# Le bouton est maintenant isolé et ne propage plus son clic #}
+                                <a href="{% url 'competences:dossier_agent' agent.id_agent %}" class="btn btn-sm btn-outline-secondary">
+                                    Dossier Agent
                                 </a>
                             </td>
-                            
-                            {# ### NOUVELLE CELLULE POUR LE STATUT DE SYNTHÈSE ### #}
-                            <td class="text-center">
-                                {% with statut=agent.statut_synthese %}
-                                    {% if not statut.apte_socle %}
-                                        <span class="badge bg-danger">INAPTE</span>
-                                        <small class="d-block text-danger">({{ statut.motif_inaptitude_socle }})</small>
-                                    {% else %}
-                                        {% if statut.apte_cam %}
-                                            <span class="badge bg-success">APTE CAM</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">Non Apte CAM</span>
-                                        {% endif %}
-                                        <br>
-                                        {% if statut.apte_cag %}
-                                            <span class="badge bg-info text-dark">APTE CAG</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">Non Apte CAG</span>
-                                        {% endif %}
-                                    {% endif %}
-                                {% endwith %}
-                            </td>
-                            
-                            {# --- Colonnes pour la Mention CAM --- #}
-                            {% if agent.cam_mention %}
-                                <td class="text-center"><span class="badge {% if agent.cam_mention.is_valide %}bg-success{% else %}bg-danger{% endif %}">{{ agent.cam_mention.get_statut_display }}</span></td>
-                                <td class="text-center echeance-{{ agent.cam_mention.alert_level }}">
-                                    {{ agent.cam_mention.date_echeance|date:"d/m/Y" }}
-                                </td>
-                            {% else %}
-                                <td colspan="2" class="text-center text-muted small">N/A</td>
-                            {% endif %}
-
-                            {# --- Colonnes pour la Mention CAG (ACS) --- #}
-                            {% if agent.cag_mention %}
-                                <td class="text-center"><span class="badge {% if agent.cag_mention.is_valide %}bg-success{% else %}bg-danger{% endif %}">{{ agent.cag_mention.get_statut_display }}</span></td>
-                                <td class="text-center echeance-{{ agent.cag_mention.alert_level }}">
-                                    {{ agent.cag_mention.date_echeance|date:"d/m/Y" }}
-                                </td>
-                            {% else %}
-                                <td colspan="2" class="text-center text-muted small">N/A</td>
-                            {% endif %}
-
-                            {# --- Colonne Aptitude Médicale --- #}
-                            {% if agent.certificat_medical %}
-                                {# On utilise le nouveau nom de champ corrigé #}
-                                <td class="text-center echeance-{{ agent.certificat_medical.alert_level }}">
-                                    {{ agent.certificat_medical.date_expiration_aptitude|date:"d/m/Y" }}
-                                </td>
-                            {% else %}
-                                <td class="text-center echeance-critique">Manquant</td>
-                            {% endif %}
-                            
-                            {# --- Colonne Aptitude Linguistique Anglais --- #}
-                            {% if agent.eng_mention %}
-                                <td class="text-center echeance-{{ agent.eng_mention.alert_level }}">
-                                    {{ agent.eng_mention.date_echeance|date:"d/m/Y" }}
-                                </td>
-                            {% else %}
-                                <td class="text-center echeance-critique">Manquante</td>
-                            {% endif %}
-
-                            {# --- Colonne Formation FH --- #}
-                            {% if agent.fh_formation %}
-                                <td class="text-center echeance-{{ agent.fh_formation.alert_level }}">
-                                    {{ agent.fh_formation.date_echeance|date:"d/m/Y" }}
-                                </td>
-                            {% else %}
-                                <td class="text-center echeance-critique">Manquant</td>
-                            {% endif %}
                         </tr>
+                        
+                        {# ========================================================== #}
+                        {#                 FIN DE LA CORRECTION MAJEURE             #}
+                        {# ========================================================== #}
+                        
+                        <tr class="collapse" id="collapse-agent-{{ agent.id_agent }}">
+                            <td colspan="5" class="p-0">
+                                <table class="table table-sm mb-0">
+                                    <tbody>
+                                    {% for mua in data.muas %}
+                                        <tr class="row-child">
+                                            <td style="width: 5%;"></td>
+                                            <td colspan="2">
+                                                <strong>MUA {{ mua.get_type_flux_display }}</strong>
+                                                <small class="text-muted d-block">Fin de cycle : {{ mua.date_fin_cycle|date:"d/m/Y" }}</small>
+                                            </td>
+                                            <td>
+                                                <strong>Progression :</strong>
+                                                <div class="progress" style="height: 20px;">
+                                                    <div class="progress-bar" role="progressbar" style="width: 75%;" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100">75%</div>
+                                                </div>
+                                            </td>
+                                            <td class="text-end">
+                                                <a href="{% url 'competences:dossier_mua' mua.id %}" class="btn btn-sm btn-outline-primary">
+                                                    Dossier MUA
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                        {% endwith %}
                         {% empty %}
                         <tr>
-                            {# On met à jour le colspan pour inclure la nouvelle colonne #}
-                            <td colspan="9" class="text-center text-muted">Aucun agent à afficher.</td>
+                            <td colspan="5" class="text-center text-muted">Aucun agent avec une MUA active à afficher.</td>
                         </tr>
                         {% endfor %}
                     </tbody>

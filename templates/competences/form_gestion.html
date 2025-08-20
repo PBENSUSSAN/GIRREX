@@ -13,8 +13,10 @@
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="{% url 'competences:tableau_bord' %}">Tableau de Bord</a></li>
                     
-                    {# ### CORRECTION ### : On utilise agent_concerne.id_agent #}
-                    <li class="breadcrumb-item"><a href="{% url 'competences:dossier_competence' agent_concerne.id_agent %}">Dossier {{ agent_concerne.trigram }}</a></li>
+                    {# ========================================================== #}
+                    {#                      CORRECTION 1 ICI                      #}
+                    {# ========================================================== #}
+                    <li class="breadcrumb-item"><a href="{% url 'competences:dossier_agent' agent_concerne.id_agent %}">Dossier {{ agent_concerne.trigram }}</a></li>
                     
                     <li class="breadcrumb-item active" aria-current="page">{{ titre }}</li>
                 </ol>
@@ -27,8 +29,10 @@
                         {% csrf_token %}
                         {{ form|crispy }}
                         <div class="d-flex justify-content-end mt-4">
-                            {# ### CORRECTION ### : On utilise agent_concerne.id_agent #}
-                            <a href="{% url 'competences:dossier_competence' agent_concerne.id_agent %}" class="btn btn-secondary me-2">Annuler</a>
+                            {# ========================================================== #}
+                            {#                      CORRECTION 2 ICI                      #}
+                            {# ========================================================== #}
+                            <a href="{% url 'competences:dossier_agent' agent_concerne.id_agent %}" class="btn btn-secondary me-2">Annuler</a>
                             
                             <button type="submit" class="btn btn-primary">
                                 <i class="bi bi-check-circle me-2"></i>Enregistrer

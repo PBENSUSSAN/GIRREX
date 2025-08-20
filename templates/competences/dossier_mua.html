@@ -1,0 +1,72 @@
+<!-- Fichier : templates/competences/dossier_mua.html -->
+{% extends "base.html" %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'competences:tableau_bord' %}">Tableau de Bord</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'competences:dossier_agent' agent_concerne.id_agent %}">Dossier {{ agent_concerne.trigram }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Dossier MUA {{ mua.get_type_flux_display }}</li>
+        </ol>
+    </nav>
+
+    <h3 class="mt-3">{{ titre }}</h3>
+    <p class="text-muted">Cycle du {{ mua.date_debut_cycle|date:"d/m/Y" }} au {{ mua.date_fin_cycle|date:"d/m/Y" }}</p>
+
+    <div class="row g-4">
+        <!-- Colonne de la checklist -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Checklist de Renouvellement</h4>
+                </div>
+                <ul class="list-group list-group-flush">
+                    {% for item in checklist %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ item.nom }}</strong>
+                        </div>
+                        {% if item.valide %}
+                            <span class="badge bg-success rounded-pill">✅ Valide</span>
+                        {% else %}
+                            <span class="badge bg-danger rounded-pill">❌ Non atteint ({{ item.details }})</span>
+                        {% endif %}
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item text-muted">Aucune règle de renouvellement configurée pour ce centre et ce type de flux.</li>
+                    {% endfor %}
+                </ul>
+                <div class="card-footer text-end">
+                    {% if toutes_conditions_remplies %}
+                        <button class="btn btn-primary">Valider le Renouvellement</button>
+                    {% else %}
+                        <button class="btn btn-secondary" disabled>Conditions non remplies</button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne des compteurs -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Compteurs d'Heures (Brutes)</h4>
+                </div>
+                <div class="card-body">
+                    <p><strong>Heures CAM :</strong> {{ mua.heures_cam_effectuees|floatformat:2 }}</p>
+                    <p><strong>Heures CAG ACS :</strong> {{ mua.heures_cag_acs_effectuees|floatformat:2 }}</p>
+                    <p><strong>Heures CAG APS :</strong> {{ mua.heures_cag_aps_effectuees|floatformat:2 }}</p>
+                    <p><strong>Heures TOUR :</strong> {{ mua.heures_tour_effectuees|floatformat:2 }}</p>
+                    <hr>
+                    <p><strong>Heures en CDQ :</strong> {{ mua.heures_en_cdq|floatformat:2 }}</p>
+                    <p><strong>Heures en Supervision :</strong> {{ mua.heures_en_supervision|floatformat:2 }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

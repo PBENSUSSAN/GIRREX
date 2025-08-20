@@ -3,34 +3,18 @@
 
 {% block title %}{{ titre }}{% endblock %}
 
-{% block page_specific_styles %}
-<style>
-    .table > tbody > tr.echeance-ok > td { background-color: #d1e7dd; }
-    .table > tbody > tr.echeance-alerte > td { background-color: #fff3cd; }
-    .table > tbody > tr.echeance-critique > td { background-color: #f8d7da; }
-</style>
-{% endblock %}
-
-
 {% block content %}
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h3>{{ titre }}</h3>
-        {% if can_edit_licence and licence %}
-            <a href="{% url 'competences:gerer_licence' agent_concerne.id_agent %}" class="btn btn-primary">
-                <i class="bi bi-pencil-fill me-2"></i>Éditer le Dossier de Licence
-            </a>
-        {% endif %}
     </div>
 
-    {% if not licence %}
+    {% if not brevet %}
         <div class="alert alert-warning">
-            <p>Cet agent ne possède pas encore de dossier de licence enregistré dans GIRREX.</p>
-            {% if can_edit_licence %}
-                <a href="{% url 'competences:gerer_licence' agent_concerne.id_agent %}" class="btn btn-success">
-                    <i class="bi bi-plus-circle"></i> Créer son Dossier de Licence maintenant
-                </a>
-            {% endif %}
+            <p>Cet agent ne possède pas encore de brevet enregistré dans GIRREX.</p>
+            <a href="{% url 'competences:gerer_brevet' agent_concerne.id_agent %}" class="btn btn-success">
+                <i class="bi bi-plus-circle"></i> Créer son Brevet maintenant
+            </a>
         </div>
     {% else %}
         <div class="row g-4">
@@ -39,80 +23,85 @@
             <!-- ============================================= -->
             <div class="col-lg-4 d-flex flex-column gap-4">
                 
-                <!-- Carte Licence & Aptitudes -->
+                <!-- Carte Brevet & Socle de validité -->
                 <div class="card shadow-sm">
-                    <div class="card-header"><h5><i class="bi bi-person-badge-fill me-2"></i>Licence & Aptitudes Clés</h5></div>
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="bi bi-person-badge-fill me-2"></i>Brevet & Socle</h5>
+                        <a href="{% url 'competences:gerer_brevet' agent_concerne.id_agent %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-pencil"></i> Éditer
+                        </a>
+                    </div>
                     <div class="card-body">
-                        <p><strong>N° Licence :</strong> {{ licence.numero_licence }}</p>
-                        <p><strong>Statut Licence :</strong> 
-                            <span class="badge {% if licence.statut == 'VALIDE' %}bg-success{% else %}bg-danger{% endif %}">{{ licence.get_statut_display }}</span>
-                        </p>
-                        {% if licence.statut == 'INAPTE_TEMP' %}
-                            <div class="alert alert-danger mt-3 p-2">
-                                <p class="fw-bold mb-1 small">Motif(s) de l'inaptitude :</p>
-                                <small>{{ licence.motif_inaptitude }}</small>
-                                
-                                {% if can_edit_licence %}
-                                <hr class="my-2">
-                                <a href="{% url 'competences:reactiver_licence' licence.id %}" class="btn btn-sm btn-warning w-100">
-                                    <i class="bi bi-arrow-counterclockwise"></i> Procédure de réactivation
-                                </a>
-                                {% endif %}
+                        <p><strong>N° Brevet :</strong> {{ brevet.numero_brevet }}</p>
+                        <p><strong>Délivré le :</strong> {{ brevet.date_delivrance|date:"d/m/Y" }}</p>
+                        <hr>
+                        <h6>Socle de validité</h6>
+                        {% if statut_socle.est_valide %}
+                            <div class="alert alert-success p-2">Socle de validité : OK</div>
+                        {% else %}
+                            <div class="alert alert-danger p-2">
+                                <strong>Socle de validité : INVALIDE</strong>
+                                <ul class="mb-0 ps-3">
+                                    {% for motif in statut_socle.motifs %}
+                                        <li><small>{{ motif }}</small></li>
+                                    {% endfor %}
+                                </ul>
                             </div>
                         {% endif %}
-                        <hr>
-                        <p><strong>Aptitude Médicale :</strong> 
-                            {% if certificat_medical and certificat_medical.date_expiration_aptitude %}
-                                Valide jusqu'au {{ certificat_medical.date_expiration_aptitude|date:"d/m/Y" }}
-                            {% else %}
-                                <span class="text-danger">Non renseignée</span>
-                            {% endif %}
-                        </p>
-                        {% for mention_ling in licence.mentions_linguistiques.all %}
-                            <p><strong>Aptitude Linguistique ({{ mention_ling.get_langue_display }}) :</strong> 
-                                Niveau {{ mention_ling.niveau_oaci }} - Valide jusqu'au {{ mention_ling.date_echeance|date:"d/m/Y" }}
-                            </p>
-                        {% empty %}
-                            <p><strong>Aptitude Linguistique :</strong> <span class="text-danger">Non renseignée</span></p>
-                        {% endfor %}
-                        <hr>
-                        <h6>Formations Réglementaires</h6>
-                        {% for suivi_formation in licence.formations_suivies.all %}
-                            <p class="mb-1"><small><strong>{{ suivi_formation.formation.nom }} :</strong> Échéance le {{ suivi_formation.date_echeance|date:"d/m/Y" }}</small></p>
-                        {% empty %}
-                            <p class="mb-1"><small class="text-muted">Aucune formation réglementaire suivie.</small></p>
-                        {% endfor %}
+                        <p class="mb-1"><small>
+                            Médical : 
+                            {% with cert=statut_socle.details.certificat_medical %}
+                                {% if cert and cert.date_expiration_aptitude %}
+                                    valide jusqu'au {{ cert.date_expiration_aptitude|date:"d/m/Y" }}
+                                {% else %}
+                                    <span class="text-danger">Non valide / Manquant</span>
+                                {% endif %}
+                            {% endwith %}
+                        </small></p>
+                         <p class="mb-1"><small>
+                            Linguistique : 
+                            {% with ling=statut_socle.details.mention_linguistique %}
+                                {% if ling and ling.date_echeance %}
+                                    valide jusqu'au {{ ling.date_echeance|date:"d/m/Y" }}
+                                {% else %}
+                                    <span class="text-danger">Non valide / Manquante</span>
+                                {% endif %}
+                            {% endwith %}
+                        </small></p>
+                         <p class="mb-1"><small>
+                            RAF AERO : 
+                            {% with raf=statut_socle.details.raf_aero %}
+                                {% if raf and raf.date_echeance %}
+                                    valide jusqu'au {{ raf.date_echeance|date:"d/m/Y" }}
+                                {% else %}
+                                    <span class="text-danger">Non valide / Manquante</span>
+                                {% endif %}
+                            {% endwith %}
+                        </small></p>
                     </div>
                 </div>
 
-                <!-- Carte Suivi Médical -->
+                <!-- Carte Événements de Carrière -->
                 <div class="card shadow-sm">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="bi bi-heart-pulse-fill me-2"></i>Suivi Médical</h5>
-                        <a href="{% url 'planifier_rdv_medical' agent_concerne.id_agent %}" class="btn btn-sm btn-primary">
-                            <i class="bi bi-calendar-plus"></i> Planifier
+                        <h5 class="mb-0"><i class="bi bi-calendar-event-fill me-2"></i>Événements de Carrière</h5>
+                        {# Bouton pour ajouter un événement #}
+                        <a href="#" class="btn btn-sm btn-primary disabled">
+                            <i class="bi bi-plus-circle"></i> Ajouter
                         </a>
                     </div>
-                    <div class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;">
-                        {% for rdv in rendez_vous_list %}
-                            {# ### DÉBUT DE LA MODIFICATION ### #}
+                    <div class="list-group list-group-flush">
+                        {% for event in evenements_carriere %}
                             <div class="list-group-item">
-                                <div class="d-flex w-100 justify-content-between">
-                                    <div>
-                                        <a href="{% url 'modifier_rdv_medical' rdv.id %}"><strong>{{ rdv.type_visite }}</strong></a>
-                                        <small class="text-muted d-block">Le {{ rdv.date_heure_rdv|date:"d/m/Y à H:i" }} à {{ rdv.organisme_medical }}</small>
-                                    </div>
-                                    <span class="badge {% if rdv.statut == 'PLANIFIE' %}bg-primary{% elif rdv.statut == 'REALISE' %}bg-success{% else %}bg-secondary{% endif %}">{{ rdv.get_statut_display }}</span>
-                                </div>
-                                {% if rdv.statut == 'PLANIFIE' or rdv.statut == 'REPORTE' %}
-                                    <div class="mt-2 text-end">
-                                        <a href="{% url 'saisir_resultat_visite' rdv.id %}" class="btn btn-sm btn-success">Saisir le Résultat</a>
-                                    </div>
-                                {% endif %}
+                                <strong>{{ event.get_type_evenement_display }}</strong>
+                                <small class="text-muted d-block">
+                                    Du {{ event.date_debut|date:"d/m/Y" }} 
+                                    {% if event.date_fin %} au {{ event.date_fin|date:"d/m/Y" }}{% endif %}
+                                </small>
+                                <p class="mb-0 small">{{ event.details }}</p>
                             </div>
-                            {# ### FIN DE LA MODIFICATION ### #}
                         {% empty %}
-                            <div class="list-group-item text-muted">Aucun rendez-vous médical planifié ou enregistré.</div>
+                            <div class="list-group-item text-muted">Aucun événement de carrière enregistré.</div>
                         {% endfor %}
                     </div>
                 </div>
@@ -124,69 +113,67 @@
             <!-- ============================================= -->
             <div class="col-lg-8 d-flex flex-column gap-4">
                 
-                <!-- Section Qualifications -->
+                <!-- Section MUA Actives -->
                 <div class="card shadow-sm">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="bi bi-award-fill me-2"></i>Qualifications Acquises</h5>
-                        {% if can_edit_licence %}
-                            <a href="{% url 'competences:ajouter_qualification' licence.id %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus-circle"></i> Ajouter</a>
-                        {% endif %}
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-shield-check me-2"></i>Mentions d'Unité Annuelles (MUA) Actives</h5>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-hover mb-0">
-                            <thead><tr><th>Qualification</th><th>Date d'Obtention</th><th>Exerce ISP/EXA</th><th>Actions</th></tr></thead>
+                            <thead><tr><th>Flux</th><th>Centre</th><th>Statut</th><th>Cycle de validité</th><th>Actions</th></tr></thead>
                             <tbody>
-                                {% for qualif in licence.qualifications.all %}
+                                {% for mua in muas_actives %}
                                     <tr>
-                                        <td>{{ qualif.get_type_qualification_display }}</td>
-                                        <td>{{ qualif.date_obtention|date:"d/m/Y" }}</td>
+                                        <td><strong>{{ mua.get_type_flux_display }}</strong></td>
+                                        <td>{{ mua.qualification.centre.code_centre }}</td>
+                                        <td><span class="badge bg-success">{{ mua.get_statut_display }}</span></td>
+                                        <td>Du {{ mua.date_debut_cycle|date:"d/m/Y" }} au {{ mua.date_fin_cycle|date:"d/m/Y" }}</td>
                                         <td>
-                                            {% if qualif.privileges_actifs %}<i class="bi bi-check-circle-fill text-success"></i> Oui{% else %}<i class="bi bi-x-circle-fill text-danger"></i> Non{% endif %}
-                                        </td>
-                                        <td>
-                                            <a href="{% url 'competences:modifier_qualification' qualif.id %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+                                            <a href="#" class="btn btn-sm btn-outline-primary disabled">
+                                                Dossier de renouvellement
+                                            </a>
                                         </td>
                                     </tr>
                                 {% empty %}
-                                    <tr><td colspan="4" class="text-center text-muted">Aucune qualification enregistrée.</td></tr>
+                                    <tr><td colspan="5" class="text-center text-muted">Aucune MUA active.</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
                 </div>
-            
-                <!-- Section Mentions d'Unité -->
+
+                <!-- Section Historique des Qualifications -->
                 <div class="card shadow-sm">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="bi bi-geo-alt-fill me-2"></i>Mentions d'Unité</h5>
-                        {% if can_add_mention %}
-                            <a href="{% url 'competences:ajouter_mention' licence.id %}" class="btn btn-sm btn-primary"><i class="bi bi-plus-circle"></i> Ajouter</a>
-                        {% endif %}
+                        <h5 class="mb-0"><i class="bi bi-award-fill me-2"></i>Historique des Qualifications ("CV")</h5>
+                        <a href="{% url 'competences:ajouter_qualification' brevet.id %}" class="btn btn-sm btn-primary">
+                            <i class="bi bi-plus-circle"></i> Ajouter une Qualification
+                        </a>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover mb-0">
-                            <thead><tr><th>Qualification</th><th>Centre</th><th>Mention (CAM/CAG)</th><th>Échéance</th><th>Actions</th></tr></thead>
-                            <tbody>
-                                {% for mention in licence.mentions_unite.all %}
-                                    <tr class="echeance-{{ mention.alert_level }}">
-                                        <td><strong>{{ mention.qualification_source.get_type_qualification_display }}</strong></td>
-                                        <td>{{ mention.centre.code_centre }}</td>
-                                        <td><span class="badge {% if mention.type_flux == 'CAG' %}bg-info text-dark{% else %}bg-secondary{% endif %}">{{ mention.type_flux }}</span> {{ mention.mention_particuliere }}</td>
-                                        <td>{{ mention.date_echeance|date:"d/m/Y" }}</td>
-                                        <td>
-                                            {% if can_add_mention %}
-                                                <a href="{% url 'competences:modifier_mention' mention.id %}" class="btn btn-sm btn-outline-secondary" title="Modifier cette mention">
-                                                    <i class="bi bi-pencil"></i>
-                                                </a>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                {% empty %}
-                                    <tr><td colspan="5" class="text-center text-muted">Aucune mention d'unité.</td></tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+                    {% for centre, qualifs in qualifications_par_centre.items %}
+                        <div class="card-header bg-light py-2"><strong>Centre : {{ centre.code_centre }}</strong></div>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover mb-0">
+                                <thead><tr><th>Qualification</th><th>Flux</th><th>Date d'obtention</th><th>Statut</th></tr></thead>
+                                <tbody>
+                                    {% for qualif in qualifs %}
+                                        <tr>
+                                            <td>{{ qualif.get_type_qualification_display }}</td>
+                                            <td><span class="badge bg-secondary">{{ qualif.get_type_flux_display }}</span></td>
+                                            <td>{{ qualif.date_obtention|date:"d/m/Y" }}</td>
+                                            <td>{{ qualif.get_statut_display }}</td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr><td colspan="4" class="text-center text-muted">Aucune qualification pour ce centre.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% empty %}
+                        <div class="card-body text-center text-muted">
+                            Aucune qualification enregistrée pour cet agent.
+                        </div>
+                    {% endfor %}
                 </div>
 
             </div> <!-- FIN DE LA COLONNE DE DROITE -->

@@ -6,10 +6,28 @@ from django.utils import timezone
 class Centre(models.Model):
     nom_centre = models.CharField(max_length=255, unique=True, help_text="Nom complet du centre (ex: DGA Essais en vol Istres)")
     code_centre = models.CharField(max_length=10, unique=True, help_text="Code mnémonique du centre (ex: IS, CA, TO)")
+      
+    gere_aps = models.BooleanField(
+        default=False, 
+        verbose_name="Gère le flux CAG APS",
+        help_text="Cocher si ce centre gère la qualification et le maintien de compétences pour le flux APS."
+    )
+    gere_tour = models.BooleanField(
+        default=False, 
+        verbose_name="Gère la position TOUR",
+        help_text="Cocher si ce centre dispose d'une position de contrôle de type TOUR."
+    )
+    nombre_cabines = models.PositiveIntegerField(
+        default=1, 
+        verbose_name="Nombre de cabines/positions",
+        help_text="Nombre de cabines ou positions de contrôle disponibles dans le centre."
+    )
+    
     class Meta:
         verbose_name = "Centre"
         verbose_name_plural = "Centres"
         ordering = ['code_centre']
+        
     def __str__(self):
         return f"{self.nom_centre} ({self.code_centre})"
 
