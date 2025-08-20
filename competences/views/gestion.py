@@ -101,7 +101,6 @@ def gerer_mention_unite_view(request, mention_id=None, licence_id=None):
     """
     if mention_id:
         mention = get_object_or_404(MentionUnite, pk=mention_id)
-        # ### CORRECTION ### : On accède à la licence via le bon chemin
         licence = mention.licence
         titre = f"Modifier la Mention pour {licence.agent.trigram}"
     elif licence_id:
@@ -109,17 +108,39 @@ def gerer_mention_unite_view(request, mention_id=None, licence_id=None):
         mention = None
         titre = f"Ajouter une Mention d'Unité pour {licence.agent.trigram}"
     else:
+        # Si aucun identifiant n'est fourni, on ne peut rien faire.
         return redirect('home')
 
     if request.method == 'POST':
         form = MentionUniteForm(request.POST, instance=mention, licence=licence)
         if form.is_valid():
             instance = form.save(commit=False)
-            if not instance.centre_id:
-                 instance.centre = request.centre_agent
+
             # On lie la mention à la licence si c'est une création
             if not mention_id:
                 instance.licence = licence
+
+            # ==========================================================
+            #                      CORRECTION
+            # ==========================================================
+            # On récupère le centre directement depuis l'agent associé à la licence.
+            # C'est la source de vérité la plus fiable.
+            agent_concerne = licence.agent
+            
+            # On vérifie que cet agent a bien un centre de défini.
+            if agent_concerne.centre:
+                # Si oui, on l'assigne à notre nouvelle mention.
+                instance.centre = agent_concerne.centre
+            else:
+                # Si l'agent n'a pas de centre, on bloque la création
+                # et on envoie un message d'erreur clair à l'utilisateur.
+                messages.error(request, f"Opération impossible : l'agent {agent_concerne.trigram} n'est rattaché à aucun centre.")
+                context = { 'form': form, 'agent_concerne': licence.agent, 'titre': titre }
+                return render(request, 'competences/form_gestion.html', context)
+            # ==========================================================
+            #                   FIN DE LA CORRECTION
+            # ==========================================================
+            
             instance.save()
             messages.success(request, f"La mention d'unité a été enregistrée avec succès.")
             return redirect('competences:dossier_competence', agent_id=licence.agent.id_agent)
