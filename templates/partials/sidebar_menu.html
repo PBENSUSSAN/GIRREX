@@ -50,12 +50,14 @@
                 <li class="sidebar-submenu-header">Saisie & Modification</li>
                 {% if service_du_jour and service_du_jour.statut == 'OUVERTE' and verrou_operationnel and verrou_operationnel.chef_de_quart == request.user.agent_profile %}
                     <li><a href="{% url 'feuille-temps-specific-jour' centre_agent.id today|date:'Y-m-d' %}" class="ps-4">Feuille d'heure</a></li>
+                    <li><a href="{% url 'activites:saisie_jour' centre_agent.id today|date:'Y-m-d' %}" class="ps-4 fw-bold text-primary">Saisie des Activités de Vol</a></li>
                     <li><a href="{% url 'ajouter-panne' centre_agent.id %}" class="ps-4">Signaler une Panne</a></li>
                     <li><a href="{% url 'ajouter-evenement' centre_agent.id %}" class="ps-4">Consigner un Événement</a></li>
                     <li><a href="{% url 'qs:pre-declarer-fne' centre_agent.id %}" class="ps-4 text-warning fw-bold">Signaler un Événement QS</a></li>
                     <li><a href="{% url 'gestion-zone' centre_agent.id %}" class="ps-4">Gestion Zone</a></li>
                 {% else %}
                     <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle.">Feuille d'heure</span></li>
+                    <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle.">Saisie des Activités de Vol</span></li>
                     <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle.">Signaler une Panne</span></li>
                     <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle.">Consigner un Événement</span></li>
                     <li><span class="ps-4 disabled" title="Vous devez ouvrir le service et en avoir le contrôle.">Signaler un Événement QS</span></li>

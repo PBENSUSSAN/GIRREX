@@ -19,11 +19,11 @@ class VolAdmin(admin.ModelAdmin):
     """
     Configuration de l'interface d'administration pour le modèle Vol.
     """
-    list_display = ('indicatif', 'date_vol', 'flux', 'centre', 'duree')
+    list_display = ('indicatif', 'date_vol', 'flux', 'centre', 'duree_reelle')
+    
     list_filter = ('centre', 'flux', 'date_vol')
     search_fields = ('indicatif',)
     date_hierarchy = 'date_vol'
-    # Ajoute la gestion des SaisieActivite directement dans la page du Vol
     inlines = [SaisieActiviteInline]
 
 @admin.register(SaisieActivite)

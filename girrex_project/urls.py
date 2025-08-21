@@ -31,6 +31,7 @@ urlpatterns = [
     path('cyber/', include('cyber.urls')),
     path('feedback/', include('feedback.urls')),
     path('competences/', include('competences.urls')),
+    path('activites/', include('activites.urls')), 
 ]
 
 if settings.DEBUG:

@@ -7,7 +7,7 @@ from collections import defaultdict
 
 from core.models import Parametre, CertificatMed
 from activites.models import SaisieActivite
-from .models import MentionLinguistique, SuiviFormationReglementaire, RegleDeRenouvellement
+from .models import MentionUniteAnnuelle, MentionLinguistique, SuiviFormationReglementaire, RegleDeRenouvellement
 
 def get_mua_dossier_context(mua):
     """
@@ -16,21 +16,11 @@ def get_mua_dossier_context(mua):
     """
     agent = mua.qualification.brevet.agent
     centre = mua.qualification.centre
-    today = timezone.now().date()
     
     # --- 1. Calcul du Socle de Validité ---
-    checklist_socle = []
-    socle_est_valide = True
-    
-    certificat = CertificatMed.objects.filter(agent=agent).order_by('-date_visite').first()
-    mention_ling = MentionLinguistique.objects.filter(brevet__agent=agent, langue='ANGLAIS').first()
-    raf_aero = SuiviFormationReglementaire.objects.filter(brevet__agent=agent, formation__slug='fh-raf-aero').first()
-
-    for nom, obj, date_field in [('Aptitude Médicale', certificat, 'date_expiration_aptitude'), ('Aptitude Linguistique', mention_ling, 'date_echeance'), ('Formation RAF AERO', raf_aero, 'date_echeance')]:
-        echeance = getattr(obj, date_field, None)
-        est_valide = obj and echeance and echeance >= today
-        checklist_socle.append({'nom': nom, 'valide': est_valide, 'details': f"Expire le {echeance.strftime('%d/%m/%Y')}" if est_valide else "Manquant ou expiré"})
-        if not est_valide: socle_est_valide = False
+    socle_context = calculer_statut_socle(agent)
+    checklist_socle = socle_context['checklist']
+    socle_est_valide = socle_context['est_valide']
         
     # --- 2. Génération des périodes mensuelles ---
     periods = []
@@ -126,3 +116,74 @@ def get_mua_dossier_context(mua):
         'monthly_breakdown': monthly_breakdown,
         'heures_brutes_totales': heures_brutes_totales,
     }
+
+# ==========================================================
+#                      NOUVELLE SECTION
+# ==========================================================
+
+def calculer_statut_socle(agent):
+    """
+    Service interne pour vérifier le socle de validité d'un agent.
+    Retourne un dictionnaire détaillé.
+    """
+    today = timezone.now().date()
+    socle_est_valide = True
+    checklist = []
+    
+    # Vérification Médicale
+    certificat = CertificatMed.objects.filter(agent=agent).order_by('-date_visite').first()
+    echeance_med = getattr(certificat, 'date_expiration_aptitude', None)
+    med_valide = certificat and echeance_med and echeance_med >= today
+    if not med_valide: socle_est_valide = False
+    checklist.append({'nom': 'Aptitude Médicale', 'valide': med_valide, 'details': f"Expire le {echeance_med.strftime('%d/%m/%Y')}" if med_valide else "Manquant ou expiré"})
+
+    # Vérification Linguistique
+    mention_ling = MentionLinguistique.objects.filter(brevet__agent=agent, langue='ANGLAIS').first()
+    echeance_ling = getattr(mention_ling, 'date_echeance', None)
+    ling_valide = mention_ling and echeance_ling and echeance_ling >= today
+    if not ling_valide: socle_est_valide = False
+    checklist.append({'nom': 'Aptitude Linguistique', 'valide': ling_valide, 'details': f"Expire le {echeance_ling.strftime('%d/%m/%Y')}" if ling_valide else "Manquant ou expiré"})
+
+    # Vérification RAF AERO
+    raf_aero = SuiviFormationReglementaire.objects.filter(brevet__agent=agent, formation__slug='fh-raf-aero').first()
+    echeance_raf = getattr(raf_aero, 'date_echeance', None)
+    raf_valide = raf_aero and echeance_raf and echeance_raf >= today
+    if not raf_valide: socle_est_valide = False
+    checklist.append({'nom': 'Formation RAF AERO', 'valide': raf_valide, 'details': f"Expire le {echeance_raf.strftime('%d/%m/%Y')}" if raf_valide else "Manquant ou expiré"})
+    
+    # Extraction des motifs en cas d'invalidité
+    motifs = [item['nom'] for item in checklist if not item['valide']]
+
+    return {'est_valide': socle_est_valide, 'motifs': motifs, 'checklist': checklist}
+
+def is_agent_apte_for_flux(agent, flux, on_date):
+    """
+    Vérifie si un agent est apte à contrôler sur un flux donné à une date donnée.
+    Retourne (True, "") si c'est bon, ou (False, "Message d'erreur") si non.
+    """
+    # Étape 1: Vérifier le socle de l'agent
+    socle_context = calculer_statut_socle(agent)
+    if not socle_context['est_valide']:
+        motif = socle_context['motifs'][0] if socle_context['motifs'] else "Socle invalide"
+        return False, f"Socle de l'agent invalide ({motif})."
+
+    # Étape 2: Trouver la MUA correspondante et vérifier son statut
+    type_flux_mua = 'CAM' if flux in ['CAM'] else 'CAG'
+    
+    try:
+        mua = MentionUniteAnnuelle.objects.get(
+            qualification__brevet__agent=agent,
+            type_flux=type_flux_mua,
+            date_debut_cycle__lte=on_date,
+            date_fin_cycle__gte=on_date,
+        )
+        if mua.statut != 'ACTIF':
+            return False, f"MUA {type_flux_mua} non active (statut: {mua.get_statut_display()})."
+            
+    except MentionUniteAnnuelle.DoesNotExist:
+        return False, f"Aucune MUA {type_flux_mua} valide trouvée pour cette période."
+    except MentionUniteAnnuelle.MultipleObjectsReturned:
+        return False, "Erreur de données : Plusieurs MUA actives trouvées pour la même période."
+
+    # Si tous les contrôles passent
+    return True, ""

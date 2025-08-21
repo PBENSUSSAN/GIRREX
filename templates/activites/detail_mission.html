@@ -1,0 +1,83 @@
+<!-- Fichier : templates/activites/detail_mission.html -->
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Détail de la Mission {{ mission.indicatif }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'activites:saisie_jour' mission.centre.id mission.date_vol|date:'Y-m-d' %}">Saisie du {{ mission.date_vol|date:"d/m/Y" }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Mission {{ mission.indicatif }}</li>
+        </ol>
+    </nav>
+
+    <h3>Gestion de la Mission : {{ mission.indicatif|default:mission.numero_strip }}</h3>
+    <p class="text-muted">Gérez ici les différents segments (relèves), leurs horaires réels et les participants.</p>
+    <hr>
+    
+    <div class="d-flex flex-column gap-4">
+        {% for segment in segments %}
+        <div class="card shadow-sm">
+            <div class="card-header bg-light">
+                <strong>Segment #{{ forloop.counter }}</strong>
+            </div>
+            <div class="card-body">
+                <div class="row g-4">
+                    <!-- Colonne de gauche : Participants -->
+                    <div class="col-md-7">
+                        <h6><i class="bi bi-people-fill me-2"></i>Participants</h6>
+                        <table class="table table-sm">
+                            <tbody>
+                                {% for activite in segment.activites.all %}
+                                <tr>
+                                    <td>{{ activite.agent.trigram }}</td>
+                                    <td><span class="badge bg-info">{{ activite.get_role_display }}</span></td>
+                                    <td class="text-end"><a href="{% url 'activites:supprimer_participant' activite.id %}" class="btn btn-sm btn-outline-danger py-0 px-2"><i class="bi bi-trash"></i></a></td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="3" class="text-center text-muted">Aucun participant.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        <hr>
+                        {# ========================================================== #}
+                        {#                      CORRECTION ICI                        #}
+                        {# ========================================================== #}
+                        {# On utilise la variable de formulaire spécifique à ce segment #}
+                        <form action="{% url 'activites:ajouter_participant' segment.id %}" method="post" class="row g-2 align-items-end">
+                            {% csrf_token %}
+                            {% with activite_form=segment.get_activite_form %}
+                                <div class="col">{{ activite_form.agent|as_crispy_field }}</div>
+                                <div class="col">{{ activite_form.role|as_crispy_field }}</div>
+                            {% endwith %}
+                            <div class="col-auto"><button type="submit" class="btn btn-sm btn-primary">Ajouter</button></div>
+                        </form>
+                    </div>
+
+                    <!-- Colonne de droite : Horaires -->
+                    <div class="col-md-5">
+                        <h6><i class="bi bi-clock-fill me-2"></i>Horaires</h6>
+                        <form action="{% url 'activites:saisir_heures_reelles' segment.id %}" method="post">
+                            {% csrf_token %}
+                            {% with realisation_form=segment.get_realisation_form %}
+                                {{ realisation_form.heure_debut_reelle|as_crispy_field }}
+                                {{ realisation_form.heure_fin_reelle|as_crispy_field }}
+                            {% endwith %}
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-sm btn-success">Enregistrer les heures</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        <div class="text-center">
+            <a href="{% url 'activites:ajouter_releve' mission.id %}" class="btn btn-success"><i class="bi bi-plus-circle me-2"></i>Ajouter une Relève</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
