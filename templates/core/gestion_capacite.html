@@ -1,0 +1,51 @@
+<!-- Fichier : templates/core/gestion_capacite.html -->
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h3>{{ titre }}</h3>
+    <p class="text-muted">Déclarez ici les périodes où une ou plusieurs cabines de votre centre seront indisponibles.</p>
+    <hr>
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header"><h5><i class="bi bi-plus-circle me-2"></i>Ajouter une indisponibilité</h5></div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        <div class="d-grid mt-3">
+                            <button type="submit" class="btn btn-primary">Enregistrer</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header"><h5><i class="bi bi-calendar-x me-2"></i>Indisponibilités Planifiées</h5></div>
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead><tr><th>Cabine</th><th>Date</th><th>Créneau</th><th>Motif</th></tr></thead>
+                        <tbody>
+                            {% for indispo in indisponibilites %}
+                            <tr>
+                                <td>{{ indispo.nom_cabine }}</td>
+                                <td>{{ indispo.date_jour|date:"d/m/Y" }}</td>
+                                <td>{{ indispo.heure_debut|time:"H:i" }} - {{ indispo.heure_fin|time:"H:i" }}</td>
+                                <td>{{ indispo.motif }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center text-muted">Aucune indisponibilité planifiée.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

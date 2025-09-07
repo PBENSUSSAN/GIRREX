@@ -78,4 +78,6 @@ urlpatterns = [
         medical.gerer_rdv_medical_view, 
         name='modifier_rdv_medical'),
     path('rdv-medical/<int:rdv_id>/saisir-resultat/', medical.enregistrer_resultat_visite_view, name='saisir_resultat_visite'),
+
+     path('planning/capacite/<int:centre_id>/', planning.gestion_capacite_view, name='gestion_capacite'),
 ]

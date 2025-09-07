@@ -200,16 +200,37 @@
     
     <hr>
     
+        <!-- ========================================================== -->
+    <!--            BLOC 4 : MENU MANAGEMENT DE CENTRE              -->
     <!-- ========================================================== -->
-    <!--               BLOC 4 : MENU ADMINISTRATION                 -->
-    <!-- ========================================================== -->
-    {% if user.is_staff or is_supervisor_view %}
+    {% if active_agent_role.role.nom == ROLES.CHEF_DE_CENTRE or active_agent_role.role.nom == ROLES.ADJOINT_CHEF_DE_CENTRE %}
     <li>
-        <a href="#adminSubmenu" data-bs-toggle="collapse" aria-expanded="false" class="dropdown-toggle"><i class="bi bi-gear-fill"></i>Administration</a>
-        <ul class="collapse list-unstyled" id="adminSubmenu">
-            <li><a href="#" class="ps-4">Gestion Utilisateurs</a></li>
+        <a href="#managementSubmenu" data-bs-toggle="collapse" aria-expanded="false" class="dropdown-toggle"><i class="bi bi-building-gear"></i>Management Centre</a>
+        <ul class="collapse list-unstyled" id="managementSubmenu">
             
-            <!-- Lien pour le tableau de bord des feedbacks (pour les admins/superviseurs) -->
+            <!-- Lien pour la gestion de la capacité du centre local -->
+            {% if effective_perms.core.change_centre and request.user.agent_profile.centre %}
+            <li>
+                <a href="{% url 'gestion_capacite' request.user.agent_profile.centre.id %}" class="ps-4">
+                    <i class="bi bi-sliders"></i> Gestion Capacité
+                </a>
+            </li>
+            {% endif %}
+
+            <li><a href="#" class="ps-4 disabled">Gestion des Agents</a></li>
+        </ul>
+    </li>
+    {% endif %}
+
+    <!-- ========================================================== -->
+    <!--            BLOC 5 : MENU ADMINISTRATION TECHNIQUE          -->
+    <!-- ========================================================== -->
+    {% if user.is_superuser %}
+    <li>
+        <a href="#adminSubmenu" data-bs-toggle="collapse" aria-expanded="false" class="dropdown-toggle"><i class="bi bi-gear-fill"></i>Administration Tech</a>
+        <ul class="collapse list-unstyled" id="adminSubmenu">
+            <li><a href="{% url 'admin:index' %}" class="ps-4">Interface Admin Django</a></li>
+            
             {% if effective_perms.feedback.view_feedback_dashboard %}
             <li>
                 <a href="{% url 'feedback:tableau-de-bord' %}" class="ps-4">
@@ -218,9 +239,8 @@
             </li>
             {% endif %}
             
-            <li><a href="#" class="ps-4">Paramètres</a></li>
+            <li><a href="#" class="ps-4 disabled">Paramètres Généraux</a></li>
         </ul>
     </li>
-    {% endif %} <!-- Fin du bloc Administration -->
-
+    {% endif %}
 </ul>

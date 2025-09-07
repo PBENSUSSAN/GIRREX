@@ -1,8 +1,7 @@
 # Fichier : core/forms.py
 
 from django import forms
-from .models import EvenementCentre, CategorieEvenement, RendezVousMedical, CertificatMed
-
+from .models import EvenementCentre, CategorieEvenement, RendezVousMedical, CertificatMed, IndisponibiliteCabine
 
 class EvenementCentreForm(forms.ModelForm):
     categorie = forms.ModelChoiceField(
@@ -77,3 +76,16 @@ class CertificatMedForm(forms.ModelForm):
             self.add_error('date_expiration_aptitude', "Une date d'expiration est requise si l'agent est déclaré apte.")
         
         return cleaned_data
+
+class IndisponibiliteCabineForm(forms.ModelForm):
+    """
+    Formulaire pour déclarer une période d'indisponibilité pour une cabine.
+    """
+    class Meta:
+        model = IndisponibiliteCabine
+        fields = ['nom_cabine', 'date_jour', 'heure_debut', 'heure_fin', 'motif']
+        widgets = {
+            'date_jour': forms.DateInput(attrs={'type': 'date'}),
+            'heure_debut': forms.TimeInput(attrs={'type': 'time'}),
+            'heure_fin': forms.TimeInput(attrs={'type': 'time'}),
+        }

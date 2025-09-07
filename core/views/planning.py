@@ -14,11 +14,13 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
+from django.contrib import messages
 
 # --- Imports Locaux (de votre application) ---
 from ..models import (
-    Agent, Centre, PositionJour, TourDeService, VersionTourDeService
+    Agent, Centre, PositionJour, TourDeService, VersionTourDeService,IndisponibiliteCabine
 )
+from ..forms import IndisponibiliteCabineForm
 
 
 @login_required
@@ -203,3 +205,35 @@ def voir_version_validee(request, version_id):
     days_formatted = [{"date": d, "jour_court": jours_fr[d.weekday()], "num": d.day} for d in days_in_month]
     context = { 'version': version, 'centre': version.centre, 'days_in_month_formatted': days_formatted, 'planning_data': planning_data }
     return render(request, 'core/voir_version.html', context)
+
+@login_required
+# Il faudra une permission, par ex: '@effective_permission_required("core.change_centre")'
+def gestion_capacite_view(request, centre_id):
+    """
+    Affiche la liste des indisponibilités pour un centre et permet d'en ajouter.
+    """
+    centre = get_object_or_404(Centre, pk=centre_id)
+    
+    if request.method == 'POST':
+        form = IndisponibiliteCabineForm(request.POST)
+        if form.is_valid():
+            indispo = form.save(commit=False)
+            indispo.centre = centre
+            indispo.save()
+            messages.success(request, "La période d'indisponibilité a été enregistrée.")
+            return redirect('gestion_capacite', centre_id=centre.id)
+    else:
+        form = IndisponibiliteCabineForm(initial={'date_jour': date.today()})
+
+    indisponibilites = IndisponibiliteCabine.objects.filter(
+        centre=centre, 
+        date_jour__gte=date.today()
+    ).order_by('date_jour', 'heure_debut')
+
+    context = {
+        'centre': centre,
+        'form': form,
+        'indisponibilites': indisponibilites,
+        'titre': f"Gestion de la Capacité - {centre.code_centre}"
+    }
+    return render(request, 'core/gestion_capacite.html', context)

@@ -4,7 +4,7 @@
 from .rh import Centre, Agent, Licence, Qualification, Mention, Module, Organisme, Formation, Evaluation, Habilitation, Affectation
 
 from .parametrage import Parametre, ValeurParametre, Role, AgentRole, Delegation
-#from .documentaire import DocumentType, Document, DocumentVersion, SignatureCircuit
+
 
 from .planning import PositionJour, TourDeService, TourDeServiceHistorique, VersionTourDeService
 
@@ -21,3 +21,5 @@ from .service_journalier import ServiceJournalier, ServiceJournalierHistorique
 from .zone import Zone, ActiviteZone
 
 from .medical import CertificatMed, RendezVousMedical
+
+from .planning_ressources import IndisponibiliteCabine, TypeActiviteHorsVol

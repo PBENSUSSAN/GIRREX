@@ -5,18 +5,26 @@ from django.core.exceptions import ValidationError
 from datetime import datetime, timedelta
 
 # On importe les modèles de l'application 'core'
-from core.models import Agent, Centre
+from core.models import Agent, Centre, TypeActiviteHorsVol
 
 class Vol(models.Model):
     """
-    Représente un vol ou un segment de vol (relève), 
-    avec ses données de planification et de réalisation.
+    Représente un bloc de temps sur une timeline : un segment de vol, une relève,
+    ou une activité hors-vol (repas, réunion...).
     """
     class TypeFlux(models.TextChoices):
         CAM = 'CAM', 'CAM'
         CAG_ACS = 'CAG_ACS', 'CAG - ACS'
         CAG_APS = 'CAG_APS', 'CAG - APS'
         TOUR = 'TOUR', 'Position TOUR'
+
+    class Statut(models.TextChoices):
+        DEMANDE = 'DEMANDE', 'Demandé'
+        PLANIFIE = 'PLANIFIE', 'Planifié'
+        ASSIGNE = 'ASSIGNE', 'Assigné'
+        TERMINE = 'TERMINE', 'Terminé'
+        CONSOLIDE = 'CONSOLIDE', 'Consolidé'
+        ANNULE = 'ANNULE', 'Annulé'
 
     # --- Données de Planification ---
     numero_strip = models.CharField(max_length=50, blank=True)
@@ -42,6 +50,7 @@ class Vol(models.Model):
         null=True, blank=True
     )
     
+    # --- Champs de Workflow et de Structure ---
     parent_vol = models.ForeignKey(
         'self', 
         on_delete=models.SET_NULL, 
@@ -49,6 +58,25 @@ class Vol(models.Model):
         blank=True, 
         related_name='releves',
         verbose_name="Vol d'origine (mission)"
+    )
+    statut = models.CharField(
+        max_length=20, 
+        choices=Statut.choices, 
+        default=Statut.DEMANDE
+    )
+    nom_cabine = models.CharField(
+        max_length=100, 
+        blank=True,
+        help_text="Nom de la cabine/position assignée par la CCA ou le Planificateur Local."
+    )
+
+    # --- Champs pour les Activités Hors-Vol ---
+    est_activite_hors_vol = models.BooleanField(default=False)
+    type_activite_hors_vol = models.ForeignKey(
+        TypeActiviteHorsVol, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True
     )
     
     @property
@@ -63,6 +91,8 @@ class Vol(models.Model):
         return (end - start).total_seconds() / 3600
 
     def __str__(self):
+        if self.est_activite_hors_vol and self.type_activite_hors_vol:
+            return f"{self.type_activite_hors_vol.nom} le {self.date_vol}"
         return f"Vol {self.indicatif or self.numero_strip} du {self.date_vol} à {self.centre.code_centre}"
 
 class SaisieActivite(models.Model):
@@ -87,8 +117,6 @@ class SaisieActivite(models.Model):
 
     def clean(self):
         """
-        La logique de validation complexe (aptitude, unicité des rôles, etc.)
-        a été déplacée dans le fichier activites/forms.py pour une meilleure
-        gestion du contexte.
+        La logique de validation complexe est maintenant gérée dans activites/forms.py.
         """
         super().clean()

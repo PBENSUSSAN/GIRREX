@@ -6,6 +6,15 @@ from django.utils import timezone
 class Centre(models.Model):
     nom_centre = models.CharField(max_length=255, unique=True, help_text="Nom complet du centre (ex: DGA Essais en vol Istres)")
     code_centre = models.CharField(max_length=10, unique=True, help_text="Code mnémonique du centre (ex: IS, CA, TO)")
+
+    sous_gestion_cca = models.BooleanField(
+        default=False,
+        verbose_name="Sous gestion CCA",
+        help_text="Cocher si la planification de ce centre est gérée par la CCA."
+    )
+    gere_aps = models.BooleanField(...)
+    gere_tour = models.BooleanField(...)
+    nombre_cabines = models.PositiveIntegerField(...)
       
     gere_aps = models.BooleanField(
         default=False, 
