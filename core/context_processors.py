@@ -1,6 +1,6 @@
 # Fichier : core/context_processors.py (Version Corrigée et Simplifiée)
 
-from datetime import date
+from datetime import date, timedelta
 from .middleware import EffectivePermissions # Importe la classe helper
 
 def girrex_global_context(request):
@@ -9,9 +9,13 @@ def girrex_global_context(request):
     par le GirrexContextMiddleware et attachées à l'objet 'request'.
     Cette fonction ne fait plus aucun calcul, elle ne fait que transmettre.
     """
+    today = date.today()
+    next_day = today + timedelta(days=1)
+    
     return {
         # Variables simples qui peuvent être définies ici
         'today': date.today(),
+        'next_day_str': next_day.isoformat(),
         'ROLES': getattr(request, 'ROLES', {}),
 
         # On lit toutes les autres variables depuis l'objet 'request'.

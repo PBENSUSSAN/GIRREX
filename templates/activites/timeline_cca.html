@@ -1,0 +1,54 @@
+<!-- Fichier : templates/activites/timeline_cca.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block page_specific_styles %}
+<style>
+    /* On donne une hauteur minimale à notre conteneur de timeline */
+    #timeline-container {
+        height: 80vh; /* 80% de la hauteur de la fenêtre */
+        border: 1px solid #dee2e6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>{{ titre }}</h3>
+    </div>
+    <hr>
+    
+    <div class="row g-4">
+        <!-- Colonne de gauche : Panneau des demandes -->
+        <div class="col-lg-3">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5><i class="bi bi-inbox-fill me-2"></i>Demandes à Planifier</h5>
+                </div>
+                <div class="card-body" id="demandes-panel">
+                    <p class="text-muted">Chargement des demandes...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne de droite : La timeline -->
+        <div class="col-lg-9">
+            <!-- ========================================================== -->
+            <!--                 L'ÉLÉMENT CLÉ EST ICI                      -->
+            <!-- ========================================================== -->
+            <!-- Ce div est le conteneur où vis-timeline va dessiner. -->
+            <!-- L'id 'timeline-container' doit correspondre à celui du JS. -->
+            <div id="timeline-container" data-target-date="{{ target_date|date:'Y-m-d' }}"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }} {# Garde les scripts de base.html #}
+<script src="{% static 'js/timeline-cca.js' %}"></script>
+{% endblock %}

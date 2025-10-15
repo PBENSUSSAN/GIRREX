@@ -23,3 +23,5 @@ from .zone import Zone, ActiviteZone
 from .medical import CertificatMed, RendezVousMedical
 
 from .planning_ressources import IndisponibiliteCabine, TypeActiviteHorsVol
+
+from .notification import Notification

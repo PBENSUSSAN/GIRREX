@@ -1,0 +1,55 @@
+# ============================================================================
+# GIRREX - Requirements
+# ============================================================================
+# Installation : pip install -r requirements.txt
+# ============================================================================
+
+# Django Framework
+Django>=5.2,<5.3
+
+# Formulaires et UI
+django-crispy-forms>=2.0
+crispy-bootstrap5>=0.7
+
+# Filtres avancés
+django-filter>=23.0
+
+# Task Queue (Asynchrone)
+celery>=5.3
+
+# Images et fichiers
+Pillow>=10.0
+
+# Base de données (Production)
+# Décommenter pour PostgreSQL en production :
+# psycopg2-binary>=2.9
+
+# Variables d'environnement (Production)
+# Décommenter pour utiliser .env en production :
+# python-decouple>=3.8
+# django-environ>=0.11
+
+# Serveur WSGI (Production)
+# Décommenter pour la production :
+# gunicorn>=21.0
+
+# Redis (pour Celery en production)
+# Décommenter pour utiliser Redis :
+# redis>=5.0
+# celery[redis]>=5.3
+
+# Monitoring et logging (Production)
+# Décommenter si nécessaire :
+# sentry-sdk>=1.40
+
+# Tests et qualité de code
+# Décommenter pour le développement :
+# coverage>=7.0
+# django-debug-toolbar>=4.2
+# flake8>=6.0
+# black>=23.0
+
+# Documentation
+# Décommenter si nécessaire :
+# sphinx>=7.0
+# sphinx-rtd-theme>=1.3

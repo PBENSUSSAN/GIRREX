@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+
+{% block title %}Mes Notifications{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>
+            <i class="bi bi-bell"></i> Mes Notifications
+            {% if nb_non_lues > 0 %}
+                <span class="badge bg-danger">{{ nb_non_lues }}</span>
+            {% endif %}
+        </h1>
+        
+        {% if nb_non_lues > 0 %}
+            <button class="btn btn-outline-primary" onclick="marquerToutesLues()">
+                <i class="bi bi-check2-all"></i> Tout marquer comme lu
+            </button>
+        {% endif %}
+    </div>
+    
+    {% if notifications_non_lues %}
+        <div class="card mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="bi bi-exclamation-circle"></i> 
+                    Notifications non lues ({{ nb_non_lues }})
+                </h5>
+            </div>
+            <div class="list-group list-group-flush">
+                {% for notif in notifications_non_lues %}
+                    <div class="list-group-item notification-item" data-id="{{ notif.id }}">
+                        <div class="d-flex w-100 justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-2">
+                                    {% if notif.type_notification == 'ALERT' %}
+                                        <span class="badge bg-danger me-2">Alerte</span>
+                                    {% elif notif.type_notification == 'WARNING' %}
+                                        <span class="badge bg-warning text-dark me-2">Avertissement</span>
+                                    {% elif notif.type_notification == 'SUCCESS' %}
+                                        <span class="badge bg-success me-2">Succès</span>
+                                    {% else %}
+                                        <span class="badge bg-info me-2">Info</span>
+                                    {% endif %}
+                                    <h6 class="mb-0">{{ notif.titre }}</h6>
+                                </div>
+                                <p class="mb-1">{{ notif.message }}</p>
+                                <small class="text-muted">
+                                    <i class="bi bi-clock"></i> {{ notif.date_creation|date:"d/m/Y à H:i" }}
+                                </small>
+                            </div>
+                            <div class="ms-3">
+                                <button class="btn btn-sm btn-outline-success" 
+                                        onclick="marquerLue({{ notif.id }})"
+                                        title="Marquer comme lue">
+                                    <i class="bi bi-check"></i>
+                                </button>
+                                {% if notif.lien_url %}
+                                    <a href="{{ notif.lien_url }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-arrow-right"></i>
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+    
+    {% if notifications_lues %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-check-circle"></i> 
+                    Notifications lues récentes
+                </h5>
+            </div>
+            <div class="list-group list-group-flush">
+                {% for notif in notifications_lues %}
+                    <div class="list-group-item" style="opacity: 0.7;">
+                        <div class="d-flex w-100 justify-content-between">
+                            <div>
+                                <div class="d-flex align-items-center mb-2">
+                                    {% if notif.type_notification == 'ALERT' %}
+                                        <span class="badge bg-secondary me-2">Alerte</span>
+                                    {% elif notif.type_notification == 'WARNING' %}
+                                        <span class="badge bg-secondary me-2">Avertissement</span>
+                                    {% elif notif.type_notification == 'SUCCESS' %}
+                                        <span class="badge bg-secondary me-2">Succès</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary me-2">Info</span>
+                                    {% endif %}
+                                    <h6 class="mb-0">{{ notif.titre }}</h6>
+                                </div>
+                                <p class="mb-1">{{ notif.message }}</p>
+                                <small class="text-muted">
+                                    <i class="bi bi-clock"></i> {{ notif.date_creation|date:"d/m/Y à H:i" }}
+                                    • Lu le {{ notif.date_lecture|date:"d/m/Y à H:i" }}
+                                </small>
+                            </div>
+                            {% if notif.lien_url %}
+                                <a href="{{ notif.lien_url }}" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-arrow-right"></i>
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+    
+    {% if not notifications_non_lues and not notifications_lues %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> 
+            Aucune notification pour le moment.
+        </div>
+    {% endif %}
+</div>
+
+<script>
+function marquerLue(notificationId) {
+    fetch(`/notifications/${notificationId}/marquer-lue/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Retirer la notification de la liste
+            const item = document.querySelector(`[data-id="${notificationId}"]`);
+            item.style.transition = 'opacity 0.3s';
+            item.style.opacity = '0';
+            setTimeout(() => {
+                item.remove();
+                // Recharger si plus de notifications non lues
+                const remaining = document.querySelectorAll('.notification-item').length;
+                if (remaining === 0) {
+                    location.reload();
+                }
+            }, 300);
+        }
+    });
+}
+
+function marquerToutesLues() {
+    if (confirm('Marquer toutes les notifications comme lues ?')) {
+        fetch('/notifications/marquer-toutes-lues/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            }
+        });
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

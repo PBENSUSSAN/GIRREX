@@ -70,6 +70,28 @@
     {% endif %}
 
     <!-- ========================================================== -->
+    <!--            BLOC 1.5 : MENU DE PLANIFICATION CCA          -->
+    <!-- ========================================================== -->
+    {% if is_supervisor_view %} {# Le menu s'affiche pour les rôles de supervision #}
+    <li class="nav-item">
+        <a class="nav-link collapsed d-flex justify-content-between align-items-center" href="#collapseCCA" data-bs-toggle="collapse" aria-expanded="false">
+            <div><i class="bi bi-calendar2-week"></i><span>Planification CCA</span></div>
+            <i class="bi bi-chevron-right sidebar-chevron"></i>
+        </a>
+        <ul class="collapse list-unstyled" id="collapseCCA">
+            <li class="sidebar-submenu-header">Planification</li>
+            <li>
+                <a href="{% url 'activites:cca_planning' next_day_str %}" class="ps-4">Planning J+1</a>
+            </li>
+             <li class="sidebar-submenu-header">Suivi</li>
+            <li>
+                <a href="{% url 'activites:cca_supervision' %}" class="ps-4">Supervision Jour J</a>
+            </li>
+        </ul>
+    </li>
+    {% endif %}
+
+    <!-- ========================================================== -->
     <!--            BLOC 2 : MENUS DE GESTION DE DOMAINE            -->
     <!-- ========================================================== -->
     

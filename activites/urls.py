@@ -25,4 +25,11 @@ urlpatterns = [
     
     # URL pour supprimer un participant
     path('participant/<int:activite_id>/supprimer/', views.supprimer_participant_view, name='supprimer_participant'),
+
+    # Page principale de planification pour la CCA pour une date donnée
+    path('cca/planning/<str:date_str>/', views.cca_planning_view, name='cca_planning'),
+    path('api/cca/planning-data/<str:date_str>/', views.api_get_planning_data, name='api_cca_planning_data'),
+    
+    # Page de supervision du jour J pour la CCA
+    path('cca/supervision/', views.cca_supervision_view, name='cca_supervision'),
 ]

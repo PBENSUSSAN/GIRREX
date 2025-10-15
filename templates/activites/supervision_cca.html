@@ -1,0 +1,32 @@
+<!-- Fichier : templates/activites/supervision_cca.html -->
+{% extends "base.html" %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>{{ titre }}</h3>
+        {# Ici, on pourrait ajouter un sélecteur de date pour voir l'historique #}
+    </div>
+    <hr>
+
+    <div class="alert alert-info">
+        Le "mur d'écrans" de supervision des timelines des centres sera implémenté ici.
+    </div>
+
+    {# Future structure : #}
+    {# <div class="row g-4"> #}
+    {#     <div class="col-lg-6"> #}
+    {#         <h4>Centre ISTRES</h4> #}
+    {#         <!-- Timeline d'Istres en lecture seule --> #}
+    {#     </div> #}
+    {#     <div class="col-lg-6"> #}
+    {#         <h4>Centre CAZAUX</h4> #}
+    {#         <!-- Timeline de Cazaux en lecture seule --> #}
+    {#     </div> #}
+    {# </div> #}
+
+</div>
+{% endblock %}

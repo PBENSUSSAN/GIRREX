@@ -49,7 +49,7 @@ def get_mua_dossier_context(mua):
         for activite in period_activities:
             flux_key = activite.vol.flux.lower()
             role_key = activite.role.lower()
-            heures_period[flux_key][role_key] += activite.vol.duree
+            heures_period[flux_key][role_key] += activite.vol.duree_reelle
             
         monthly_breakdown.append({'label': period['label'], 'heures': heures_period})
 
