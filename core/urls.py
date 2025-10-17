@@ -3,6 +3,8 @@
 from django.urls import path
 from .views import general, planning, feuille_temps, cahier_de_marche, zone, medical
 
+# NOTE: Pas de app_name pour éviter de casser les URLs existantes
+
 urlpatterns = [
     # --- Vues Générales ---
     path('', general.home, name='home'),
@@ -67,17 +69,60 @@ urlpatterns = [
     path('api/zones/update/<int:zone_id>/', zone.api_update_zone, name='api-zone-update'),
     path('api/zones/delete/<int:zone_id>/', zone.api_delete_zone, name='api-zone-delete'),
 
-    # ### DÉBUT DES NOUVELLES URLS MÉDICALES ###
+    # ### URLS MÉDICALES ###
+    # RDV - Nouvelle version avec traçabilité
     path(
-        'agent/<int:agent_id>/rdv-medical/planifier/', 
-        medical.gerer_rdv_medical_view, 
+        'medical/rdv/planifier/',
+        medical.planifier_rdv_medical_view,
         name='planifier_rdv_medical'
     ),
     path(
-        'rdv-medical/<int:rdv_id>/modifier/', 
-        medical.gerer_rdv_medical_view, 
-        name='modifier_rdv_medical'),
-    path('rdv-medical/<int:rdv_id>/saisir-resultat/', medical.enregistrer_resultat_visite_view, name='saisir_resultat_visite'),
+        'medical/rdv/planifier/<int:agent_id>/',
+        medical.planifier_rdv_medical_view,
+        name='planifier_rdv_medical_pour'
+    ),
+    path(
+        'medical/rdv/<int:rdv_id>/modifier/',
+        medical.modifier_rdv_medical_view,
+        name='modifier_rdv_medical'
+    ),
+    path(
+        'medical/rdv/<int:rdv_id>/annuler/',
+        medical.annuler_rdv_medical_view,
+        name='annuler_rdv_medical'
+    ),
+    path(
+        'medical/rdv/<int:rdv_id>/resultat/',
+        medical.saisir_resultat_visite_view,
+        name='saisir_resultat_visite'
+    ),
+    path(
+        'medical/rdv/<int:rdv_id>/historique/',
+        medical.historique_rdv_view,
+        name='historique_rdv'
+    ),
+    
+    # NOUVELLES URLS - Module enrichi
+    path(
+        'agent/<int:agent_id>/dossier-medical/',
+        medical.dossier_medical_view,
+        name='dossier_medical'
+    ),
+    path(
+        'centre/<int:centre_id>/dashboard-medical/',
+        medical.dashboard_medical_centre_view,
+        name='dashboard_medical_centre'
+    ),
+    path(
+        'medical/dashboard-national/',
+        medical.dashboard_medical_national_view,
+        name='dashboard_medical_national'
+    ),
+    path(
+        'agent/<int:agent_id>/declarer-arret/',
+        medical.declarer_arret_maladie_view,
+        name='declarer_arret_maladie'
+    ),
 
-     path('planning/capacite/<int:centre_id>/', planning.gestion_capacite_view, name='gestion_capacite'),
+    path('planning/capacite/<int:centre_id>/', planning.gestion_capacite_view, name='gestion_capacite'),
 ]

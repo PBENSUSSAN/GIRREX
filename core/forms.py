@@ -1,7 +1,7 @@
 # Fichier : core/forms.py
 
 from django import forms
-from .models import EvenementCentre, CategorieEvenement, RendezVousMedical, CertificatMed, IndisponibiliteCabine
+from .models import EvenementCentre, CategorieEvenement, RendezVousMedical, CertificatMed, IndisponibiliteCabine, ArretMaladie
 
 class EvenementCentreForm(forms.ModelForm):
     categorie = forms.ModelChoiceField(
@@ -36,14 +36,17 @@ class RendezVousMedicalForm(forms.ModelForm):
         fields = [
             'date_heure_rdv', 
             'organisme_medical', 
-            'type_visite', 
-            'statut'
+            'type_visite',
+            'commentaire'
         ]
         widgets = {
             'date_heure_rdv': forms.DateTimeInput(
                 attrs={'type': 'datetime-local', 'class': 'form-control'},
                 format='%Y-%m-%dT%H:%M'
             ),
+            'organisme_medical': forms.TextInput(attrs={'class': 'form-control'}),
+            'type_visite': forms.TextInput(attrs={'class': 'form-control'}),
+            'commentaire': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
         }
 
 class CertificatMedForm(forms.ModelForm):
@@ -89,3 +92,49 @@ class IndisponibiliteCabineForm(forms.ModelForm):
             'heure_debut': forms.TimeInput(attrs={'type': 'time'}),
             'heure_fin': forms.TimeInput(attrs={'type': 'time'}),
         }
+
+
+class ArretMaladieForm(forms.ModelForm):
+    """
+    Formulaire pour déclarer un arrêt maladie.
+    """
+    class Meta:
+        model = ArretMaladie
+        fields = [
+            'date_debut',
+            'date_fin_prevue',
+            'motif',
+            'certificat_arret'
+        ]
+        widgets = {
+            'date_debut': forms.DateInput(
+                attrs={'type': 'date', 'class': 'form-control'}
+            ),
+            'date_fin_prevue': forms.DateInput(
+                attrs={'type': 'date', 'class': 'form-control'}
+            ),
+            'motif': forms.TextInput(
+                attrs={'class': 'form-control', 'placeholder': 'Ex: Grippe, Congé maladie'}
+            ),
+        }
+        labels = {
+            'date_debut': 'Date de début',
+            'date_fin_prevue': 'Date de fin prévue',
+            'motif': 'Motif (optionnel)',
+            'certificat_arret': 'Certificat médical (optionnel)'
+        }
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        date_debut = cleaned_data.get('date_debut')
+        date_fin_prevue = cleaned_data.get('date_fin_prevue')
+        
+        # Vérifier que la date de fin est après la date de début
+        if date_debut and date_fin_prevue:
+            if date_fin_prevue < date_debut:
+                self.add_error(
+                    'date_fin_prevue',
+                    "La date de fin doit être postérieure à la date de début."
+                )
+        
+        return cleaned_data

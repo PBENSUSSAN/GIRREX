@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    
+    <!-- En-tête -->
+    <div class="mb-4">
+        <h2><i class="bi bi-globe-americas me-2"></i>{{ titre }}</h2>
+        <p class="text-muted">Vue consolidée de tous les centres</p>
+    </div>
+
+    <!-- Statistiques globales -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h3 class="mb-0">{{ stats_globales.total }}</h3>
+                    <p class="text-muted mb-0 small">Agents total</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center shadow-sm border-danger">
+                <div class="card-body">
+                    <h3 class="mb-0 text-danger">{{ stats_globales.critiques }}</h3>
+                    <p class="text-muted mb-0 small">🔴 Critiques</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center shadow-sm border-warning">
+                <div class="card-body">
+                    <h3 class="mb-0 text-warning">{{ stats_globales.urgents }}</h3>
+                    <p class="text-muted mb-0 small">🟠 < 30 jours</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center shadow-sm border-info">
+                <div class="card-body">
+                    <h3 class="mb-0 text-info">{{ stats_globales.importants }}</h3>
+                    <p class="text-muted mb-0 small">🟡 < 90 jours</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center shadow-sm border-success">
+                <div class="card-body">
+                    <h3 class="mb-0 text-success">{{ stats_globales.ok }}</h3>
+                    <p class="text-muted mb-0 small">✅ Conformes</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center shadow-sm bg-light">
+                <div class="card-body">
+                    <h3 class="mb-0">{{ stats_globales.taux_conformite }}%</h3>
+                    <p class="text-muted mb-0 small">Taux conformité</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Répartition par centre -->
+    {% if stats_centres %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-bar-chart-fill me-2"></i>
+                Répartition par Centre
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead>
+                        <tr>
+                            <th>Centre</th>
+                            <th class="text-center">Total</th>
+                            <th class="text-center">Critiques</th>
+                            <th class="text-center">Urgents</th>
+                            <th class="text-center">À surveiller</th>
+                            <th class="text-center">OK</th>
+                            <th class="text-center">Conformité</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stat in stats_centres %}
+                        <tr>
+                            <td><strong>{{ stat.centre.code_centre }}</strong> - {{ stat.centre.nom_centre }}</td>
+                            <td class="text-center">{{ stat.total }}</td>
+                            <td class="text-center">
+                                {% if stat.critiques > 0 %}
+                                <span class="badge bg-danger">{{ stat.critiques }}</span>
+                                {% else %}
+                                —
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if stat.urgents > 0 %}
+                                <span class="badge bg-warning text-dark">{{ stat.urgents }}</span>
+                                {% else %}
+                                —
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if stat.importants > 0 %}
+                                <span class="badge bg-info">{{ stat.importants }}</span>
+                                {% else %}
+                                —
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-success">{{ stat.ok }}</span>
+                            </td>
+                            <td class="text-center">
+                                <strong class="{% if stat.taux_conformite < 80 %}text-danger{% elif stat.taux_conformite < 90 %}text-warning{% else %}text-success{% endif %}">
+                                    {{ stat.taux_conformite }}%
+                                </strong>
+                            </td>
+                            <td>
+                                <a href="{% url 'dashboard_medical_centre' stat.centre.id %}" 
+                                   class="btn btn-sm btn-outline-primary me-1">
+                                    <i class="bi bi-arrow-right-circle"></i> Détail Centre
+                                </a>
+                                <a href="{% url 'dashboard_medical_national' %}?centre={{ stat.centre.id }}" 
+                                   class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-filter"></i> Filtrer agents
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Filtres -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-funnel-fill me-2"></i>
+                Filtres
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Centre</label>
+                    <select name="centre" class="form-select">
+                        <option value="">Tous les centres</option>
+                        {% for centre in centres_disponibles %}
+                        <option value="{{ centre.id }}" {% if filtre_centre|stringformat:"s" == centre.id|stringformat:"s" %}selected{% endif %}>
+                            {{ centre.code_centre }} - {{ centre.nom_centre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Statut</label>
+                    <select name="statut" class="form-select">
+                        <option value="">Tous les statuts</option>
+                        <option value="critiques" {% if filtre_statut == 'critiques' %}selected{% endif %}>🔴 Critiques</option>
+                        <option value="urgents" {% if filtre_statut == 'urgents' %}selected{% endif %}>🟠 Urgents (< 30j)</option>
+                        <option value="importants" {% if filtre_statut == 'importants' %}selected{% endif %}>🟡 À surveiller (< 90j)</option>
+                        <option value="ok" {% if filtre_statut == 'ok' %}selected{% endif %}>✅ Conformes</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Échéance</label>
+                    <select name="echeance" class="form-select">
+                        <option value="">Toutes échéances</option>
+                        <option value="expire" {% if filtre_echeance == 'expire' %}selected{% endif %}>Expirés</option>
+                        <option value="30" {% if filtre_echeance == '30' %}selected{% endif %}>< 30 jours</option>
+                        <option value="90" {% if filtre_echeance == '90' %}selected{% endif %}>< 90 jours</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-search"></i> Filtrer
+                    </button>
+                    <a href="{% url 'dashboard_medical_national' %}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Réinitialiser
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Liste des agents filtrés -->
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-people-fill me-2"></i>
+                Liste des Agents ({{ agents_filtres|length }} résultat{{ agents_filtres|length|pluralize }})
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if agents_filtres %}
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead>
+                        <tr>
+                            <th>Centre</th>
+                            <th>Agent</th>
+                            <th>Statut</th>
+                            <th>Expiration</th>
+                            <th>Jours restants</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for info in agents_filtres %}
+                        <tr class="table-{{ info.classe_alerte }}">
+                            <td>
+                                {% if info.agent.centre %}
+                                <strong>{{ info.agent.centre.code_centre }}</strong>
+                                {% else %}
+                                —
+                                {% endif %}
+                            </td>
+                            <td>
+                                <strong>{{ info.agent.trigram }}</strong> - 
+                                {{ info.agent.nom }} {{ info.agent.prenom }}
+                            </td>
+                            <td>
+                                {% if info.statut == 'aucun_certificat' %}
+                                <span class="badge bg-danger">Aucun certificat</span>
+                                {% elif info.statut == 'inapte' %}
+                                <span class="badge bg-danger">Inapte</span>
+                                {% elif info.statut == 'expire' %}
+                                <span class="badge bg-danger">Expiré</span>
+                                {% elif info.statut == 'expire_bientot' %}
+                                <span class="badge bg-warning text-dark">< 30j</span>
+                                {% elif info.statut == 'a_surveiller' %}
+                                <span class="badge bg-info">< 90j</span>
+                                {% elif info.statut == 'ok' %}
+                                <span class="badge bg-success">OK</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ info.statut }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if info.certificat and info.certificat.date_expiration_aptitude %}
+                                {{ info.certificat.date_expiration_aptitude|date:"d/m/Y" }}
+                                {% else %}
+                                —
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if info.jours_restants is not None %}
+                                    {% if info.jours_restants < 0 %}
+                                    <strong class="text-danger">{{ info.jours_restants }} j</strong>
+                                    {% elif info.jours_restants <= 30 %}
+                                    <strong class="text-danger">{{ info.jours_restants }} j</strong>
+                                    {% elif info.jours_restants <= 90 %}
+                                    <strong class="text-warning">{{ info.jours_restants }} j</strong>
+                                    {% else %}
+                                    {{ info.jours_restants }} j
+                                    {% endif %}
+                                {% else %}
+                                —
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'dossier_medical' info.agent.id_agent %}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> Voir
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted text-center my-4">Aucun agent ne correspond aux filtres sélectionnés.</p>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <div class="card shadow border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">
+                        <i class="bi bi-exclamation-triangle"></i> {{ titre }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Info agent -->
+                    <div class="alert alert-info">
+                        <strong>Agent :</strong> {{ agent_concerne.trigram }} - {{ agent_concerne.nom }} {{ agent_concerne.prenom }}
+                    </div>
+
+                    <!-- Info RDV -->
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5><i class="bi bi-calendar-event"></i> RDV à annuler</h5>
+                            <p class="mb-1"><strong>Date :</strong> {{ rdv.date_heure_rdv|date:"d/m/Y à H:i" }}</p>
+                            <p class="mb-1"><strong>Centre médical :</strong> {{ rdv.organisme_medical }}</p>
+                            <p class="mb-1"><strong>Type :</strong> {{ rdv.type_visite }}</p>
+                            <p class="mb-0"><strong>Statut actuel :</strong> 
+                                <span class="badge bg-info">{{ rdv.get_statut_display }}</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Confirmation -->
+                    <div class="alert alert-warning">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Attention :</strong> Cette action ne supprime pas le RDV mais le marque comme "Annulé". 
+                        L'historique sera conservé pour traçabilité.
+                    </div>
+
+                    <!-- Formulaire -->
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="raison" class="form-label">Raison de l'annulation (optionnel)</label>
+                            <textarea 
+                                name="raison" 
+                                id="raison" 
+                                class="form-control" 
+                                rows="3" 
+                                placeholder="Ex: Indisponibilité, changement de planning..."
+                            ></textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'dossier_medical' agent_concerne.id_agent %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Retour
+                            </a>
+                            <button type="submit" class="btn btn-warning">
+                                <i class="bi bi-x-circle"></i> Confirmer l'annulation
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

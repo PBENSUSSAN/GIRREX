@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-clipboard-check"></i> {{ titre }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Info agent -->
+                    <div class="alert alert-info">
+                        <strong>Agent :</strong> {{ agent_concerne.trigram }} - {{ agent_concerne.nom }} {{ agent_concerne.prenom }}
+                    </div>
+
+                    <!-- Info RDV -->
+                    <div class="card mb-3 bg-light">
+                        <div class="card-body">
+                            <h5><i class="bi bi-calendar-event"></i> Informations du RDV</h5>
+                            <p class="mb-1"><strong>Date :</strong> {{ rdv.date_heure_rdv|date:"d/m/Y à H:i" }}</p>
+                            <p class="mb-0"><strong>Centre médical :</strong> {{ rdv.organisme_medical }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Formulaire -->
+                    <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                        {% endif %}
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.date_visite.id_for_label }}" class="form-label">
+                                    <i class="bi bi-calendar-date"></i> Date de la visite *
+                                </label>
+                                {{ form.date_visite }}
+                                {% if form.date_visite.errors %}
+                                <div class="text-danger small">{{ form.date_visite.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.organisme_medical.id_for_label }}" class="form-label">
+                                    <i class="bi bi-hospital"></i> Centre médical *
+                                </label>
+                                {{ form.organisme_medical }}
+                                {% if form.organisme_medical.errors %}
+                                <div class="text-danger small">{{ form.organisme_medical.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.resultat.id_for_label }}" class="form-label">
+                                    <i class="bi bi-clipboard-pulse"></i> Résultat de la visite *
+                                </label>
+                                {{ form.resultat }}
+                                {% if form.resultat.errors %}
+                                <div class="text-danger small">{{ form.resultat.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.classe_aptitude.id_for_label }}" class="form-label">
+                                    <i class="bi bi-award"></i> Classe d'aptitude
+                                </label>
+                                {{ form.classe_aptitude }}
+                                {% if form.classe_aptitude.errors %}
+                                <div class="text-danger small">{{ form.classe_aptitude.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label for="{{ form.date_expiration_aptitude.id_for_label }}" class="form-label">
+                                    <i class="bi bi-calendar-x"></i> Date d'expiration de l'aptitude *
+                                </label>
+                                {{ form.date_expiration_aptitude }}
+                                {% if form.date_expiration_aptitude.errors %}
+                                <div class="text-danger small">{{ form.date_expiration_aptitude.errors }}</div>
+                                {% endif %}
+                                <div class="form-text">Date jusqu'à laquelle l'aptitude est valide</div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label for="{{ form.restrictions.id_for_label }}" class="form-label">
+                                    <i class="bi bi-exclamation-triangle"></i> Restrictions (si applicable)
+                                </label>
+                                {{ form.restrictions }}
+                                {% if form.restrictions.errors %}
+                                <div class="text-danger small">{{ form.restrictions.errors }}</div>
+                                {% endif %}
+                                <div class="form-text">Ex: Port de verres correcteurs obligatoire</div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label for="{{ form.commentaire.id_for_label }}" class="form-label">
+                                    <i class="bi bi-chat-text"></i> Commentaire
+                                </label>
+                                {{ form.commentaire }}
+                                {% if form.commentaire.errors %}
+                                <div class="text-danger small">{{ form.commentaire.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label for="{{ form.piece_jointe.id_for_label }}" class="form-label">
+                                    <i class="bi bi-paperclip"></i> Scan du certificat (optionnel)
+                                </label>
+                                {{ form.piece_jointe }}
+                                {% if form.piece_jointe.errors %}
+                                <div class="text-danger small">{{ form.piece_jointe.errors }}</div>
+                                {% endif %}
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle"></i> Formats acceptés : PDF, JPG, PNG - Le certificat peut être ajouté plus tard
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Info :</strong> Une fois validé, ce résultat mettra à jour votre aptitude médicale et le RDV sera marqué comme "Réalisé".
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'dossier_medical' agent_concerne.id_agent %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Annuler
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle"></i> Valider le résultat
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
