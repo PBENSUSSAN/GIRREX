@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-bandaid-fill me-2"></i>{{ titre }}</h2>
+        <a href="{% url 'dossier_medical' agent_concerne.id_agent %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    <!-- Informations agent -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h5>Agent concerné</h5>
+            <p class="mb-0">
+                <strong>{{ agent_concerne.trigram }}</strong> - 
+                {{ agent_concerne.prenom }} {{ agent_concerne.nom }}
+            </p>
+        </div>
+    </div>
+
+    <!-- Formulaire -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ form|crispy }}
+                
+                <div class="alert alert-info mt-3">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Information :</strong> Si l'arrêt dépasse 21 jours, une visite de reprise sera automatiquement requise.
+                </div>
+                
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-check-lg"></i> Enregistrer l'arrêt
+                    </button>
+                    <a href="{% url 'dossier_medical' agent_concerne.id_agent %}" class="btn btn-secondary">
+                        Annuler
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

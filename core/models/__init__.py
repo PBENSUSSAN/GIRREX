@@ -20,7 +20,7 @@ from .service_journalier import ServiceJournalier, ServiceJournalierHistorique
 # On importe les zones et leu activité
 from .zone import Zone, ActiviteZone
 
-from .medical import CertificatMed, RendezVousMedical
+from .medical import CertificatMed, RendezVousMedical, CentreMedical, ArretMaladie, HistoriqueRDV
 
 from .planning_ressources import IndisponibiliteCabine, TypeActiviteHorsVol
 

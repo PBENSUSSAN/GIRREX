@@ -131,6 +131,36 @@
             </li>
             {% endif %}
 
+            {# NOUVELLE SECTION : SUIVI MÉDICAL #}
+            <li class="sidebar-submenu-header">Suivi Médical</li>
+            
+            {# Tous les agents voient leur propre dossier #}
+            {% if request.user.agent_profile %}
+            <li>
+                <a href="{% url 'dossier_medical' request.user.agent_profile.id_agent %}" class="ps-4">
+                    <i class="bi bi-heart-pulse-fill"></i> Mon Dossier Médical
+                </a>
+            </li>
+            {% endif %}
+            
+            {# Dashboard Médical Centre / National #}
+            {# On affiche le menu pour tous les rôles autorisés #}
+            {% if request.user.agent_profile %}
+                {% if effective_perms.competences.change_licence or effective_perms.competences.view_all_licences or active_agent_role.role.nom == ROLES.CHEF_DE_CENTRE or active_agent_role.role.nom == ROLES.ADJOINT_CHEF_DE_CENTRE or active_agent_role.role.nom == ROLES.CHEF_DE_DIVISION or active_agent_role.role.nom == ROLES.ADJOINT_CHEF_DE_DIVISION or active_agent_role.role.nom == ROLES.ADJOINT_FORM or active_agent_role.role.nom == ROLES.FORM_LOCAL %}
+                <li>
+                    {% if request.user.agent_profile.centre %}
+                    <a href="{% url 'dashboard_medical_centre' request.user.agent_profile.centre.id %}" class="ps-4">
+                        <i class="bi bi-hospital-fill"></i> Dashboard Médical Centre
+                    </a>
+                    {% else %}
+                    <a href="{% url 'dashboard_medical_national' %}" class="ps-4">
+                        <i class="bi bi-hospital-fill"></i> Dashboard Médical National
+                    </a>
+                    {% endif %}
+                </li>
+                {% endif %}
+            {% endif %}
+
             <li class="sidebar-submenu-header">Gestion de la Formation</li>
             <li>
                 <a href="#" class="ps-4 disabled">Catalogue des Formations</a>

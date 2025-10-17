@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <div class="card shadow">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-clock-history"></i> {{ titre }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Info agent et RDV -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h5><i class="bi bi-person"></i> Agent</h5>
+                                    <p class="mb-0"><strong>{{ agent_concerne.trigram }}</strong> - {{ agent_concerne.nom }} {{ agent_concerne.prenom }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h5><i class="bi bi-calendar-event"></i> RDV</h5>
+                                    <p class="mb-1"><strong>Date :</strong> {{ rdv.date_heure_rdv|date:"d/m/Y à H:i" }}</p>
+                                    <p class="mb-0">
+                                        <strong>Statut :</strong> 
+                                        {% if rdv.statut == 'PLANIFIE' %}
+                                        <span class="badge bg-primary">{{ rdv.get_statut_display }}</span>
+                                        {% elif rdv.statut == 'REALISE' %}
+                                        <span class="badge bg-success">{{ rdv.get_statut_display }}</span>
+                                        {% elif rdv.statut == 'ANNULE' %}
+                                        <span class="badge bg-danger">{{ rdv.get_statut_display }}</span>
+                                        {% elif rdv.statut == 'REPORTE' %}
+                                        <span class="badge bg-warning">{{ rdv.get_statut_display }}</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Timeline de l'historique -->
+                    <h5 class="mb-3"><i class="bi bi-list-check"></i> Historique des actions</h5>
+                    
+                    {% if historique %}
+                    <div class="timeline">
+                        {% for entry in historique %}
+                        <div class="timeline-item mb-4">
+                            <div class="timeline-marker 
+                                {% if entry.action == 'CREATION' %}bg-primary
+                                {% elif entry.action == 'MODIFICATION' %}bg-warning
+                                {% elif entry.action == 'ANNULATION' %}bg-danger
+                                {% elif entry.action == 'REALISATION' %}bg-success
+                                {% endif %}">
+                                {% if entry.action == 'CREATION' %}
+                                <i class="bi bi-plus-circle"></i>
+                                {% elif entry.action == 'MODIFICATION' %}
+                                <i class="bi bi-pencil"></i>
+                                {% elif entry.action == 'ANNULATION' %}
+                                <i class="bi bi-x-circle"></i>
+                                {% elif entry.action == 'REALISATION' %}
+                                <i class="bi bi-check-circle"></i>
+                                {% endif %}
+                            </div>
+                            <div class="timeline-content">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <h6 class="mb-1">
+                                                    <strong>{{ entry.get_action_display }}</strong>
+                                                </h6>
+                                                <p class="mb-1 text-muted">
+                                                    <i class="bi bi-clock"></i> {{ entry.date_action|date:"d/m/Y à H:i:s" }}
+                                                </p>
+                                                <p class="mb-1">
+                                                    <i class="bi bi-person"></i> 
+                                                    {% if entry.utilisateur %}
+                                                        {% if entry.utilisateur.agent_profile %}
+                                                            {{ entry.utilisateur.agent_profile.trigram }}
+                                                        {% else %}
+                                                            {{ entry.utilisateur.username }}
+                                                        {% endif %}
+                                                    {% else %}
+                                                        Système
+                                                    {% endif %}
+                                                </p>
+                                            </div>
+                                            <span class="badge 
+                                                {% if entry.action == 'CREATION' %}bg-primary
+                                                {% elif entry.action == 'MODIFICATION' %}bg-warning text-dark
+                                                {% elif entry.action == 'ANNULATION' %}bg-danger
+                                                {% elif entry.action == 'REALISATION' %}bg-success
+                                                {% endif %}">
+                                                {{ entry.get_action_display }}
+                                            </span>
+                                        </div>
+                                        
+                                        {% if entry.action == 'MODIFICATION' and entry.ancienne_date and entry.nouvelle_date %}
+                                        <div class="mt-2 p-2 bg-light rounded">
+                                            <p class="mb-1"><strong>Ancienne date :</strong> {{ entry.ancienne_date|date:"d/m/Y à H:i" }}</p>
+                                            <p class="mb-0"><strong>Nouvelle date :</strong> {{ entry.nouvelle_date|date:"d/m/Y à H:i" }}</p>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if entry.ancien_statut and entry.nouveau_statut %}
+                                        <div class="mt-2">
+                                            <small>
+                                                Statut : <span class="badge bg-secondary">{{ entry.ancien_statut }}</span> 
+                                                <i class="bi bi-arrow-right"></i> 
+                                                <span class="badge bg-info">{{ entry.nouveau_statut }}</span>
+                                            </small>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if entry.commentaire %}
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                <i class="bi bi-chat-quote"></i> {{ entry.commentaire }}
+                                            </small>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> Aucun historique disponible pour ce RDV.
+                    </div>
+                    {% endif %}
+
+                    <div class="mt-4">
+                        <a href="{% url 'dossier_medical' agent_concerne.id_agent %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Retour au dossier médical
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 40px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #dee2e6;
+}
+
+.timeline-item {
+    position: relative;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -32px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 14px;
+    border: 3px solid white;
+    box-shadow: 0 0 0 2px #dee2e6;
+}
+
+.timeline-content {
+    margin-left: 10px;
+}
+</style>
+{% endblock %}

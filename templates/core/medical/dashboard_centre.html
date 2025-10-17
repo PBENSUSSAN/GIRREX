@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-hospital-fill me-2"></i>{{ titre }}</h2>
+    </div>
+
+    <!-- Statistiques globales -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="mb-0">{{ stats.total }}</h3>
+                    <p class="text-muted mb-0">Agents total</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-danger">
+                <div class="card-body">
+                    <h3 class="mb-0 text-danger">{{ stats.critiques }}</h3>
+                    <p class="text-muted mb-0">🔴 Critiques</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-warning">
+                <div class="card-body">
+                    <h3 class="mb-0 text-warning">{{ stats.urgentes }}</h3>
+                    <p class="text-muted mb-0">🟠 < 30 jours</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-success">
+                <div class="card-body">
+                    <h3 class="mb-0 text-success">{{ stats.taux_conformite }}%</h3>
+                    <p class="text-muted mb-0">Conformité</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alertes Critiques -->
+    {% if alertes_critiques %}
+    <div class="card shadow-sm mb-4 border-danger">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                Alertes Critiques ({{ stats.critiques }})
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Agent</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for info in alertes_critiques %}
+                        <tr>
+                            <td><strong>{{ info.agent.trigram }}</strong> - {{ info.agent.nom }} {{ info.agent.prenom }}</td>
+                            <td>
+                                {% if info.statut == 'aucun_certificat' %}
+                                <span class="badge bg-danger">Aucun certificat</span>
+                                {% elif info.statut == 'inapte' %}
+                                <span class="badge bg-danger">Inapte</span>
+                                {% elif info.statut == 'expire' %}
+                                <span class="badge bg-danger">Expiré ({{ info.jours_restants }} j)</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'dossier_medical' info.agent.id_agent %}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> Voir
+                                </a>
+                                {% if effective_perms.competences.change_licence %}
+                                <a href="{% url 'planifier_rdv_medical_pour' info.agent.id_agent %}" 
+                                   class="btn btn-sm btn-warning">
+                                    <i class="bi bi-calendar-plus"></i> Planifier
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Alertes Urgentes -->
+    {% if alertes_urgentes %}
+    <div class="card shadow-sm mb-4 border-warning">
+        <div class="card-header bg-warning">
+            <h5 class="mb-0">
+                <i class="bi bi-clock-fill me-2"></i>
+                Alertes Urgentes - Expire dans < 30 jours ({{ stats.urgentes }})
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Agent</th>
+                            <th>Expiration</th>
+                            <th>Jours restants</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for info in alertes_urgentes %}
+                        <tr>
+                            <td><strong>{{ info.agent.trigram }}</strong> - {{ info.agent.nom }} {{ info.agent.prenom }}</td>
+                            <td>{{ info.certificat.date_expiration_aptitude|date:"d/m/Y" }}</td>
+                            <td>
+                                <span class="badge bg-danger">{{ info.jours_restants }} jour{{ info.jours_restants|pluralize }}</span>
+                            </td>
+                            <td>
+                                <a href="{% url 'dossier_medical' info.agent.id_agent %}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> Voir
+                                </a>
+                                {% if effective_perms.competences.change_licence %}
+                                <a href="{% url 'planifier_rdv_medical_pour' info.agent.id_agent %}" 
+                                   class="btn btn-sm btn-warning">
+                                    <i class="bi bi-calendar-plus"></i> Planifier
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Agents OK (repliable) -->
+    {% if agents_ok %}
+    <div class="card shadow-sm">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">
+                <a class="text-white text-decoration-none" data-bs-toggle="collapse" href="#collapseAgentsOk">
+                    <i class="bi bi-check-circle-fill me-2"></i>
+                    Agents Conformes ({{ stats.ok }})
+                    <i class="bi bi-chevron-down float-end"></i>
+                </a>
+            </h5>
+        </div>
+        <div class="collapse" id="collapseAgentsOk">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Agent</th>
+                                <th>Expiration</th>
+                                <th>Jours restants</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for info in agents_ok %}
+                            <tr>
+                                <td>{{ info.agent.trigram }} - {{ info.agent.nom }} {{ info.agent.prenom }}</td>
+                                <td>{{ info.certificat.date_expiration_aptitude|date:"d/m/Y" }}</td>
+                                <td>{{ info.jours_restants }} jour{{ info.jours_restants|pluralize }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

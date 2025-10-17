@@ -66,6 +66,13 @@ class Agent(models.Model):
         if self.reference:
             return f"{display_name} ({self.reference})" if display_name else self.reference
         return f"Agent ID {self.id_agent}"
+    
+    def certificat_medical_actif(self):
+        """
+        Retourne le certificat médical le plus récent (ou None).
+        Utilisé pour vérifier l'aptitude actuelle de l'agent.
+        """
+        return self.certificats_medicaux.order_by('-date_visite').first()
 
 class Licence(models.Model):
     STATUT_CHOICES = [("valide", "Valide"), ("suspendue", "Suspendue"), ("retiree", "Retirée"), ("expiree", "Expirée")]
