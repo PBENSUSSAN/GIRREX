@@ -312,13 +312,33 @@ def peut_voir_dossier_medical(request, agent_cible):
     
     agent_user = request.user.agent_profile
     
+    # 1. L'agent voit SON propre dossier
     if agent_user.id_agent == agent_cible.id_agent:
         return True
     
+    # 2. Chef Division/Adjoint Chef Division/Adjoint Form (vision nationale)
     if 'competences.view_all_licences' in request.effective_perms:
         return True
     
+    # 2bis. Vérification explicite par rôle (au cas où la permission n'est pas encore assignée)
+    if request.active_agent_role and request.active_agent_role.role.nom in [
+        Role.RoleName.CHEF_DE_DIVISION,
+        Role.RoleName.ADJOINT_CHEF_DE_DIVISION,
+        Role.RoleName.ADJOINT_FORM
+    ]:
+        return True
+    
+    # 3. FORM_LOCAL (peut modifier) → voit son centre
     if 'competences.change_licence' in request.effective_perms:
+        if request.centre_agent and agent_cible.centre:
+            if request.centre_agent.id == agent_cible.centre.id:
+                return True
+    
+    # 4. Chef de Centre / Adjoint Chef de Centre (consultation de leur centre)
+    if request.active_agent_role and request.active_agent_role.role.nom in [
+        Role.RoleName.CHEF_DE_CENTRE,
+        Role.RoleName.ADJOINT_CHEF_DE_CENTRE
+    ]:
         if request.centre_agent and agent_cible.centre:
             if request.centre_agent.id == agent_cible.centre.id:
                 return True

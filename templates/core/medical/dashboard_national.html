@@ -124,8 +124,12 @@
                             </td>
                             <td>
                                 <a href="{% url 'dashboard_medical_centre' stat.centre.id %}" 
-                                   class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-arrow-right-circle"></i> Détail
+                                   class="btn btn-sm btn-outline-primary me-1">
+                                    <i class="bi bi-arrow-right-circle"></i> Détail Centre
+                                </a>
+                                <a href="{% url 'dashboard_medical_national' %}?centre={{ stat.centre.id }}" 
+                                   class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-filter"></i> Filtrer agents
                                 </a>
                             </td>
                         </tr>

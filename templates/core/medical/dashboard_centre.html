@@ -21,7 +21,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
             <div class="card text-center border-danger">
                 <div class="card-body">
                     <h3 class="mb-0 text-danger">{{ stats.critiques }}</h3>
@@ -29,11 +29,19 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
             <div class="card text-center border-warning">
                 <div class="card-body">
                     <h3 class="mb-0 text-warning">{{ stats.urgentes }}</h3>
                     <p class="text-muted mb-0">🟠 < 30 jours</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center border-info">
+                <div class="card-body">
+                    <h3 class="mb-0 text-info">{{ stats.importantes }}</h3>
+                    <p class="text-muted mb-0">🟡 < 90 jours</p>
                 </div>
             </div>
         </div>
@@ -149,6 +157,55 @@
     </div>
     {% endif %}
 
+    <!-- Alertes Importantes (90 jours) -->
+    {% if alertes_importantes %}
+    <div class="card shadow-sm mb-4 border-info">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-info-circle-fill me-2"></i>
+                À Surveiller - Expire dans 30-90 jours ({{ stats.importantes }})
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Agent</th>
+                            <th>Expiration</th>
+                            <th>Jours restants</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for info in alertes_importantes %}
+                        <tr>
+                            <td><strong>{{ info.agent.trigram }}</strong> - {{ info.agent.nom }} {{ info.agent.prenom }}</td>
+                            <td>{{ info.certificat.date_expiration_aptitude|date:"d/m/Y" }}</td>
+                            <td>
+                                <span class="badge bg-warning">{{ info.jours_restants }} jour{{ info.jours_restants|pluralize }}</span>
+                            </td>
+                            <td>
+                                <a href="{% url 'dossier_medical' info.agent.id_agent %}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> Voir
+                                </a>
+                                {% if effective_perms.competences.change_licence %}
+                                <a href="{% url 'planifier_rdv_medical_pour' info.agent.id_agent %}" 
+                                   class="btn btn-sm btn-info">
+                                    <i class="bi bi-calendar-plus"></i> Planifier
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Agents OK (repliable) -->
     {% if agents_ok %}
     <div class="card shadow-sm">
@@ -166,21 +223,28 @@
                 <div class="table-responsive">
                     <table class="table table-sm">
                         <thead>
-                            <tr>
-                                <th>Agent</th>
-                                <th>Expiration</th>
-                                <th>Jours restants</th>
+                        <tr>
+                        <th>Agent</th>
+                        <th>Expiration</th>
+                        <th>Jours restants</th>
+                            <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for info in agents_ok %}
-                            <tr>
-                                <td>{{ info.agent.trigram }} - {{ info.agent.nom }} {{ info.agent.prenom }}</td>
-                                <td>{{ info.certificat.date_expiration_aptitude|date:"d/m/Y" }}</td>
-                                <td>{{ info.jours_restants }} jour{{ info.jours_restants|pluralize }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
+                        {% for info in agents_ok %}
+                        <tr>
+                        <td>{{ info.agent.trigram }} - {{ info.agent.nom }} {{ info.agent.prenom }}</td>
+                        <td>{{ info.certificat.date_expiration_aptitude|date:"d/m/Y" }}</td>
+                            <td>{{ info.jours_restants }} jour{{ info.jours_restants|pluralize }}</td>
+                            <td>
+                                    <a href="{% url 'dossier_medical' info.agent.id_agent %}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> Voir
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
                     </table>
                 </div>
             </div>
