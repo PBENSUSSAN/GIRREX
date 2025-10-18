@@ -197,11 +197,23 @@ class ArretMaladie(models.Model):
     Suivi des arrêts maladie des agents.
     Important pour la gestion de l'aptitude (seuil 21 jours).
     """
+    class StatutArret(models.TextChoices):
+        EN_COURS = 'EN_COURS', 'En cours'
+        CLOTURE = 'CLOTURE', 'Clôturé (reprise effectuée)'
+        ANNULE = 'ANNULE', 'Annulé'
+    
     agent = models.ForeignKey(
         Agent,
         on_delete=models.CASCADE,
         related_name='arrets_maladie',
         verbose_name="Agent concerné"
+    )
+    
+    statut = models.CharField(
+        max_length=20,
+        choices=StatutArret.choices,
+        default=StatutArret.EN_COURS,
+        verbose_name="Statut de l'arrêt"
     )
     
     date_debut = models.DateField(
@@ -258,6 +270,23 @@ class ArretMaladie(models.Model):
         verbose_name="Commentaire"
     )
     
+    # Champs de clôture
+    date_cloture = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Date de clôture",
+        help_text="Date de déclaration de reprise ou d'annulation"
+    )
+    
+    cloture_par = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='arrets_clotures',
+        verbose_name="Clôturé par"
+    )
+    
     date_creation = models.DateTimeField(
         auto_now_add=True,
         verbose_name="Date de saisie"
@@ -269,7 +298,8 @@ class ArretMaladie(models.Model):
         verbose_name_plural = "Arrêts Maladie"
     
     def __str__(self):
-        return f"{self.agent.trigram} - {self.date_debut.strftime('%d/%m/%Y')} → {self.date_fin_prevue.strftime('%d/%m/%Y')}"
+        statut_display = f" ({self.get_statut_display()})" if hasattr(self, 'statut') else ""
+        return f"{self.agent.trigram} - {self.date_debut.strftime('%d/%m/%Y')} → {self.date_fin_prevue.strftime('%d/%m/%Y')}{statut_display}"
     
     @property
     def duree_jours(self):
@@ -281,6 +311,34 @@ class ArretMaladie(models.Model):
     def est_long_terme(self):
         """Arrêt > 21 jours = visite de reprise obligatoire."""
         return self.duree_jours > 21
+    
+    @property
+    def jours_ecoules_depuis_debut(self):
+        """
+        Jours écoulés depuis le début (si EN_COURS).
+        Si CLOTURE ou ANNULE, retourne 0.
+        """
+        from datetime import date
+        # Vérifier si le champ statut existe (après migration)
+        if not hasattr(self, 'statut') or self.statut != 'EN_COURS':
+            return 0
+        return (date.today() - self.date_debut).days
+    
+    @property
+    def necessite_pfu(self):
+        """
+        Vrai si arrêt EN_COURS depuis 90 jours ou plus.
+        Déclenche la procédure de suspension MUA.
+        """
+        return hasattr(self, 'statut') and self.statut == 'EN_COURS' and self.jours_ecoules_depuis_debut >= 90
+    
+    @property
+    def proche_seuil_pfu(self):
+        """
+        Vrai si arrêt EN_COURS depuis 85 jours ou plus.
+        Alerte préventive pour préparer le PFU.
+        """
+        return hasattr(self, 'statut') and self.statut == 'EN_COURS' and self.jours_ecoules_depuis_debut >= 85
     
     def save(self, *args, **kwargs):
         """

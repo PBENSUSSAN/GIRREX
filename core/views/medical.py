@@ -346,6 +346,32 @@ def peut_voir_dossier_medical(request, agent_cible):
     return False
 
 
+def peut_gerer_arret_maladie(request, agent_cible):
+    """
+    Vérifie si l'utilisateur peut gérer les arrêts maladie de l'agent cible.
+    
+    UNIQUEMENT Chef de Centre ou Adjoint Chef de Centre du CENTRE de l'agent.
+    """
+    if not hasattr(request.user, 'agent_profile') or not request.user.agent_profile:
+        return False
+    
+    if not request.active_agent_role:
+        return False
+    
+    # UNIQUEMENT Chef de Centre ou Adjoint Chef de Centre
+    if request.active_agent_role.role.nom not in [
+        Role.RoleName.CHEF_DE_CENTRE,
+        Role.RoleName.ADJOINT_CHEF_DE_CENTRE
+    ]:
+        return False
+    
+    # Du même centre que l'agent
+    if not request.centre_agent or not agent_cible.centre:
+        return False
+    
+    return request.centre_agent.id == agent_cible.centre.id
+
+
 @login_required
 def dossier_medical_view(request, agent_id):
     agent = get_object_or_404(Agent, pk=agent_id)
@@ -396,8 +422,21 @@ def dossier_medical_view(request, agent_id):
         date_heure_rdv__gte=date.today()
     ).order_by('date_heure_rdv').first()
     
+    # Arrêts EN COURS uniquement
+    arrets_en_cours = agent.arrets_maladie.filter(
+        statut='EN_COURS'
+    ).order_by('-date_debut') if hasattr(agent.arrets_maladie.first(), 'statut') else []
+    
+    # Arrêts récents (6 derniers mois) - tous statuts sauf EN_COURS
     six_mois_avant = date.today() - timedelta(days=180)
-    arrets_recents = agent.arrets_maladie.filter(date_debut__gte=six_mois_avant).order_by('-date_debut')
+    arrets_recents = agent.arrets_maladie.filter(
+        date_debut__gte=six_mois_avant
+    ).exclude(
+        statut='EN_COURS'
+    ).order_by('-date_debut') if hasattr(agent.arrets_maladie.first(), 'statut') else agent.arrets_maladie.filter(date_debut__gte=six_mois_avant).order_by('-date_debut')
+    
+    # Vérifier si l'utilisateur peut gérer les arrêts
+    peut_gerer_arrets = peut_gerer_arret_maladie(request, agent)
     
     context = {
         'agent_concerne': agent,
@@ -405,7 +444,9 @@ def dossier_medical_view(request, agent_id):
         'statut_info': statut_info,
         'historique_certificats': historique_certificats,
         'prochain_rdv': prochain_rdv,
+        'arrets_en_cours': arrets_en_cours,
         'arrets_recents': arrets_recents,
+        'peut_gerer_arrets': peut_gerer_arrets,
     }
     
     return render(request, 'core/medical/dossier_medical.html', context)
@@ -533,18 +574,21 @@ def dashboard_medical_centre_view(request, centre_id):
 
 
 @login_required
-@effective_permission_required('competences.change_licence', raise_exception=True)
 def declarer_arret_maladie_view(request, agent_id):
     agent = get_object_or_404(Agent, pk=agent_id)
     
-    if not peut_voir_dossier_medical(request, agent):
-        raise PermissionDenied("Vous n'avez pas l'autorisation de déclarer un arrêt pour cet agent.")
+    # Vérif permissions : Chef Centre ou Adjoint Chef Centre UNIQUEMENT
+    if not peut_gerer_arret_maladie(request, agent):
+        raise PermissionDenied("Seul le Chef de Centre ou son Adjoint peut déclarer un arrêt maladie.")
     
     if request.method == 'POST':
         form = ArretMaladieForm(request.POST, request.FILES)
         if form.is_valid():
             arret = form.save(commit=False)
             arret.agent = agent
+            # Par défaut, un nouvel arrêt est EN_COURS
+            if hasattr(arret, 'statut'):
+                arret.statut = 'EN_COURS'
             arret.save()
             
             if arret.est_long_terme:
@@ -571,6 +615,142 @@ def declarer_arret_maladie_view(request, agent_id):
     }
     
     return render(request, 'core/medical/declarer_arret.html', context)
+
+
+@login_required
+def modifier_arret_maladie_view(request, arret_id):
+    """
+    Permet au Chef Centre/Adjoint de modifier un arrêt EN_COURS.
+    Typiquement pour prolonger (changer date_fin_prevue).
+    """
+    arret = get_object_or_404(ArretMaladie, pk=arret_id)
+    agent = arret.agent
+    
+    # Vérif permissions : Chef Centre ou Adjoint Chef Centre UNIQUEMENT
+    if not peut_gerer_arret_maladie(request, agent):
+        raise PermissionDenied("Seul le Chef de Centre ou son Adjoint peut modifier un arrêt maladie.")
+    
+    # Ne peut modifier que les arrêts EN_COURS
+    if hasattr(arret, 'statut') and arret.statut != 'EN_COURS':
+        messages.error(request, "Cet arrêt ne peut plus être modifié (déjà clôturé ou annulé).")
+        return redirect('dossier_medical', agent_id=agent.id_agent)
+    
+    if request.method == 'POST':
+        form = ArretMaladieForm(request.POST, request.FILES, instance=arret)
+        if form.is_valid():
+            arret = form.save()
+            
+            messages.success(
+                request,
+                f"Arrêt maladie modifié. Nouvelle date de fin prévue : {arret.date_fin_prevue.strftime('%d/%m/%Y')}."
+            )
+            
+            # Alerte si proche du seuil PFU
+            if arret.proche_seuil_pfu:
+                messages.warning(
+                    request,
+                    f"⚠️ Attention : L'arrêt dure depuis {arret.jours_ecoules_depuis_debut} jours. "
+                    f"PFU requis à 90 jours."
+                )
+            
+            return redirect('dossier_medical', agent_id=agent.id_agent)
+    else:
+        form = ArretMaladieForm(instance=arret)
+    
+    context = {
+        'form': form,
+        'arret': arret,
+        'agent_concerne': agent,
+        'titre': f"Modifier Arrêt Maladie - {agent.trigram}",
+        'action': 'modifier'
+    }
+    
+    return render(request, 'core/medical/form_arret.html', context)
+
+
+@login_required
+def cloturer_arret_maladie_view(request, arret_id):
+    """
+    Permet au Chef Centre/Adjoint de déclarer la reprise de l'agent.
+    Enregistre date_fin_reelle = aujourd'hui et statut = CLOTURE.
+    """
+    arret = get_object_or_404(ArretMaladie, pk=arret_id)
+    agent = arret.agent
+    
+    # Vérif permissions
+    if not peut_gerer_arret_maladie(request, agent):
+        raise PermissionDenied("Seul le Chef de Centre ou son Adjoint peut clôturer un arrêt maladie.")
+    
+    # Ne peut clôturer que les arrêts EN_COURS
+    if hasattr(arret, 'statut') and arret.statut != 'EN_COURS':
+        messages.error(request, "Cet arrêt est déjà clôturé ou annulé.")
+        return redirect('dossier_medical', agent_id=agent.id_agent)
+    
+    if request.method == 'POST':
+        from django.utils import timezone
+        from datetime import date
+        
+        arret.date_fin_reelle = date.today()
+        if hasattr(arret, 'statut'):
+            arret.statut = 'CLOTURE'
+        if hasattr(arret, 'cloture_par'):
+            arret.cloture_par = request.user
+        if hasattr(arret, 'date_cloture'):
+            arret.date_cloture = timezone.now()
+        arret.save()
+        
+        messages.success(
+            request,
+            f"✅ Reprise de {agent.trigram} enregistrée. Arrêt clôturé."
+        )
+        
+        return redirect('dossier_medical', agent_id=agent.id_agent)
+    
+    context = {
+        'arret': arret,
+        'agent_concerne': agent,
+        'titre': f"Déclarer Reprise - {agent.trigram}"
+    }
+    
+    return render(request, 'core/medical/cloturer_arret.html', context)
+
+
+@login_required
+def annuler_arret_maladie_view(request, arret_id):
+    """
+    Permet au Chef Centre/Adjoint d'annuler un arrêt (erreur de saisie).
+    """
+    arret = get_object_or_404(ArretMaladie, pk=arret_id)
+    agent = arret.agent
+    
+    # Vérif permissions
+    if not peut_gerer_arret_maladie(request, agent):
+        raise PermissionDenied("Seul le Chef de Centre ou son Adjoint peut annuler un arrêt maladie.")
+    
+    # Ne peut annuler que les arrêts EN_COURS
+    if hasattr(arret, 'statut') and arret.statut != 'EN_COURS':
+        messages.error(request, "Cet arrêt est déjà clôturé ou annulé.")
+        return redirect('dossier_medical', agent_id=agent.id_agent)
+    
+    if request.method == 'POST':
+        if hasattr(arret, 'statut'):
+            arret.statut = 'ANNULE'
+        arret.save()
+        
+        messages.warning(
+            request,
+            f"Arrêt maladie annulé (erreur de saisie)."
+        )
+        
+        return redirect('dossier_medical', agent_id=agent.id_agent)
+    
+    context = {
+        'arret': arret,
+        'agent_concerne': agent,
+        'titre': f"Annuler Arrêt Maladie - {agent.trigram}"
+    }
+    
+    return render(request, 'core/medical/annuler_arret.html', context)
 
 
 # ============================================================================

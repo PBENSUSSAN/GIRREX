@@ -269,7 +269,14 @@
             </li>
             {% endif %}
 
-            <li><a href="#" class="ps-4 disabled">Gestion des Agents</a></li>
+            <!-- Lien pour la gestion des agents -->
+            {% if request.user.agent_profile.centre %}
+            <li>
+                <a href="{% url 'gestion-agents-centre' request.user.agent_profile.centre.id %}" class="ps-4">
+                    <i class="bi bi-people-fill"></i> Gestion des Agents
+                </a>
+            </li>
+            {% endif %}
         </ul>
     </li>
     {% endif %}

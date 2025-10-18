@@ -1,0 +1,274 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-person-badge me-2"></i>{{ titre }}</h2>
+        <a href="{% url 'gestion-agents-centre' centre.id %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Retour à la liste
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- Colonne gauche : Infos agent -->
+        <div class="col-lg-4">
+            
+            <!-- Carte identité -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-person-circle" style="font-size: 5rem; color: #0d6efd;"></i>
+                    </div>
+                    <h3 class="mb-1">{{ agent.trigram }}</h3>
+                    <h5 class="text-muted mb-3">{{ agent.nom }} {{ agent.prenom }}</h5>
+                    
+                    <div class="row text-start">
+                        <div class="col-6">
+                            <small class="text-muted">Centre</small><br>
+                            <strong>{{ agent.centre.code_centre }}</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Type</small><br>
+                            <strong>{% if agent.type_agent %}{{ agent.get_type_agent_display }}{% else %}—{% endif %}</strong>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="row text-start">
+                        <div class="col-12">
+                            <small class="text-muted">Statut</small><br>
+                            {% if agent.actif %}
+                            <span class="badge bg-success">Actif</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactif</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statut médical -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-{{ statut_medical.classe }}  
+                    {% if statut_medical.classe == 'warning' %}text-dark{% else %}text-white{% endif %}">
+                    <h6 class="mb-0"><i class="bi bi-heart-pulse"></i> Statut Médical</h6>
+                </div>
+                <div class="card-body">
+                    <h4>
+                        <span class="badge bg-{{ statut_medical.classe }}">
+                            {{ statut_medical.libelle }}
+                        </span>
+                    </h4>
+                    
+                    {% if statut_medical.expiration %}
+                    <p class="mb-1">
+                        <small class="text-muted">Valide jusqu'au</small><br>
+                        <strong>{{ statut_medical.expiration|date:"d/m/Y" }}</strong>
+                    </p>
+                    <p class="mb-0">
+                        <small class="text-muted">Échéance dans</small><br>
+                        <strong class="text-{{ statut_medical.classe }}">
+                            {{ statut_medical.jours_restants }} jour{{ statut_medical.jours_restants|pluralize }}
+                        </strong>
+                    </p>
+                    {% endif %}
+                    
+                    {% if not certificat_actuel %}
+                    <div class="alert alert-warning mt-2 mb-0">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Aucun certificat médical enregistré
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Infos rapides -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-info-circle"></i> Infos Rapides</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2">
+                            <small class="text-muted">MUA actives</small><br>
+                            {% if muas_actives %}
+                            {% for mua in muas_actives %}
+                            <span class="badge bg-success me-1">{{ mua.get_type_flux_display }}</span>
+                            {% endfor %}
+                            {% else %}
+                            <span class="text-muted">Aucune</span>
+                            {% endif %}
+                        </li>
+                        <li class="mb-2">
+                            <small class="text-muted">Dernière activité</small><br>
+                            {% if derniere_activite %}
+                            <strong>{{ derniere_activite|date:"d/m/Y" }}</strong>
+                            {% else %}
+                            <span class="text-muted">Non renseignée</span>
+                            {% endif %}
+                        </li>
+                        <li class="mb-0">
+                            <small class="text-muted">Prochain RDV</small><br>
+                            {% if prochain_rdv %}
+                            <strong>{{ prochain_rdv.date_heure_rdv|date:"d/m/Y" }}</strong>
+                            {% else %}
+                            <span class="text-muted">Aucun</span>
+                            {% endif %}
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Colonne droite : Actions et alertes -->
+        <div class="col-lg-8">
+            
+            <!-- Actions rapides -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-lightning-charge"></i> Actions Rapides</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <a href="{% url 'declarer_arret_maladie' agent.id_agent %}" 
+                               class="btn btn-warning btn-lg w-100">
+                                <i class="bi bi-bandaid"></i><br>
+                                Déclarer un arrêt maladie
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <a href="{% url 'dossier_medical' agent.id_agent %}" 
+                               class="btn btn-info btn-lg w-100">
+                                <i class="bi bi-heart-pulse"></i><br>
+                                Consulter dossier médical
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <a href="{% url 'competences:dossier_agent' agent.id_agent %}" 
+                               class="btn btn-success btn-lg w-100">
+                                <i class="bi bi-award"></i><br>
+                                Voir dossier compétences
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <a href="{% url 'planifier_rdv_medical_pour' agent.id_agent %}" 
+                               class="btn btn-secondary btn-lg w-100">
+                                <i class="bi bi-calendar-plus"></i><br>
+                                Planifier une visite
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Arrêts en cours (ALERTES) -->
+            {% if arrets_en_cours %}
+            <div class="card shadow-sm mb-4 border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-exclamation-triangle-fill"></i> 
+                        Arrêt{{ arrets_en_cours|pluralize }} Maladie en Cours
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for arret in arrets_en_cours %}
+                    <div class="alert 
+                        {% if arret.necessite_pfu %}alert-danger
+                        {% elif arret.proche_seuil_pfu %}alert-warning
+                        {% else %}alert-info{% endif %} mb-3">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h6 class="alert-heading">
+                                    {% if arret.necessite_pfu %}
+                                    <i class="bi bi-exclamation-octagon-fill"></i> PFU REQUIS
+                                    {% elif arret.proche_seuil_pfu %}
+                                    <i class="bi bi-exclamation-triangle-fill"></i> PFU IMMINENT
+                                    {% else %}
+                                    <i class="bi bi-info-circle-fill"></i> Arrêt en cours
+                                    {% endif %}
+                                </h6>
+                                <p class="mb-2">
+                                    <strong>Début :</strong> {{ arret.date_debut|date:"d/m/Y" }}<br>
+                                    <strong>Fin prévue :</strong> {{ arret.date_fin_prevue|date:"d/m/Y" }}<br>
+                                    <strong>Jours écoulés :</strong> 
+                                    <span class="badge 
+                                        {% if arret.necessite_pfu %}bg-danger
+                                        {% elif arret.proche_seuil_pfu %}bg-warning text-dark
+                                        {% else %}bg-info{% endif %}">
+                                        {{ arret.jours_ecoules_depuis_debut }} jour{{ arret.jours_ecoules_depuis_debut|pluralize }}
+                                    </span>
+                                </p>
+                                
+                                {% if arret.necessite_pfu %}
+                                <div class="alert alert-danger mt-2 mb-0">
+                                    <strong>🚨 ATTENTION :</strong> Arrêt > 90 jours ininterrompu. 
+                                    Plan de Formation Personnalisé (PFU) requis avant réactivation de la MUA.
+                                </div>
+                                {% elif arret.proche_seuil_pfu %}
+                                <div class="alert alert-warning mt-2 mb-0">
+                                    <strong>⚠️ ALERTE :</strong> Arrêt approche du seuil PFU (90 jours). 
+                                    Reste {{ 90|add:"-"|add:arret.jours_ecoules_depuis_debut }} jour{{ 90|add:"-"|add:arret.jours_ecoules_depuis_debut|pluralize }}.
+                                </div>
+                                {% endif %}
+                                
+                                {% if arret.motif %}
+                                <p class="mb-0 mt-2">
+                                    <small class="text-muted">Motif :</small> {{ arret.motif }}
+                                </p>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <a href="{% url 'modifier-arret-maladie' arret.id %}" 
+                                   class="btn btn-sm btn-primary mb-1 w-100">
+                                    <i class="bi bi-pencil"></i> Prolonger
+                                </a>
+                                <a href="{% url 'cloturer-arret-maladie' arret.id %}" 
+                                   class="btn btn-sm btn-success mb-1 w-100">
+                                    <i class="bi bi-check-circle"></i> Déclarer reprise
+                                </a>
+                                <a href="{% url 'annuler-arret-maladie' arret.id %}" 
+                                   class="btn btn-sm btn-outline-danger w-100">
+                                    <i class="bi bi-trash"></i> Annuler
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <!-- Pas d'arrêt en cours -->
+            <div class="alert alert-success">
+                <i class="bi bi-check-circle-fill"></i>
+                <strong>Aucun arrêt maladie en cours</strong> pour cet agent.
+            </div>
+            {% endif %}
+
+            <!-- Aide contextuelle -->
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-question-circle"></i> Informations</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li>Un arrêt de plus de <strong>21 jours</strong> nécessite une visite de reprise</li>
+                        <li>Un arrêt ininterrompu de <strong>90 jours</strong> déclenche la procédure PFU</li>
+                        <li>Le PFU suspend temporairement la MUA jusqu'à validation du plan de formation</li>
+                        <li>Pour déclarer la reprise, cliquez sur "Déclarer reprise" dans la section arrêt</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

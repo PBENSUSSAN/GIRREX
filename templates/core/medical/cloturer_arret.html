@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- En-tête -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>{{ titre }}</h2>
+                <a href="{% url 'dossier_medical' agent_concerne.id_agent %}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Retour au dossier
+                </a>
+            </div>
+
+            <!-- Informations agent -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Agent concerné</h5>
+                    <p class="mb-0">
+                        <strong>{{ agent_concerne.trigram }}</strong> - 
+                        {{ agent_concerne.nom }} {{ agent_concerne.prenom }}
+                        {% if agent_concerne.centre %}
+                        <span class="badge bg-secondary">{{ agent_concerne.centre.code_centre }}</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Détails de l'arrêt -->
+            <div class="card mb-4 border-warning">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="bi bi-clipboard-pulse"></i> Détails de l'arrêt maladie</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <p class="mb-2">
+                                <small class="text-muted">Date de début</small><br>
+                                <strong>{{ arret.date_debut|date:"d/m/Y" }}</strong>
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <p class="mb-2">
+                                <small class="text-muted">Date de fin prévue</small><br>
+                                <strong>{{ arret.date_fin_prevue|date:"d/m/Y" }}</strong>
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <p class="mb-2">
+                                <small class="text-muted">Durée écoulée</small><br>
+                                <strong>{{ arret.jours_ecoules_depuis_debut }} jour{{ arret.jours_ecoules_depuis_debut|pluralize }}</strong>
+                            </p>
+                        </div>
+                    </div>
+
+                    {% if arret.motif %}
+                    <hr>
+                    <p class="mb-0">
+                        <small class="text-muted">Motif</small><br>
+                        {{ arret.motif }}
+                    </p>
+                    {% endif %}
+
+                    {% if arret.commentaire %}
+                    <hr>
+                    <p class="mb-0">
+                        <small class="text-muted">Commentaire</small><br>
+                        {{ arret.commentaire|linebreaks }}
+                    </p>
+                    {% endif %}
+
+                    {% if arret.necessite_pfu %}
+                    <div class="alert alert-danger mt-3 mb-0">
+                        <strong>🚨 ATTENTION :</strong> Cet arrêt a dépassé 90 jours. Une procédure PFU (Plan de Formation Personnalisé) sera nécessaire avant la reprise.
+                    </div>
+                    {% elif arret.proche_seuil_pfu %}
+                    <div class="alert alert-warning mt-3 mb-0">
+                        <strong>⚠️ ALERTE :</strong> Cet arrêt approche du seuil PFU (90 jours). Durée actuelle : {{ arret.jours_ecoules_depuis_debut }} jours.
+                    </div>
+                    {% endif %}
+
+                    {% if arret.est_long_terme %}
+                    <div class="alert alert-info mt-3 mb-0">
+                        <strong><i class="bi bi-info-circle"></i> Information :</strong> Cet arrêt dépasse 21 jours. Une visite médicale de reprise est obligatoire.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Confirmation -->
+            <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-check-circle"></i> Confirmer la reprise</h5>
+                </div>
+                <div class="card-body">
+                    <p>
+                        Vous êtes sur le point de déclarer que <strong>{{ agent_concerne.trigram }}</strong> a repris son service aujourd'hui (<strong>{{ "now"|date:"d/m/Y" }}</strong>).
+                    </p>
+
+                    <div class="alert alert-light">
+                        <h6 class="alert-heading">Cette action va :</h6>
+                        <ul class="mb-0">
+                            <li>Enregistrer la date de fin réelle : <strong>{{ "now"|date:"d/m/Y" }}</strong></li>
+                            <li>Clôturer cet arrêt maladie</li>
+                            <li>Archiver l'arrêt (traçabilité complète)</li>
+                        </ul>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'dossier_medical' agent_concerne.id_agent %}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Annuler
+                            </a>
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="bi bi-check-circle"></i> Confirmer la reprise
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

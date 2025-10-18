@@ -1,7 +1,7 @@
 # Fichier : core/urls.py (Corrigé pour la sélection par Rôle)
 
 from django.urls import path
-from .views import general, planning, feuille_temps, cahier_de_marche, zone, medical
+from .views import general, planning, feuille_temps, cahier_de_marche, zone, medical, gestion_agents
 
 # NOTE: Pas de app_name pour éviter de casser les URLs existantes
 
@@ -122,6 +122,33 @@ urlpatterns = [
         'agent/<int:agent_id>/declarer-arret/',
         medical.declarer_arret_maladie_view,
         name='declarer_arret_maladie'
+    ),
+    path(
+        'medical/arret/<int:arret_id>/modifier/',
+        medical.modifier_arret_maladie_view,
+        name='modifier-arret-maladie'
+    ),
+    path(
+        'medical/arret/<int:arret_id>/cloturer/',
+        medical.cloturer_arret_maladie_view,
+        name='cloturer-arret-maladie'
+    ),
+    path(
+        'medical/arret/<int:arret_id>/annuler/',
+        medical.annuler_arret_maladie_view,
+        name='annuler-arret-maladie'
+    ),
+
+    # === GESTION DES AGENTS (Chef de Centre) ===
+    path(
+        'centre/<int:centre_id>/gestion-agents/',
+        gestion_agents.liste_agents_centre_view,
+        name='gestion-agents-centre'
+    ),
+    path(
+        'centre/<int:centre_id>/agent/<int:agent_id>/fiche/',
+        gestion_agents.fiche_agent_view,
+        name='fiche-agent'
     ),
 
     path('planning/capacite/<int:centre_id>/', planning.gestion_capacite_view, name='gestion_capacite'),

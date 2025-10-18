@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-people-fill me-2"></i>{{ titre }}</h2>
+        <a href="{% url 'tour-de-service-hub' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-people"></i> Total Agents</h5>
+                    <h2 class="mb-0">{{ stats.total }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-bandaid"></i> En Arrêt</h5>
+                    <h2 class="mb-0">{{ stats.en_arret }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-check-circle"></i> Disponibles</h5>
+                    <h2 class="mb-0">{{ stats.disponibles }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres et Recherche -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <!-- Recherche -->
+                <div class="col-md-3">
+                    <label class="form-label">Recherche</label>
+                    <input type="text" 
+                           class="form-control" 
+                           name="q" 
+                           value="{{ filtres.recherche }}"
+                           placeholder="Nom, prénom, trigram...">
+                </div>
+
+                <!-- Filtre Statut -->
+                <div class="col-md-2">
+                    <label class="form-label">Statut</label>
+                    <select class="form-select" name="statut">
+                        <option value="actif" {% if filtres.statut == 'actif' %}selected{% endif %}>Actifs</option>
+                        <option value="inactif" {% if filtres.statut == 'inactif' %}selected{% endif %}>Inactifs</option>
+                        <option value="tous" {% if filtres.statut == 'tous' %}selected{% endif %}>Tous</option>
+                    </select>
+                </div>
+
+                <!-- Filtre Type Agent -->
+                <div class="col-md-2">
+                    <label class="form-label">Type Agent</label>
+                    <select class="form-select" name="fonction">
+                        <option value="">Tous</option>
+                        {% for fonction in fonctions_disponibles %}
+                        <option value="{{ fonction }}" {% if filtres.fonction == fonction %}selected{% endif %}>
+                            {{ fonction|title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Filtre Arrêt -->
+                <div class="col-md-2">
+                    <label class="form-label">Arrêt maladie</label>
+                    <select class="form-select" name="arret">
+                        <option value="">Tous</option>
+                        <option value="en_arret" {% if filtres.arret == 'en_arret' %}selected{% endif %}>En arrêt</option>
+                        <option value="sans_arret" {% if filtres.arret == 'sans_arret' %}selected{% endif %}>Sans arrêt</option>
+                    </select>
+                </div>
+
+                <!-- Boutons -->
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-funnel"></i> Filtrer
+                    </button>
+                    <a href="{% url 'gestion-agents-centre' centre.id %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> Réinitialiser
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Liste des agents -->
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-list-ul me-2"></i>
+                Liste des Agents ({{ stats.total }})
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            {% if agents_list %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Trigram</th>
+                            <th>Nom Prénom</th>
+                            <th>Type</th>
+                            <th>Statut</th>
+                            <th>Alertes</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in agents_list %}
+                        <tr {% if item.a_arret %}class="table-warning"{% endif %}>
+                            <td>
+                                <strong>{{ item.agent.trigram }}</strong>
+                            </td>
+                            <td>{{ item.agent.nom }} {{ item.agent.prenom }}</td>
+                            <td>
+                                {% if item.agent.type_agent %}
+                                {{ item.agent.get_type_agent_display }}
+                                {% else %}
+                                —
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.agent.actif %}
+                                <span class="badge bg-success">Actif</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Inactif</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.arret_en_cours %}
+                                <span class="badge 
+                                    {% if item.arret_en_cours.necessite_pfu %}bg-danger
+                                    {% elif item.arret_en_cours.proche_seuil_pfu %}bg-warning text-dark
+                                    {% else %}bg-info{% endif %}">
+                                    <i class="bi bi-bandaid"></i> 
+                                    Arrêt {{ item.arret_en_cours.jours_ecoules_depuis_debut }}j
+                                    {% if item.arret_en_cours.necessite_pfu %}
+                                    - PFU REQUIS
+                                    {% elif item.arret_en_cours.proche_seuil_pfu %}
+                                    - PFU imminent
+                                    {% endif %}
+                                </span>
+                                {% else %}
+                                <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <a href="{% url 'fiche-agent' centre.id item.agent.id_agent %}" 
+                                   class="btn btn-sm btn-primary">
+                                    <i class="bi bi-eye"></i> Voir fiche
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                <p class="text-muted mt-3">Aucun agent trouvé avec ces critères.</p>
+                <a href="{% url 'gestion-agents-centre' centre.id %}" class="btn btn-outline-primary">
+                    Réinitialiser les filtres
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}
