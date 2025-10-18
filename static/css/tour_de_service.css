@@ -83,3 +83,18 @@ body.hide-weekends .weekend {
     .weekend { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     a { text-decoration: none; color: black; }
 }
+
+/* ✅ NOUVEAU : Animation pour les jours d'arrêt à traiter */
+.arret-a-traiter {
+    border: 3px solid #e74c3c !important;
+    box-shadow: 0 0 10px rgba(231, 76, 60, 0.5) !important;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(231, 76, 60, 0.8);
+    }
+}

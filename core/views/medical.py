@@ -604,7 +604,29 @@ def declarer_arret_maladie_view(request, agent_id):
                     f"Durée : {arret.duree_jours} jours."
                 )
             
-            return redirect('dossier_medical', agent_id=agent.id_agent)
+            # ✅ NOUVEAU : Stocker l'arrêt dans la session et rediriger vers Tour de Service
+            request.session['arret_a_traiter'] = {
+                'arret_id': arret.id,
+                'agent_id': agent.id_agent,
+                'date_debut': arret.date_debut.isoformat(),
+                'date_fin': arret.date_fin_prevue.isoformat()
+            }
+            
+            # Rediriger vers le Tour de Service du mois concerné
+            from django.urls import reverse
+            tour_url = reverse(
+                'tour-de-service-monthly',
+                args=[agent.centre.id, arret.date_debut.year, arret.date_debut.month]
+            )
+            
+            messages.info(
+                request,
+                f"⚠️ Veuillez mettre à jour le planning pour l'arrêt maladie de {agent.trigram} "
+                f"du {arret.date_debut.strftime('%d/%m/%Y')} au {arret.date_fin_prevue.strftime('%d/%m/%Y')} "
+                f"({arret.duree_jours} jour{'s' if arret.duree_jours > 1 else ''})."
+            )
+            
+            return redirect(tour_url)
     else:
         form = ArretMaladieForm()
     

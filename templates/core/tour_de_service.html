@@ -19,6 +19,11 @@
     data-month="{{ current_month }}" 
     data-can-edit="{{ user_can_edit|yesno:'True,False' }}" 
     data-csrf-token="{{ csrf_token }}"
+    {% if arret_a_traiter %}
+    data-arret-agent-id="{{ arret_a_traiter.agent_id }}"
+    data-arret-date-debut="{{ arret_a_traiter.date_debut }}"
+    data-arret-date-fin="{{ arret_a_traiter.date_fin }}"
+    {% endif %}
     class="container-fluid mt-4">
 
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">

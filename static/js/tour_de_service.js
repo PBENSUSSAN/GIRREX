@@ -7,6 +7,21 @@
 class PlanningApp {
     constructor(config) {
         this.config = config;
+        
+        // ✅ NOUVEAU : Config arrêt à traiter
+        const container = document.getElementById('planning-container');
+        this.config.arretAgentId = container.dataset.arretAgentId || null;
+        this.config.arretDateDebut = container.dataset.arretDateDebut || null;
+        this.config.arretDateFin = container.dataset.arretDateFin || null;
+        
+        // 🐞 DEBUG : Afficher les données d'arrêt
+        if (this.config.arretAgentId) {
+            console.log('=== ARRÊT DÉTECTÉ ===')
+            console.log('Agent ID:', this.config.arretAgentId);
+            console.log('Date début:', this.config.arretDateDebut);
+            console.log('Date fin:', this.config.arretDateFin);
+        }
+        
         this.elements = {
             grid: document.getElementById('planning-grid'),
             gridHead: document.getElementById('planning-grid-head'),
@@ -71,6 +86,28 @@ class PlanningApp {
         cell.dataset.positionApremId = tour.position_apres_midi_id || '';
         cell.dataset.comment = tour.commentaire || '';
         cell.title = tour.commentaire || '';
+
+        // ✅ NOUVEAU : Surligner si c'est un jour d'arrêt à traiter
+        if (this.config.arretAgentId && this.config.arretAgentId == agent.id_agent) {
+            const cellDate = new Date(day.date_iso + 'T00:00:00');  // 🐞 FIX : Forcer l'heure à 00:00
+            const debutArret = new Date(this.config.arretDateDebut + 'T00:00:00');
+            const finArret = new Date(this.config.arretDateFin + 'T00:00:00');
+            
+            // 🐞 DEBUG : Logger les comparaisons
+            console.log('Test cellule:', day.date_iso, 'pour agent', agent.id_agent);
+            console.log('  cellDate:', cellDate);
+            console.log('  debutArret:', debutArret);
+            console.log('  finArret:', finArret);
+            console.log('  Dans la plage?', cellDate >= debutArret && cellDate <= finArret);
+            
+            if (cellDate >= debutArret && cellDate <= finArret) {
+                console.log('✅ SURLIGNAGE APPLIQUÉ pour', day.date_iso);
+                cell.classList.add('arret-a-traiter');
+                cell.style.border = '3px solid #e74c3c';
+                cell.style.boxShadow = '0 0 10px rgba(231, 76, 60, 0.8)';
+                cell.style.animation = 'pulse 2s infinite';
+            }
+        }
 
         if (tour.position_matin_id) {
             const position = this.state.positions.find(p => p.id == tour.position_matin_id);

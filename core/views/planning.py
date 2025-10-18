@@ -35,6 +35,19 @@ def tour_de_service_view(request, centre_id, year=None, month=None):
     prev_month_date = (current_month_date - timedelta(days=1)).replace(day=1)
     next_month_date = (current_month_date.replace(day=28) + timedelta(days=4)).replace(day=1)
 
+    # ✅ NOUVEAU : Récupérer l'arrêt à traiter depuis la session
+    arret_a_traiter = request.session.get('arret_a_traiter', None)
+    
+    # Si l'arrêt est pour un autre centre, ignorer
+    if arret_a_traiter:
+        try:
+            from core.models import Agent
+            agent = Agent.objects.get(pk=arret_a_traiter['agent_id'])
+            if agent.centre.id != centre.id:
+                arret_a_traiter = None
+        except:
+            arret_a_traiter = None
+
     context = {
         'centre': centre,
         'user_can_edit': request.user.has_perm('core.change_tourdeservice'),
@@ -43,8 +56,17 @@ def tour_de_service_view(request, centre_id, year=None, month=None):
         'current_month': month,
         'prev_month_url': reverse('tour-de-service-monthly', args=[centre.id, prev_month_date.year, prev_month_date.month]),
         'next_month_url': reverse('tour-de-service-monthly', args=[centre.id, next_month_date.year, next_month_date.month]),
+        'arret_a_traiter': arret_a_traiter,  # ✅ Passer au template
     }
-    return render(request, 'core/tour_de_service.html', context)
+    
+    # ✅ FIX : Rendre le template D'ABORD
+    response = render(request, 'core/tour_de_service.html', context)
+    
+    # ✅ Nettoyer la session APRÈS le rendu
+    if arret_a_traiter and 'arret_a_traiter' in request.session:
+        del request.session['arret_a_traiter']
+    
+    return response
 
 
 @login_required
