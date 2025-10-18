@@ -199,7 +199,13 @@ def valider_tour_de_service(request, centre_id, year, month):
             agent_key = str(tour.agent.id_agent)
             if agent_key not in planning_snapshot:
                 planning_snapshot[agent_key] = {'trigram': tour.agent.trigram or tour.agent.reference, 'planning': {}}
-            planning_snapshot[agent_key]['planning'][tour.date.isoformat()] = {'position_matin': tour.position_matin.nom if tour.position_matin else None, 'position_apres_midi': tour.position_apres_midi.nom if tour.position_apres_midi else None, 'commentaire': tour.commentaire}
+            planning_snapshot[agent_key]['planning'][tour.date.isoformat()] = {
+                'position_matin': tour.position_matin.nom if tour.position_matin else None,
+                'position_matin_couleur': tour.position_matin.couleur if tour.position_matin else None,  # ✅ NOUVEAU
+                'position_apres_midi': tour.position_apres_midi.nom if tour.position_apres_midi else None,
+                'position_apres_midi_couleur': tour.position_apres_midi.couleur if tour.position_apres_midi else None,  # ✅ NOUVEAU
+                'commentaire': tour.commentaire
+            }
         versions_existantes = VersionTourDeService.objects.filter(centre=centre, annee=year, mois=month).count()
         nouveau_numero_index = versions_existantes + 1
         numero_version_str = f"{str(month).zfill(2)}{year}-{nouveau_numero_index}"

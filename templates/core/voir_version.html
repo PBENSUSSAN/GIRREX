@@ -76,7 +76,11 @@
                     {% for day_data in days_in_month_formatted %}
                         {% with date_key=day_data.date|date:"Y-m-d" %}
                         {% with tour=agent_data.planning|get_item:date_key %}
-                        <td class="planning-cell {% if day_data.date.weekday >= 5 %}weekend{% endif %}" title="{{ tour.commentaire|default:'' }}">
+                        <td class="planning-cell {% if day_data.date.weekday >= 5 %}weekend{% endif %}" 
+                            {% if tour.position_matin_couleur and tour.position_matin_couleur != '#FFFFFF' and tour.position_matin_couleur != '#ffffff' %}
+                            style="background-color: {{ tour.position_matin_couleur }};"
+                            {% endif %}
+                            title="{{ tour.commentaire|default:'' }}">
                             <span class="view-mode {% if tour.commentaire %}has-comment{% endif %}">
                                 <span class="morning">{{ tour.position_matin|default:"" }}</span>
                                 <span class="afternoon">{{ tour.position_apres_midi|default:"" }}</span>
