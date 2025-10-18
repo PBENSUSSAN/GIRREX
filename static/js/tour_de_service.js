@@ -195,7 +195,7 @@ class PlanningApp {
     renderPositionsModal() {
         const positionsData = this.state.positions;
         this.elements.positionsListBody.innerHTML = '';
-        const categorieChoices = {'SITE': 'Travail sur site', 'HORS_SITE': 'Travail hors site', 'NON_TRAVAIL': 'Non travail'};
+        const categorieChoices = {'CONTROLE': 'Contrôle', 'AUTRES': 'Autres', 'ABSENT': 'Absent'};
         if (positionsData.length === 0) {
             this.elements.positionsListBody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">Aucune position configurée.</td></tr>`;
             return;
@@ -233,7 +233,7 @@ class PlanningApp {
         const currentColor = this.state.positions.find(p => p.id == posId)?.couleur || '#FFFFFF';
         nomCell.innerHTML = `<input type="text" class="form-control form-control-sm" value="${nomValue}">`;
         descCell.innerHTML = `<input type="text" class="form-control form-control-sm" value="${descValue}">`;
-        catCell.innerHTML = `<select class="form-select form-select-sm"><option value="SITE" ${catValue === 'SITE' ? 'selected' : ''}>Travail sur site</option><option value="HORS_SITE" ${catValue === 'HORS_SITE' ? 'selected' : ''}>Travail hors site</option><option value="NON_TRAVAIL" ${catValue === 'NON_TRAVAIL' ? 'selected' : ''}>Non travail</option></select>`;
+        catCell.innerHTML = `<select class="form-select form-select-sm"><option value="CONTROLE" ${catValue === 'CONTROLE' ? 'selected' : ''}>Contrôle</option><option value="AUTRES" ${catValue === 'AUTRES' ? 'selected' : ''}>Autres</option><option value="ABSENT" ${catValue === 'ABSENT' ? 'selected' : ''}>Absent</option></select>`;
         colorCell.innerHTML = `<input type="color" class="form-control form-control-color form-control-sm" value="${currentColor}">`;
         button.innerHTML = '<i class="bi bi-check-lg"></i>';
         button.classList.replace('btn-primary', 'btn-success');

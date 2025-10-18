@@ -18,9 +18,9 @@ class PositionJour(models.Model):
     Chaque centre gère sa propre liste de positions.
     """
     class Categorie(models.TextChoices):
-        TRAVAIL_SITE = 'SITE', 'Travail sur site'
-        TRAVAIL_HORS_SITE = 'HORS_SITE', 'Travail hors site'
-        NON_TRAVAIL = 'NON_TRAVAIL', 'Non travail'
+        CONTROLE = 'CONTROLE', 'Contrôle'
+        AUTRES = 'AUTRES', 'Autres'
+        ABSENT = 'ABSENT', 'Absent'
 
     centre = models.ForeignKey(
         Centre, 
