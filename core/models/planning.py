@@ -59,8 +59,18 @@ class PositionJour(models.Model):
         return f"{self.nom} ({self.centre.code_centre})"
 
 class TourDeService(models.Model):
-    """Représente l'affectation d'un agent pour une journée spécifique."""
-    agent = models.ForeignKey(Agent, on_delete=models.CASCADE, related_name='tours_de_service')
+    """
+    Représente l'affectation d'un agent pour une journée spécifique.
+    
+    Si agent_id est NULL, c'est un commentaire pour la JOURNÉE entière (pas pour un agent spécifique).
+    """
+    agent = models.ForeignKey(
+        Agent, 
+        on_delete=models.CASCADE, 
+        related_name='tours_de_service',
+        null=True,  # ✅ NOUVEAU : Permet commentaire jour (agent=NULL)
+        blank=True
+    )
     date = models.DateField(db_index=True)
     position_matin = models.ForeignKey(
         PositionJour, 
@@ -80,7 +90,10 @@ class TourDeService(models.Model):
     class Meta:
         verbose_name = "Tour de Service"
         verbose_name_plural = "Tours de Service"
-        unique_together = ('agent', 'date')
+        # ✅ MODIFIÉ : unique_together enlevé car on peut avoir :
+        # - Une entrée par (agent, date) pour les affectations
+        # - Une entrée avec (agent=NULL, date) pour le commentaire jour
+        # On ajoute une contrainte unique au niveau DB plus tard si nécessaire
         ordering = ['-date', 'agent']
 
     def __str__(self):

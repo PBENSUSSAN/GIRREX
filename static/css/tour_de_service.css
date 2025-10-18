@@ -37,6 +37,18 @@
     font-weight: bold; 
     border-bottom: 2px dotted #0d6efd;
 }
+
+/* ✅ Style pour les en-têtes de jour avec commentaire */
+.day-col.has-comment {
+    /* Pas de gras, juste l'astérisque suffit */
+    border-bottom: 2px dotted #0d6efd;
+}
+.day-col.editable {
+    cursor: context-menu;
+}
+.day-col.editable:hover {
+    background-color: #e9ecef;
+}
 .view-mode .morning, .view-mode .afternoon {
     display: block;
     line-height: 1.2;

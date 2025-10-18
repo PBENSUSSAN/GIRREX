@@ -21,7 +21,41 @@ from ..services import verifier_regles_horaires
 @login_required
 @permission_required('core.view_feuilletemps', raise_exception=True)
 def feuille_de_temps_view(request, centre_id, jour=None):
+    """
+    Vue de la feuille de temps.
+    
+    ⚠️ SÉCURITÉ : Vérifie que l'utilisateur a le droit de voir CE centre.
+    """
     centre = get_object_or_404(Centre, pk=centre_id)
+    
+    # ✅ CONTRÔLE DE SÉCURITÉ
+    if not hasattr(request.user, 'agent_profile') or not request.user.agent_profile:
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("Vous devez être un agent pour accéder à la feuille de temps.")
+    
+    from core.models import Role
+    from django.core.exceptions import PermissionDenied
+    
+    acces_autorise = False
+    
+    # 1. Vision NATIONALE
+    if request.active_agent_role and request.active_agent_role.role.nom in [
+        Role.RoleName.CHEF_DE_DIVISION,
+        Role.RoleName.ADJOINT_CHEF_DE_DIVISION,
+        Role.RoleName.ADJOINT_FORM
+    ]:
+        acces_autorise = True
+    elif 'competences.view_all_licences' in request.effective_perms:
+        acces_autorise = True
+    # 2. Accès à SON centre uniquement
+    elif request.centre_agent and request.centre_agent.id == centre.id:
+        acces_autorise = True
+    
+    if not acces_autorise:
+        raise PermissionDenied(
+            f"Vous n'avez pas l'autorisation d'accéder à la feuille de temps du centre {centre.code_centre}."
+        )
+    
     jour_str = jour or date.today().isoformat()
     date_jour = date.fromisoformat(jour_str)
     jour_precedent = (date_jour - timedelta(days=1)).isoformat()

@@ -26,8 +26,39 @@ def cahier_de_marche_view(request, centre_id, jour):
     """
     Prépare les données pour le Cahier de Marche, en incluant l'historique du service
     et les préavis de maintenance (MISO).
+    
+    ⚠️ SÉCURITÉ : Vérifie que l'utilisateur a le droit de voir CE centre.
     """
     centre = get_object_or_404(Centre, pk=centre_id)
+    
+    # ✅ CONTRÔLE DE SÉCURITÉ
+    if not hasattr(request.user, 'agent_profile') or not request.user.agent_profile:
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("Vous devez être un agent pour accéder au cahier de marche.")
+    
+    from core.models import Role
+    from django.core.exceptions import PermissionDenied
+    
+    acces_autorise = False
+    
+    # 1. Vision NATIONALE
+    if request.active_agent_role and request.active_agent_role.role.nom in [
+        Role.RoleName.CHEF_DE_DIVISION,
+        Role.RoleName.ADJOINT_CHEF_DE_DIVISION,
+        Role.RoleName.ADJOINT_FORM
+    ]:
+        acces_autorise = True
+    elif 'competences.view_all_licences' in request.effective_perms:
+        acces_autorise = True
+    # 2. Accès à SON centre uniquement
+    elif request.centre_agent and request.centre_agent.id == centre.id:
+        acces_autorise = True
+    
+    if not acces_autorise:
+        raise PermissionDenied(
+            f"Vous n'avez pas l'autorisation d'accéder au cahier de marche du centre {centre.code_centre}."
+        )
+    
     try:
         target_date = datetime.strptime(jour, "%Y-%m-%d").date()
     except ValueError:

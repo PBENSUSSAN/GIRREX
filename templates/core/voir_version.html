@@ -63,9 +63,14 @@
                 <tr>
                     <th class="agent-col">Agent</th>
                     {% for day_data in days_in_month_formatted %}
-                    <th class="day-col {% if day_data.date.weekday >= 5 %}weekend{% endif %}">
-                        {{ day_data.jour_court }}<br>{{ day_data.num }}
+                    {% with date_key=day_data.date|date:"Y-m-d" %}
+                    <th class="day-col {% if day_data.date.weekday >= 5 %}weekend{% endif %} {% if planning_data.commentaires_jour and date_key in planning_data.commentaires_jour %}has-comment{% endif %}"
+                        {% if planning_data.commentaires_jour and date_key in planning_data.commentaires_jour %}
+                        title="{{ planning_data.commentaires_jour|get_item:date_key }}"
+                        {% endif %}>
+                        {{ day_data.jour_court }}<br>{{ day_data.num }}{% if planning_data.commentaires_jour and date_key in planning_data.commentaires_jour %} <span style="color: #000;">*</span>{% endif %}
                     </th>
+                    {% endwith %}
                     {% endfor %}
                 </tr>
             </thead>
@@ -82,7 +87,7 @@
                             {% endif %}
                             title="{{ tour.commentaire|default:'' }}">
                             <span class="view-mode {% if tour.commentaire %}has-comment{% endif %}">
-                                <span class="morning">{{ tour.position_matin|default:"" }}</span>
+                                <span class="morning">{{ tour.position_matin|default:"" }}{% if tour.commentaire %} <span style="color: #000;">*</span>{% endif %}</span>
                                 <span class="afternoon">{{ tour.position_apres_midi|default:"" }}</span>
                             </span>
                         </td>

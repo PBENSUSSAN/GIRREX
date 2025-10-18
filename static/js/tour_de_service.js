@@ -118,7 +118,7 @@ class PlanningApp {
 
         cell.innerHTML = `
             <span class="view-mode ${tour.commentaire ? 'has-comment' : ''}">
-                <span class="morning">${tour.position_matin_nom || ""}</span>
+                <span class="morning">${tour.position_matin_nom || ""}${tour.commentaire ? ' <span style="color: #000;">*</span>' : ''}</span>
                 <span class="afternoon" style="display:none;">${tour.position_apres_midi_nom || ""}</span>
             </span>
             <span class="edit-mode" style="display:none;"></span>`;
@@ -130,7 +130,20 @@ class PlanningApp {
         this.elements.gridBody.innerHTML = '';
         const headerRow = document.createElement('tr');
         if (!this.state.isViewInverted) {
-            headerRow.innerHTML = `<th class="agent-col">Agent</th>` + this.state.days.map(d => `<th class="day-col ${d.weekday >= 5 ? 'weekend' : ''}">${d.jour_court}<br>${d.num}</th>`).join('');
+            // ✅ Créer l'en-tête avec support des commentaires jour
+            let headerHTML = `<th class="agent-col">Agent</th>`;
+            this.state.days.forEach(d => {
+                const hasComment = d.commentaire_jour && d.commentaire_jour.trim() !== '';
+                const editableClass = this.config.canEdit ? 'editable' : '';
+                const commentClass = hasComment ? 'has-comment' : '';
+                const asterix = hasComment ? ' <span style="color: #000;">*</span>' : '';  // ✅ Astérisque noir
+                headerHTML += `<th class="day-col ${d.weekday >= 5 ? 'weekend' : ''} ${editableClass} ${commentClass}" 
+                    data-date="${d.date_iso}" 
+                    title="${hasComment ? d.commentaire_jour : ''}">
+                    ${d.jour_court}<br>${d.num}${asterix}
+                </th>`;
+            });
+            headerRow.innerHTML = headerHTML;
             this.elements.gridHead.appendChild(headerRow);
             this.state.agents.forEach(agent => {
                 const bodyRow = document.createElement('tr');
@@ -213,20 +226,47 @@ class PlanningApp {
     }
 
     async saveComment(agentId, date, commentText) {
-        const cell = this.elements.grid.querySelector(`[data-agent-id='${agentId}'][data-date='${date}']`);
-        if(!cell) return;
+        // ✅ Si agentId est null, c'est un commentaire JOUR
+        const isJourComment = agentId === null || agentId === '';
+        
         try {
             const response = await fetch("/ajax/update-comment/", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.config.csrfToken },
-                body: JSON.stringify({ agent_id: agentId, date: date, commentaire: commentText })
+                body: JSON.stringify({ 
+                    agent_id: isJourComment ? null : agentId, 
+                    date: date, 
+                    commentaire: commentText 
+                })
             });
             const data = await response.json();
-            cell.dataset.comment = commentText;
-            cell.title = commentText;
-            cell.querySelector('.view-mode').classList.toggle('has-comment', data.comment_exists);
-            if(this.commentModal) this.commentModal.hide();
-        } catch (error) { console.error('Erreur sauvegarde commentaire:', error); }
+            
+            if (isJourComment) {
+                // ✅ Commentaire JOUR : mettre à jour l'en-tête
+                const th = this.elements.gridHead.querySelector(`th[data-date='${date}']`);
+                if (th) {
+                    th.classList.toggle('has-comment', data.comment_exists);
+                    th.title = commentText;
+                }
+                // Mettre à jour dans le state
+                const day = this.state.days.find(d => d.date_iso === date);
+                if (day) {
+                    day.commentaire_jour = commentText;
+                }
+            } else {
+                // ✅ Commentaire AGENT : mettre à jour la cellule
+                const cell = this.elements.grid.querySelector(`[data-agent-id='${agentId}'][data-date='${date}']`);
+                if (cell) {
+                    cell.dataset.comment = commentText;
+                    cell.title = commentText;
+                    cell.querySelector('.view-mode').classList.toggle('has-comment', data.comment_exists);
+                }
+            }
+            
+            if (this.commentModal) this.commentModal.hide();
+        } catch (error) { 
+            console.error('Erreur sauvegarde commentaire:', error); 
+        }
     }
 
     renderPositionsModal() {
@@ -310,24 +350,57 @@ class PlanningApp {
     attachEventListeners() {
         document.addEventListener('click', e => { if (this.state.activeCell && !this.state.activeCell.contains(e.target)) { this.switchToViewMode(this.state.activeCell); } }, true);
         this.elements.grid.addEventListener('click', e => { const cell = e.target.closest('.planning-cell.editable'); if (cell) { e.stopPropagation(); this.switchToEditMode(cell); } });
+        
+        // ✅ Gestion du clic droit sur les CELLULES AGENTS
         this.elements.grid.addEventListener('contextmenu', e => {
             e.preventDefault();
             const cell = e.target.closest('.planning-cell.editable');
-            if (!cell || !this.commentModal) return;
-            const agent = this.state.agents.find(a => a.id_agent == cell.dataset.agentId);
-            const identifier = agent ? (agent.trigram || agent.reference) : 'N/A';
-            this.elements.commentModalEl.querySelector('#comment-agent-id').value = cell.dataset.agentId;
-            this.elements.commentModalEl.querySelector('#comment-date').value = cell.dataset.date;
-            this.elements.commentModalEl.querySelector('#comment-textarea').value = cell.dataset.comment;
-            this.elements.commentModalEl.querySelector('#comment-modal-title').textContent = `${identifier} - ${cell.dataset.date}`;
-            this.commentModal.show();
+            if (cell && this.commentModal) {
+                const agent = this.state.agents.find(a => a.id_agent == cell.dataset.agentId);
+                const identifier = agent ? (agent.trigram || agent.reference) : 'N/A';
+                this.elements.commentModalEl.querySelector('#comment-agent-id').value = cell.dataset.agentId;
+                this.elements.commentModalEl.querySelector('#comment-date').value = cell.dataset.date;
+                this.elements.commentModalEl.querySelector('#comment-textarea').value = cell.dataset.comment;
+                this.elements.commentModalEl.querySelector('#comment-modal-title').textContent = `${identifier} - ${cell.dataset.date}`;
+                this.commentModal.show();
+            }
+        });
+        
+        // ✅ NOUVEAU : Gestion du clic droit sur les EN-TÊTES JOUR
+        this.elements.gridHead.addEventListener('contextmenu', e => {
+            e.preventDefault();
+            const th = e.target.closest('.day-col.editable');
+            if (th && this.commentModal) {
+                const dateISO = th.dataset.date;
+                // Trouver le jour pour récupérer le commentaire existant
+                const day = this.state.days.find(d => d.date_iso === dateISO);
+                const commentaire = day ? day.commentaire_jour : '';
+                
+                this.elements.commentModalEl.querySelector('#comment-agent-id').value = '';  // Vide = commentaire jour
+                this.elements.commentModalEl.querySelector('#comment-date').value = dateISO;
+                this.elements.commentModalEl.querySelector('#comment-textarea').value = commentaire;
+                this.elements.commentModalEl.querySelector('#comment-modal-title').textContent = `Journée du ${dateISO}`;
+                this.commentModal.show();
+            }
         });
         if (this.elements.commentModalEl) {
             const saveBtn = this.elements.commentModalEl.querySelector('#save-comment-btn');
             const deleteBtn = this.elements.commentModalEl.querySelector('#delete-comment-btn');
-            const getIdsFromModal = () => ({agentId: this.elements.commentModalEl.querySelector('#comment-agent-id').value, date: this.elements.commentModalEl.querySelector('#comment-date').value});
-            saveBtn.addEventListener('click', () => { const { agentId, date } = getIdsFromModal(); const comment = this.elements.commentModalEl.querySelector('#comment-textarea').value; this.saveComment(agentId, date, comment); });
-            deleteBtn.addEventListener('click', () => { const { agentId, date } = getIdsFromModal(); this.saveComment(agentId, date, ''); });
+            const getIdsFromModal = () => ({
+                agentId: this.elements.commentModalEl.querySelector('#comment-agent-id').value || null,  // ✅ null si vide
+                date: this.elements.commentModalEl.querySelector('#comment-date').value
+            });
+            
+            saveBtn.addEventListener('click', () => { 
+                const { agentId, date } = getIdsFromModal(); 
+                const comment = this.elements.commentModalEl.querySelector('#comment-textarea').value; 
+                this.saveComment(agentId, date, comment); 
+            });
+            
+            deleteBtn.addEventListener('click', () => { 
+                const { agentId, date } = getIdsFromModal(); 
+                this.saveComment(agentId, date, ''); 
+            });
         }
         if (this.elements.configModalEl) {
             this.elements.configModalEl.addEventListener('show.bs.modal', () => { this.renderPositionsModal(); });

@@ -25,9 +25,52 @@ def selecteur_centre_view(request):
     """
     Page générique permettant de choisir un centre pour accéder à une vue locale.
     La vue de destination est passée en paramètre GET 'next_view'.
+    
+    ⚠️ SÉCURITÉ : UNIQUEMENT pour Chef de Division / Adjoint Chef Division / Adjoint Form
+    Les autres utilisateurs sont redirigés vers LEUR centre uniquement.
     """
     next_view_name = request.GET.get('next_view', 'tour-de-service-centre')
     
+    # ✅ CONTRÔLE DE SÉCURITÉ
+    if not hasattr(request.user, 'agent_profile') or not request.user.agent_profile:
+        messages.error(request, "Vous devez être un agent pour accéder à cette page.")
+        return redirect('home')
+    
+    agent = request.user.agent_profile
+    
+    # Vérifier si l'utilisateur a une vision NATIONALE (peut voir tous les centres)
+    from core.models import Role
+    a_vision_nationale = False
+    
+    # 1. Vérifier par rôle actif
+    if request.active_agent_role and request.active_agent_role.role.nom in [
+        Role.RoleName.CHEF_DE_DIVISION,
+        Role.RoleName.ADJOINT_CHEF_DE_DIVISION,
+        Role.RoleName.ADJOINT_FORM
+    ]:
+        a_vision_nationale = True
+    
+    # 2. Vérifier par permission
+    elif 'competences.view_all_licences' in request.effective_perms:
+        a_vision_nationale = True
+    
+    # ✅ SI PAS VISION NATIONALE → REDIRIGER VERS SON PROPRE CENTRE
+    if not a_vision_nationale:
+        if agent.centre:
+            messages.info(
+                request,
+                f"Vous avez été redirigé automatiquement vers votre centre ({agent.centre.code_centre})."
+            )
+            if next_view_name == 'cahier-de-marche':
+                today_str = timezone.now().strftime('%Y-%m-%d')
+                return redirect('cahier-de-marche', centre_id=agent.centre.id, jour=today_str)
+            else:
+                return redirect('tour-de-service-centre', centre_id=agent.centre.id)
+        else:
+            messages.error(request, "Vous n'êtes affecté à aucun centre.")
+            return redirect('home')
+    
+    # ✅ SI VISION NATIONALE → AFFICHER LE SÉLECTEUR
     if next_view_name == 'cahier-de-marche':
         titre = "Sélectionner un centre pour voir son Cahier de Marche"
     else:
